@@ -44,7 +44,7 @@ const AttendanceChart = () => {
   return (
     <div className="bg-white rounded-lg p-4 h-full">
       <div className="flex justify-between items-center">
-        <h1 className="text-lg font-semibold">Attendance</h1>
+        <h1 className="text-lg text-red-700 font-semibold">SO Backlogs</h1>
         <Image src="/images/moreDark.png" alt="" width={20} height={20} />
       </div>
       <ResponsiveContainer width="100%" height="90%">
@@ -58,7 +58,7 @@ const AttendanceChart = () => {
           />
           <YAxis axisLine={false} tick={{ fill: "#d1d5db" }} tickLine={false} />
           <Tooltip
-            contentStyle={{ borderRadius: "10px", borderColor: "lightgray" }}
+            contentStyle={{ borderRadius: "10px", borderColor: "#7f8caa" }}
           />
           <Legend
             align="left"
