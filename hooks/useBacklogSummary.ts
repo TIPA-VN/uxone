@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 
 export const useBacklogSummary = () =>
   useMutation({
-    mutationFn: async (business: number) => {
+    mutationFn: async (business: string) => {
       const res = await fetch("http://10.116.2.72:5002/backlog-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
