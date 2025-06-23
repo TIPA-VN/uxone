@@ -4,7 +4,7 @@ import { useBacklogSummary } from "@/hooks/useBacklogHooks";
 import UserCard from "@/components/UserCard";
 
 export default function CustomerCards() {
-  const { mutate, data, isPending, isSuccess } = useBacklogSummary();
+  const { mutate, data, isSuccess } = useBacklogSummary();
 
   // Trigger fetch on initial render
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
-// GET /api/backlogs?customerId=2000021&startWeek=2025-W20&endWeek=2025-W25
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -9,8 +9,13 @@ export async function GET(req: NextRequest) {
     const startWeek = searchParams.get("startWeek");
     const endWeek = searchParams.get("endWeek");
 
-    const whereClause: any = {};
-    if (customerId) whereClause.customerId = customerId;
+    // Replace `any` with proper Prisma type
+    const whereClause: Prisma.SOPeriodBacklogWhereInput = {};
+
+    if (customerId) {
+      whereClause.customerId = customerId;
+    }
+
     if (startWeek && endWeek) {
       whereClause.week = {
         gte: startWeek,

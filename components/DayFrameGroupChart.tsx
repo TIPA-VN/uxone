@@ -16,6 +16,11 @@ type FrameGroupCount = {
   count: number;
 };
 
+type RawFrameGroupCount = {
+  frame: string | null;
+  count: number;
+};
+
 export default function DayFrameGroupChart() {
   const [chartData, setChartData] = useState<FrameGroupCount[]>([]);
   const [othersBreakdown, setOthersBreakdown] = useState<FrameGroupCount[]>([]);
@@ -39,9 +44,9 @@ export default function DayFrameGroupChart() {
       if (!res.ok) throw new Error("Failed to fetch data");
 
       const result = await res.json();
-      const raw = result.frame_group_count || [];
+      const raw: RawFrameGroupCount[] = result.frame_group_count || [];
 
-      const processed = raw.map((d: any) => ({
+      const processed: FrameGroupCount[] = raw.map((d) => ({
         frame: d.frame ?? "Others",
         count: d.count,
       }));
@@ -61,6 +66,7 @@ export default function DayFrameGroupChart() {
       setOthersBreakdown(others);
       setTotal(result.total || 0);
     } catch (err) {
+      console.error("Failed to fetch chart data:", err);
       setError(true);
     } finally {
       setLoading(false);
@@ -75,29 +81,20 @@ export default function DayFrameGroupChart() {
     loadAndSchedule();
   }, []);
 
-  const handleBarClick = (data: any) => {
+  const handleBarClick = (data: FrameGroupCount) => {
     if (data.frame === "Others") {
       setShowModal(true);
     }
   };
 
   const colorPalette = [
-    "#3b82f6", // blue
-    "#10b981", // emerald
-    "#f59e0b", // amber
-    "#8b5cf6", // violet
-    "#ef4444", // red
-    "#14b8a6", // teal
-    "#6366f1", // indigo
-    "#eab308", // yellow
-    "#ec4899", // pink
-    "#22c55e", // green
+    "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6",
+    "#ef4444", "#14b8a6", "#6366f1", "#eab308",
+    "#ec4899", "#22c55e",
   ];
 
-  const getBarColor = (frame: string, index: number) => {
-    if (frame === "Others") return "#ea580c"; // orange-600
-    return colorPalette[index % colorPalette.length];
-  };
+  const getBarColor = (frame: string, index: number) =>
+    frame === "Others" ? "#ea580c" : colorPalette[index % colorPalette.length];
 
   const exportCSV = () => {
     const headers = ["Frame", "Count"];
@@ -118,8 +115,6 @@ export default function DayFrameGroupChart() {
 
   return (
     <div className="bg-white rounded-lg p-4 shadow relative">
-      {/* Centered Total Count Label */}
-
       <div className="flex justify-center items-center gap-2 mb-3">
         <h2 className="text-lg font-semibold text-cyan-700">
           Daily Production by Frame Group (Top 8 + Others)
@@ -173,7 +168,7 @@ export default function DayFrameGroupChart() {
               <Bar
                 dataKey="count"
                 radius={[0, 10, 10, 0]}
-                isAnimationActive={true}
+                isAnimationActive
                 animationDuration={800}
                 animationEasing="ease-out"
                 cursor="pointer"

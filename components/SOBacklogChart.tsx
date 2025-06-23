@@ -7,6 +7,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  TextProps,
   Legend,
   ResponsiveContainer,
 } from "recharts";
@@ -38,13 +39,16 @@ export default function SOBacklogChart() {
             dataKey="Group"
             interval={0}
             height={80}
-            tick={{
-              angle: -35,
-              textAnchor: "end",
-              fill: "#6b7280",
-              fontSize: 13,
-            }as any}
+            tick={
+              {
+                angle: -35,
+                textAnchor: "end",
+                fill: "#6b7280",
+                fontSize: 13,
+              } as Partial<TextProps>
+            }
           />
+
           <YAxis tick={{ fill: "#6b7280" }} />
           <Tooltip />
           <Legend

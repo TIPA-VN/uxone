@@ -21,16 +21,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const { tipaId, password } = await signInSchema.parseAsync(
             credentials
           );
+
           const user = await prisma.user.findUnique({
-            where: { tipaId : credentials.tipaId as string},
+            where: { tipaId }, // ✅ using validated tipaId
           });
 
           if (!user) return null;
 
           const passwordValid = await verifyPassword(
-            credentials.password as string,
+            password,
             user.hashedPassword
-          );
+          ); // ✅ validated password
           if (!passwordValid) return null;
 
           return {
@@ -39,7 +40,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: user.name,
             role: user.role,
             tipaId: user.tipaId,
-            image: user.image
+            image: user.image,
           } as User;
         } catch (error) {
           if (error instanceof ZodError) return null;
@@ -49,26 +50,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  session: {strategy: "jwt"},
+  session: { strategy: "jwt" },
 
   callbacks: {
-
-    async jwt({ token, user }:{token: JWT; user: User}) {
+    async jwt({ token, user }: { token: JWT; user: User }) {
       if (user) {
         token.tipaId = user.tipaId;
         token.role = user.role;
       }
       return token;
     },
-        async session({ session, token }:{session: Session; token: JWT}) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
-        session.user.tipaId = token.tipaId as string ;
-        session.user.role = token.role as string ;
+        session.user.tipaId = token.tipaId as string;
+        session.user.role = token.role as string;
       }
       return session;
     },
   },
   pages: {
-    signIn: "/auth/signin"
-  }
+    signIn: "/auth/signin",
+  },
 });
