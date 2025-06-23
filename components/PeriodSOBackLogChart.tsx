@@ -13,6 +13,13 @@ import {
 } from "recharts";
 import { useFetchBacklogTrends } from "@/hooks/useBacklogHooks";
 
+type BacklogTrendItem = {
+  week: string;
+  backlogs: number;
+  inDock: number;
+  inProgress: number;
+};
+
 const customerOptions = [
   { id: "2000021", name: "TIPS-LVM" },
   { id: "2000161", name: "PRODRIVE-LVM" },
@@ -24,33 +31,33 @@ const customerOptions = [
 ];
 
 export default function CustomerBacklogTrends() {
-  const [selectedCustomer, setSelectedCustomer] = useState<string | undefined>();
+  const [selectedCustomer, setSelectedCustomer] = useState<
+    string | undefined
+  >();
   const [startWeek, setStartWeek] = useState("2025-W20");
   const [endWeek, setEndWeek] = useState("2025-W25");
 
   const { mutate, data, isPending, error } = useFetchBacklogTrends();
 
-  // Auto-set default customer if not selected
   useEffect(() => {
     if (!selectedCustomer && customerOptions.length > 0) {
       setSelectedCustomer(customerOptions[0].id);
     }
   }, [selectedCustomer]);
 
-  // Auto-fetch data once default customer is set
   useEffect(() => {
     if (selectedCustomer) {
       mutate({ customerId: selectedCustomer, startWeek, endWeek });
     }
-  }, [selectedCustomer, startWeek, endWeek]);
+  }, [selectedCustomer, startWeek, endWeek, mutate]);
 
-  const chartData =
-    data?.map((d: any) => ({
+  const chartData: BacklogTrendItem[] =
+    data?.map((d: BacklogTrendItem) => ({
       week: d.week,
       backlogs: d.backlogs,
       inDock: d.inDock,
       inProgress: d.inProgress,
-    })) || [];
+    })) ?? [];
 
   return (
     <div className="bg-white p-4 rounded-xl w-full h-full">
@@ -105,9 +112,24 @@ export default function CustomerBacklogTrends() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="backlogs" stroke="#60A5FA" strokeWidth={3} />
-            <Line type="monotone" dataKey="inDock" stroke="#FBBF24" strokeWidth={3} />
-            <Line type="monotone" dataKey="inProgress" stroke="#34D399" strokeWidth={3} />
+            <Line
+              type="monotone"
+              dataKey="backlogs"
+              stroke="#60A5FA"
+              strokeWidth={3}
+            />
+            <Line
+              type="monotone"
+              dataKey="inDock"
+              stroke="#FBBF24"
+              strokeWidth={3}
+            />
+            <Line
+              type="monotone"
+              dataKey="inProgress"
+              stroke="#34D399"
+              strokeWidth={3}
+            />
           </LineChart>
         </ResponsiveContainer>
       )}

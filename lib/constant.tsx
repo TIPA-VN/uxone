@@ -5,9 +5,7 @@ import { HiOutlineShieldCheck, HiOutlineUserGroup } from "react-icons/hi";
 import { ImBooks, ImCalendar } from "react-icons/im";
 import { IoHome } from "react-icons/io5";
 import { LiaPencilRulerSolid, LiaToolsSolid } from "react-icons/lia";
-import { MdEngineering, MdOtherHouses } from "react-icons/md";
-import { RiLogoutCircleLine } from "react-icons/ri";
-import { TfiAnnouncement } from "react-icons/tfi";
+import { MdEngineering } from "react-icons/md";
 import { VscSettingsGear } from "react-icons/vsc";
 
 export const SidebarLinks = [

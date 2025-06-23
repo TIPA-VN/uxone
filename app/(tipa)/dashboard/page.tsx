@@ -1,14 +1,9 @@
-import SOBacklogChart from "@/components/SOBacklogChart";
 import CountChart from "@/components/CountChart";
-import EventCalendar from "@/components/EventCalendar";
 import CustomerBacklogTrends from "@/components/PeriodSOBackLogChart";
 import CustomerCards from "@/components/CustomerCards";
 import { saltAndHashPassword } from "@/lib/hashPassword";
 import FrameGroupChart from "@/components/FrameGroupChart";
 import DayFrameGroupChart from "@/components/DayFrameGroupChart";
-
-const password = await saltAndHashPassword("Ngoc@n1709");
-console.log(password);
 const AdminPage = () => {
   return (
     <div className="p-4 flex gap-4 flex-col md:flex-row">

@@ -10,10 +10,16 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  LabelList,
   CartesianGrid,
 } from "recharts";
 import { useGroupBacklogs } from "@/hooks/useBacklogHooks";
+
+// Define expected structure from API
+type GroupBacklogItem = {
+  Backlogs: number;
+  "In-Dock": number;
+  "In-Progress": number;
+};
 
 const CountChart = () => {
   const [totals, setTotals] = useState({
@@ -21,23 +27,15 @@ const CountChart = () => {
     inDock: 0,
     inProgress: 0,
   });
+
   const { mutate, isPending } = useGroupBacklogs();
 
   useEffect(() => {
     mutate("2000", {
-      onSuccess: (data) => {
-        const backlogs = data.reduce(
-          (sum: number, g: any) => sum + g["Backlogs"],
-          0
-        );
-        const inDock = data.reduce(
-          (sum: number, g: any) => sum + g["In-Dock"],
-          0
-        );
-        const inProgress = data.reduce(
-          (sum: number, g: any) => sum + g["In-Progress"],
-          0
-        );
+      onSuccess: (data: GroupBacklogItem[]) => {
+        const backlogs = data.reduce((sum, g) => sum + g.Backlogs, 0);
+        const inDock = data.reduce((sum, g) => sum + g["In-Dock"], 0);
+        const inProgress = data.reduce((sum, g) => sum + g["In-Progress"], 0);
         setTotals({ backlogs, inDock, inProgress });
       },
     });
@@ -82,14 +80,14 @@ const CountChart = () => {
             fill="#FF6B6B"
             name="In-Progress"
             animationDuration={900}
-          ></Bar>
+          />
           <Bar
             dataKey="In-Dock"
             stackId="a"
             fill="#4ECDC4"
             name="In-Dock"
             animationDuration={900}
-          ></Bar>
+          />
         </BarChart>
       </ResponsiveContainer>
 
