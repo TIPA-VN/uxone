@@ -1,7 +1,6 @@
 import CountChart from "@/components/CountChart";
 import CustomerBacklogTrends from "@/components/PeriodSOBackLogChart";
 import CustomerCards from "@/components/CustomerCards";
-import { saltAndHashPassword } from "@/lib/hashPassword";
 import FrameGroupChart from "@/components/FrameGroupChart";
 import DayFrameGroupChart from "@/components/DayFrameGroupChart";
 const AdminPage = () => {
