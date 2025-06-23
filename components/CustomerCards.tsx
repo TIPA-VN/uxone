@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { useBacklogSummary } from "@/hooks/useBacklogSummary";
+import { useBacklogSummary } from "@/hooks/useBacklogHooks";
 import UserCard from "@/components/UserCard";
 
 export default function CustomerCards() {

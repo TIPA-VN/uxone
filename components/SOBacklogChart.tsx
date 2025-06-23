@@ -1,5 +1,5 @@
 "use client";
-import { useBacklogCustomers } from "@/hooks/useBacklogSummary";
+import { useBacklogCustomers } from "@/hooks/useBacklogHooks";
 import {
   BarChart,
   Bar,
@@ -27,7 +27,7 @@ export default function SOBacklogChart() {
       <h2 className="text-lg font-semibold mb-4 text-red-700">
         SO Backlogs by Groups
       </h2>
-      <ResponsiveContainer width="100%" height={375}>
+      <ResponsiveContainer width="100%" height={300}>
         <BarChart
           data={data}
           barSize={20}

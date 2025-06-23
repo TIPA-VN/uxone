@@ -22,6 +22,7 @@ model User {
 
 model SOPeriodBacklog {
   id           String   @id @default(cuid())
+  week         String // e.g. "2024-W23"
   customerId   String
   customerName String
   business     String

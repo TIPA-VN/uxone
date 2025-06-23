@@ -1,71 +1,105 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
-  RadialBarChart,
-  RadialBar,
-  Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
   ResponsiveContainer,
+  Legend,
+  LabelList,
+  CartesianGrid,
 } from "recharts";
-
-const data = [
-  {
-    name: "Total",
-    count: 106,
-    fill: "white",
-  },
-  {
-    name: "Girls",
-    count: 53,
-    fill: "#fbe698",
-  },
-  {
-    name: "Boys",
-    count: 53,
-    fill: "#15b5b0",
-  },
-];
+import { useGroupBacklogs } from "@/hooks/useBacklogHooks";
 
 const CountChart = () => {
+  const [totals, setTotals] = useState({
+    backlogs: 0,
+    inDock: 0,
+    inProgress: 0,
+  });
+  const { mutate, isPending } = useGroupBacklogs();
+
+  useEffect(() => {
+    mutate("2000", {
+      onSuccess: (data) => {
+        const backlogs = data.reduce(
+          (sum: number, g: any) => sum + g["Backlogs"],
+          0
+        );
+        const inDock = data.reduce(
+          (sum: number, g: any) => sum + g["In-Dock"],
+          0
+        );
+        const inProgress = data.reduce(
+          (sum: number, g: any) => sum + g["In-Progress"],
+          0
+        );
+        setTotals({ backlogs, inDock, inProgress });
+      },
+    });
+  }, [mutate]);
+
+  const { backlogs, inDock, inProgress } = totals;
+
+  if (isPending || backlogs === 0) {
+    return <div className="bg-white rounded-xl p-4">Loading...</div>;
+  }
+
+  const chartData = [
+    {
+      name: "Backlogs",
+      "In-Progress": inProgress,
+      "In-Dock": inDock,
+    },
+  ];
+
   return (
     <div className="bg-white rounded-xl w-full h-full p-4">
-      {/* TITLE */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-lg text-slate-600 font-semibold">Students</h1>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-lg text-slate-600 font-semibold">SO Backlogs</h1>
         <Image src="/images/moreDark.png" alt="" width={20} height={20} />
       </div>
-      {/* CHART */}
-      <div className="relative w-full h-[75%]">
-        <ResponsiveContainer>
-          <RadialBarChart
-            cx="50%"
-            cy="50%"
-            innerRadius="40%"
-            outerRadius="100%"
-            barSize={32}
-            data={data}
-          >
-            <RadialBar background dataKey="count" />
-          </RadialBarChart>
-        </ResponsiveContainer>
-        <Image
-          src="/images/maleFemale.png"
-          alt=""
-          width={50}
-          height={50}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-        />
-      </div>
-      {/* BOTTOM */}
-      <div className="flex justify-center gap-16">
-        <div className="flex flex-col gap-1">
-          <div className="w-5 h-5 bg-[#74bdcb] rounded-full" />
-          <h1 className="font-bold text-slate-600">1,234</h1>
-          <h2 className="text-xs text-slate-600">Boys (55%)</h2>
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="w-5 h-5 bg-[#fbe698] rounded-full" />
-          <h1 className="font-bold text-slate-600">1,234</h1>
-          <h2 className="text-xs text-slate-600">Girls (45%)</h2>
+
+      {/* Chart */}
+      <ResponsiveContainer width="100%" height={250}>
+        <BarChart
+          data={chartData}
+          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" axisLine={false} tickLine={false} />
+          <YAxis allowDecimals={false} />
+          <Tooltip formatter={(value: number) => value.toLocaleString()} />
+          <Legend verticalAlign="top" height={36} />
+          <Bar
+            dataKey="In-Progress"
+            stackId="a"
+            fill="#FF6B6B"
+            name="In-Progress"
+            animationDuration={900}
+          ></Bar>
+          <Bar
+            dataKey="In-Dock"
+            stackId="a"
+            fill="#4ECDC4"
+            name="In-Dock"
+            animationDuration={900}
+          ></Bar>
+        </BarChart>
+      </ResponsiveContainer>
+
+      {/* Summary */}
+      <div className="flex justify-center mt-4">
+        <div className="text-center">
+          <p className="text-sm text-slate-500">Total Backlogs</p>
+          <p className="font-bold text-slate-700 text-xl">
+            {backlogs.toLocaleString()}
+          </p>
         </div>
       </div>
     </div>
