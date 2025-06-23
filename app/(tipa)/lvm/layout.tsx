@@ -2,6 +2,7 @@ import MenuPage from "@/components/menu";
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import Link from "next/link";
+import QueryProvider from "@/lib/QueryProvider"
 
 export default function TipaLayout({
   children,
@@ -26,13 +27,14 @@ export default function TipaLayout({
             TipaWeb
           </span>
         </Link>
-        <MenuPage />
+                {/* Sidebar Menu */}
+        <MenuPage  />
       </div>
       {/* Main content area */}
       <div className="w-[86%] md:w-[92%] lg:w-[84%] xl:w-[86%] bg-gray-100 p-2 overflow-scroll">
         <Navbar />
 
-        {children}
+        <QueryProvider>{children}</QueryProvider>
       </div>
     </div>
   );

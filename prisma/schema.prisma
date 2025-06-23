@@ -1,0 +1,33 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String  @id @default(cuid())
+  tipaId         String  @unique
+  role           String  @default("USER")
+  name           String?
+  hashedPassword String
+  email          String  @unique
+  image          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SOPeriodBacklog {
+  id           String   @id @default(cuid())
+  week         String // e.g. "2024-W23"
+  customerId   String
+  customerName String
+  business     String
+  backlogs     Float
+  inDock       Float
+  inProgress   Float
+  recordedAt   DateTime @default(now())
+}

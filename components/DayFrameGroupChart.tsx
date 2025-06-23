@@ -1,0 +1,230 @@
+"use client";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
+import { useEffect, useState } from "react";
+
+type FrameGroupCount = {
+  frame: string;
+  count: number;
+};
+
+export default function DayFrameGroupChart() {
+  const [chartData, setChartData] = useState<FrameGroupCount[]>([]);
+  const [othersBreakdown, setOthersBreakdown] = useState<FrameGroupCount[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(false);
+      const res = await fetch("http://10.116.2.72:5002/api/wo-comp-query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ range_type: "day" }),
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch data");
+
+      const result = await res.json();
+      const raw = result.frame_group_count || [];
+
+      const processed = raw.map((d: any) => ({
+        frame: d.frame ?? "Others",
+        count: d.count,
+      }));
+
+      const topN = 8;
+      const sorted = [...processed].sort((a, b) => b.count - a.count);
+      const top = sorted.slice(0, topN);
+      const others = sorted.slice(topN);
+      const othersCount = others.reduce((sum, d) => sum + d.count, 0);
+
+      const reduced =
+        othersCount > 0
+          ? [...top, { frame: "Others", count: othersCount }]
+          : top;
+
+      setChartData(reduced);
+      setOthersBreakdown(others);
+      setTotal(result.total || 0);
+    } catch (err) {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadAndSchedule = async () => {
+      await fetchData();
+      setInterval(fetchData, 5 * 60 * 1000);
+    };
+    loadAndSchedule();
+  }, []);
+
+  const handleBarClick = (data: any) => {
+    if (data.frame === "Others") {
+      setShowModal(true);
+    }
+  };
+
+  const colorPalette = [
+    "#3b82f6", // blue
+    "#10b981", // emerald
+    "#f59e0b", // amber
+    "#8b5cf6", // violet
+    "#ef4444", // red
+    "#14b8a6", // teal
+    "#6366f1", // indigo
+    "#eab308", // yellow
+    "#ec4899", // pink
+    "#22c55e", // green
+  ];
+
+  const getBarColor = (frame: string, index: number) => {
+    if (frame === "Others") return "#ea580c"; // orange-600
+    return colorPalette[index % colorPalette.length];
+  };
+
+  const exportCSV = () => {
+    const headers = ["Frame", "Count"];
+    const rows = othersBreakdown.map((d) => [d.frame, d.count]);
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((v) => `"${v}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `others_breakdown_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="bg-white rounded-lg p-4 shadow relative">
+      {/* Centered Total Count Label */}
+
+      <div className="flex justify-center items-center gap-2 mb-3">
+        <h2 className="text-lg font-semibold text-cyan-700">
+          Daily Production by Frame Group (Top 8 + Others)
+        </h2>
+      </div>
+
+      <div className="absolute top-50 left-3/4 -translate-x-1/2 bg-white/90 px-4 py-1 rounded shadow text-center z-10">
+        <p className="text-xs text-gray-500">Total Motors</p>
+        <p className="text-base font-bold text-gray-800">{total}</p>
+        <p className="text-xs text-gray-600">
+          {new Date().toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })}
+        </p>
+      </div>
+
+      {loading ? (
+        <p>Loading chart...</p>
+      ) : error ? (
+        <p className="text-red-500">Failed to load chart data.</p>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={375}>
+            <BarChart
+              data={chartData}
+              layout="vertical"
+              barSize={20}
+              margin={{ top: 20, right: 30, left: 40, bottom: 20 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                horizontal={false}
+                stroke="#ddd"
+              />
+              <XAxis type="number" tick={{ fill: "#6b7280" }} />
+              <YAxis
+                type="category"
+                dataKey="frame"
+                tick={{ fill: "#6b7280", fontSize: 13 }}
+                width={80}
+              />
+              <Tooltip
+                formatter={(val: number) => val.toLocaleString()}
+                labelFormatter={(label: string) => `Frame: ${label}`}
+              />
+              <Bar
+                dataKey="count"
+                radius={[0, 10, 10, 0]}
+                isAnimationActive={true}
+                animationDuration={800}
+                animationEasing="ease-out"
+                cursor="pointer"
+                onClick={(data) => handleBarClick(data.payload)}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={getBarColor(entry.frame, index)}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+
+          {showModal && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-[400px] max-h-[80vh] overflow-y-auto shadow-lg relative">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="absolute top-2 right-3 text-gray-500 hover:text-red-500 text-xl"
+                >
+                  ×
+                </button>
+                <h3 className="text-lg font-semibold mb-4 text-cyan-700">
+                  Others Breakdown
+                </h3>
+                <ul className="space-y-2 text-sm">
+                  {othersBreakdown.map((item, i) => (
+                    <li
+                      key={i}
+                      className="flex justify-between border-b pb-1 text-gray-700"
+                    >
+                      <span>{item.frame}</span>
+                      <span>{item.count.toLocaleString()}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={exportCSV}
+                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Export CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

@@ -88,13 +88,7 @@ export const SidebarLinks = [
         route: "/lvm/other",
         label: "Settings",
         icon: <VscSettingsGear />,
-      },
-      {
-        imgURL: "/assets/other.svg",
-        route: "/lvm/other",
-        label: "Logout",
-        icon: <RiLogoutCircleLine />,
-      },
+      }
     ],
   },
 ];
