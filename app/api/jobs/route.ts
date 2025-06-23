@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.sOPeriodBacklog.createMany({
       data: data.map((item: any) => ({
-        week: "2025-W24",
+        week: weekLabel,
         customerName: item.customer_name,
         customerId: item.customer_id,
         business,
