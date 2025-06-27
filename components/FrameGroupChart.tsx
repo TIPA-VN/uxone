@@ -82,11 +82,11 @@ export default function FrameGroupChart() {
   }, [rangeType, queryClient]);
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow relative">
+    <div className="bg-white rounded-lg p-4 shadow relative min-h-[400px] flex flex-col">
       <div className="flex justify-evenly items-center gap-4 mb-4">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-cyan-700">
-            Production Report
+            Production <span className="hidden lg:inline">Report</span>
           </h2>
           <select
             aria-label="Select time range"
@@ -111,76 +111,86 @@ export default function FrameGroupChart() {
         </button>
       </div>
 
-      {isLoading && <p>Loading chart...</p>}
-      {isError && <p className="text-red-500">Failed to load chart data.</p>}
-      {!isLoading && !isError && chartData.length === 0 && (
-        <p className="text-gray-500 text-center">No data available.</p>
-      )}
-
-      {!isLoading && !isError && chartData.length > 0 && (
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="flex-1 min-w-0 relative">
-            {!showPercentage && (
-              <div className="absolute top-10 left-3 bg-white/90 px-2 py-1 rounded shadow max-w-30 min-w-30 text-left z-10">
-                <p className="text-xs flex justify-center text-gray-600">Total Products</p>
-                <p className="text-lg flex justify-center font-bold text-gray-800">{total}</p>
-              </div>
-            )}
-            <ResponsiveContainer width="90%" height={345}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="label"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  innerRadius={40}
-                  isAnimationActive
-                  label={false}
-                >
-                  {chartData.map((entry, idx) => (
-                    <Cell
-                      key={`cell-${idx}`}
-                      fill={COLORS[idx % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(val: number) =>
-                    showPercentage
-                      ? [`${val}%`, "Percentage"]
-                      : [val.toLocaleString(), "Count"]
-                  }
-                  labelFormatter={(label: string) => `Frame Type: ${label}`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            {/* Centered total label */}
+      <div className="flex-1 flex flex-col justify-center">
+        {isLoading && (
+          <div className="flex-1 flex items-center justify-center">
+            <p>Loading chart...</p>
           </div>
-          <div className="flex-1 max-w-[120px] max-h-[375px] overflow-y-auto">
-            <h3 className="text-base font-semibold mb-2 text-cyan-700">
-              Frames
-            </h3>
-            <ul className="space-y-2 text-sm">
-              {chartData.map((item, idx) => (
-                <li key={item.label} className="flex items-center gap-2">
-                  <span
-                    className="inline-block w-4 h-4 rounded-full"
-                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                  ></span>
-                  <span className="flex-1">{item.label}</span>
-                  <span className="font-semibold text-gray-700">
-                    {showPercentage
-                      ? `${item.value}%`
-                      : Number(item.value).toLocaleString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
+        )}
+        {isError && (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-red-500">Failed to load chart data.</p>
           </div>
-        </div>
-      )}
+        )}
+        {!isLoading && !isError && chartData.length === 0 && (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-gray-500 text-center">No data available.</p>
+          </div>
+        )}
+        {!isLoading && !isError && chartData.length > 0 && (
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex-1 min-w-0 relative">
+              {!showPercentage && (
+                <div className="absolute top-2 left-2 bg-white/90 px-2 py-1 rounded shadow text-left z-10">
+                  <p className="text-xs text-gray-600">Total Products</p>
+                  <p className="text-base font-bold text-gray-800">{total}</p>
+                </div>
+              )}
+              <ResponsiveContainer width="90%" height={375}>
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    dataKey="value"
+                    nameKey="label"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    innerRadius={40}
+                    isAnimationActive
+                    label={false}
+                  >
+                    {chartData.map((entry, idx) => (
+                      <Cell
+                        key={`cell-${idx}`}
+                        fill={COLORS[idx % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(val: number) =>
+                      showPercentage
+                        ? [`${val}%`, "Percentage"]
+                        : [val.toLocaleString(), "Count"]
+                    }
+                    labelFormatter={(label: string) => `Frame Type: ${label}`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 max-w-[120px] max-h-[375px] overflow-y-auto">
+              <h3 className="text-base font-semibold mb-2 text-cyan-700">
+                Frames
+              </h3>
+              <ul className="space-y-2 text-sm">
+                {chartData.map((item, idx) => (
+                  <li key={item.label} className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-4 h-4 rounded-full"
+                      style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                    ></span>
+                    <span className="flex-1">{item.label}</span>
+                    <span className="font-semibold text-gray-700">
+                      {showPercentage
+                        ? `${item.value}%`
+                        : Number(item.value).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

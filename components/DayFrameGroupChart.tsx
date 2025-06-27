@@ -129,14 +129,15 @@ export default function DayFrameGroupChart() {
   }, [othersBreakdown]);
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow relative">
+    <div className="bg-white rounded-lg p-4 shadow relative min-h-[400px] flex flex-col">
       <div className="flex justify-center items-center gap-2 mb-3">
         <h2 className="text-lg font-semibold text-cyan-700">
           Daily Production (Top 10)
         </h2>
       </div>
 
-      <div className="absolute top-50 left-3/4 -translate-x-1/2 bg-white/90 px-4 py-1 min-w-30 rounded shadow text-center z-10">
+      {/* Move total label to top left and keep card full height */}
+      <div className="absolute top-2 left-2 bg-white/90 px-4 py-1 min-w-30 rounded shadow text-left z-10">
         <p className="text-xs text-gray-500">Total Motors</p>
         <p className="text-base font-bold text-gray-800">{total}</p>
         <p className="text-xs text-gray-600">
@@ -148,14 +149,23 @@ export default function DayFrameGroupChart() {
         </p>
       </div>
 
-      {loading ? (
-        <p>Loading chart...</p>
-      ) : error ? (
-        <p className="text-red-500">Failed to load chart data.</p>
-      ) : chartData.length === 0 ? (
-        <p className="text-gray-500 text-center">No data available.</p>
-      ) : (
-        <>
+      <div className="flex-1 flex flex-col justify-center">
+        {loading && (
+          <div className="flex-1 flex items-center justify-center">
+            <p>Loading chart...</p>
+          </div>
+        )}
+        {error && (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-red-500">Failed to load chart data.</p>
+          </div>
+        )}
+        {!loading && !error && chartData.length === 0 && (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-gray-500 text-center">No data available.</p>
+          </div>
+        )}
+        {!loading && !error && chartData.length > 0 && (
           <ResponsiveContainer width="100%" height={375}>
             <BarChart
               data={chartData}
@@ -197,48 +207,48 @@ export default function DayFrameGroupChart() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        )}
+      </div>
 
-          {showModal && (
-            <div
-              className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-              role="dialog"
-              aria-modal="true"
+      {showModal && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto shadow-lg relative">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-2 right-3 text-gray-500 hover:text-red-500 text-xl"
+              aria-label="Close modal"
             >
-              <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto shadow-lg relative">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="absolute top-2 right-3 text-gray-500 hover:text-red-500 text-xl"
-                  aria-label="Close modal"
+              ×
+            </button>
+            <h3 className="text-lg font-semibold mb-4 text-cyan-700">
+              Others Breakdown
+            </h3>
+            <ul className="space-y-2 text-sm">
+              {othersBreakdown.map((item, i) => (
+                <li
+                  key={i}
+                  className="flex justify-between border-b pb-1 text-gray-700"
                 >
-                  ×
-                </button>
-                <h3 className="text-lg font-semibold mb-4 text-cyan-700">
-                  Others Breakdown
-                </h3>
-                <ul className="space-y-2 text-sm">
-                  {othersBreakdown.map((item, i) => (
-                    <li
-                      key={i}
-                      className="flex justify-between border-b pb-1 text-gray-700"
-                    >
-                      <span>{item.frame}</span>
-                      <span>{item.count.toLocaleString()}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={exportCSV}
-                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded text-sm"
-                  >
-                    Export CSV
-                  </button>
-                </div>
-              </div>
+                  <span>{item.frame}</span>
+                  <span>{item.count.toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={exportCSV}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded text-sm"
+              >
+                Export CSV
+              </button>
             </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
     </div>
-  );
-}
+      );
+    }
