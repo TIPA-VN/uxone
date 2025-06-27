@@ -85,7 +85,7 @@ export default function FrameGroupChart() {
     <div className="bg-white rounded-lg p-4 shadow relative min-h-[400px] flex flex-col">
       <div className="flex justify-evenly items-center gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-cyan-700">
+          <h2 className="text-base font-semibold text-cyan-700">
             Production <span className="hidden lg:inline">Report</span>
           </h2>
           <select
@@ -105,7 +105,7 @@ export default function FrameGroupChart() {
         </div>
         <button
           onClick={() => setShowPercentage((prev) => !prev)}
-          className="text-sm bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded"
+          className=" bg-cyan-600 hover:bg-cyan-700 text-white px-2 text-sm py-1 rounded"
         >
           {showPercentage ? "Count" : "Percentage"}
         </button>
