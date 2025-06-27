@@ -68,7 +68,7 @@ export default function CustomerBacklogTrends() {
         const idx = customerOptions.findIndex((c) => c.id === prev);
         return customerOptions[(idx + 1) % customerOptions.length].id;
       });
-    }, 5000);
+    }, 30 * 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -125,8 +125,9 @@ const chartData: BacklogTrendItem[] =
 
       <div>
         <h3 className="font-semibold mb-2 text-indigo-700">
-          {customerOptions.find((c) => c.id === selectedCustomer)?.name} Backlog Trends
+          {customerOptions.find((c) => c.id === selectedCustomer)?.name} 
         </h3>
+        <h3 className="flex justify-center">Backlog Trends</h3>
         {isPending ? (
           <p>Loading...</p>
         ) : error ? (

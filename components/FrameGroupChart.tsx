@@ -74,7 +74,7 @@ export default function FrameGroupChart() {
       });
 
       setTimeout(() => setRangeType(nextRange), 200);
-    },3 * 60 * 1000);
+    }, 60 * 1000);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -120,7 +120,7 @@ export default function FrameGroupChart() {
       {!isLoading && !isError && chartData.length > 0 && (
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 min-w-0 relative">
-            <ResponsiveContainer width="100%" height={375}>
+            <ResponsiveContainer width="90%" height={345}>
               <PieChart>
                 <Pie
                   data={chartData}
@@ -128,8 +128,8 @@ export default function FrameGroupChart() {
                   nameKey="label"
                   cx="50%"
                   cy="50%"
-                  outerRadius={120}
-                  innerRadius={60}
+                  outerRadius={80}
+                  innerRadius={40}
                   isAnimationActive
                   label={false}
                 >

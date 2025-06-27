@@ -159,7 +159,7 @@ export default function DayFrameGroupChart() {
         <p className="text-gray-500 text-center">No data available.</p>
       ) : (
         <>
-          <ResponsiveContainer width="100%" height={375}>
+          <ResponsiveContainer width="90%" height={350}>
             <BarChart
               data={chartData}
               layout="vertical"

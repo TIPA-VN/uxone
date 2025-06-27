@@ -13,21 +13,21 @@ const AdminPage = () => {
           <div className="w-full min-w-[300px] lg:w-1/3 max-h-[500px]">
             <CountChart />
           </div>
-          <div className="w-full min-w-[250px] lg:w-2/3 max-h-[500px]">
+          <div className="w-full min-w-[300px] lg:w-2/3 max-h-[500px]">
             <CustomerBacklogTrends />
           </div>
         </div>
         <div className="flex gap-2 flex-col md:flex-row lg:flex-row">
-          <div className=" min-w-[300px] lg:w-2/5 max-h-[500px]">
+          <div className=" min-w-[350px] lg:max-w-1/4 max-h-[400px]">
             <DayFrameGroupChart />
           </div>
-          <div className=" min-w-[300px] lg:w-3/5 max-h-[500px]">
+          <div className=" min-w-[300px] lg:w-3/4 max-h-[400px]">
             <FrameGroupChart />
           </div>
         </div>
       </div>
       {/* RIGHT */}
-      <div className="w-full lg:w-1/4 md:w-3/4 flex flex-col gap-8">
+      <div className="w-full lg:w-1/4 md:w-1/2 flex flex-col gap-8">
         <CustomerCards />
         <Announcements />
       </div>
