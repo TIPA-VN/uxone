@@ -137,10 +137,10 @@ export default function DayFrameGroupChart() {
       </div>
 
       {/* Move total label to top left and keep card full height */}
-      <div className="absolute top-2 left-2 bg-white/90 px-4 py-1 min-w-30 rounded shadow text-left z-10">
-        <p className="text-xs text-gray-500">Total Motors</p>
-        <p className="text-base font-bold text-gray-800">{total}</p>
-        <p className="text-xs text-gray-600">
+      <div className="absolute top-50 left-60 bg-white/90 px-4 py-1 min-w-30 rounded shadow text-left z-10">
+        <p className="text-xs flex justify-center text-gray-500">Total Motors</p>
+        <p className="text-base flex justify-center font-bold text-gray-800">{total}</p>
+        <p className="text-xs flex justify-center text-gray-600">
           {new Date().toLocaleString("en-US", {
             month: "short",
             day: "numeric",

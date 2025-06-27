@@ -131,9 +131,9 @@ export default function FrameGroupChart() {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1 min-w-0 relative">
               {!showPercentage && (
-                <div className="absolute top-2 left-2 bg-white/90 px-2 py-1 rounded shadow text-left z-10">
-                  <p className="text-xs text-gray-600">Total Products</p>
-                  <p className="text-base font-bold text-gray-800">{total}</p>
+                <div className="absolute top-15 left-20 bg-white/90 px-2 py-1 rounded shadow text-left z-10">
+                  <p className="text-xs flex justify-center text-gray-600">Total Products</p>
+                  <p className="text-base flex justify-center font-bold text-gray-800">{total}</p>
                 </div>
               )}
               <ResponsiveContainer width="90%" height={375}>
