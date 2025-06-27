@@ -80,12 +80,12 @@ export default function CustomerBacklogTrends() {
   }, [selectedCustomer, startWeek, endWeek, mutate]);
 
   // Use only API data for chart
-  const chartData: BacklogTrendItem[] =
-    data?.map((d: any) => ({
-      week: d.week,
-      inDock: d.inDock,
-      inProgress: d.inProgress,
-    })) ?? [];
+const chartData: BacklogTrendItem[] =
+  data?.map((d: BacklogTrendItem) => ({
+    week: d.week,
+    inDock: d.inDock,
+    inProgress: d.inProgress,
+  })) ?? [];
 
   return (
     <div className="bg-white p-4 rounded-xl w-full h-full">

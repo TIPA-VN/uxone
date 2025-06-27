@@ -21,6 +21,19 @@ type RawFrameGroupCount = {
   count: number;
 };
 
+const colorPalette = [
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ef4444",
+  "#14b8a6",
+  "#6366f1",
+  "#eab308",
+  "#ec4899",
+  "#22c55e",
+];
+
 export default function DayFrameGroupChart() {
   const [chartData, setChartData] = useState<FrameGroupCount[]>([]);
   const [othersBreakdown, setOthersBreakdown] = useState<FrameGroupCount[]>([]);
@@ -90,16 +103,12 @@ export default function DayFrameGroupChart() {
     }
   };
 
-  const colorPalette = [
-    "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6",
-    "#ef4444", "#14b8a6", "#6366f1", "#eab308",
-    "#ec4899", "#22c55e",
-  ];
-
   const getBarColor = useCallback(
     (frame: string, index: number) =>
-      frame === "Others" ? "#ea580c" : colorPalette[index % colorPalette.length],
-    [colorPalette]
+      frame === "Others"
+        ? "#ea580c"
+        : colorPalette[index % colorPalette.length],
+    []
   );
 
   const exportCSV = useCallback(() => {

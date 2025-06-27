@@ -141,7 +141,7 @@ export default function FrameGroupChart() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number, name: string, props: any) =>
+                  formatter={(val: number) =>
                     showPercentage
                       ? [`${val}%`, "Percentage"]
                       : [val.toLocaleString(), "Count"]
