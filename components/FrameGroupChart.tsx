@@ -120,6 +120,12 @@ export default function FrameGroupChart() {
       {!isLoading && !isError && chartData.length > 0 && (
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 min-w-0 relative">
+            {!showPercentage && (
+              <div className="absolute top-15 left-3 bg-white/90 px-2 py-1 rounded shadow text-left z-10">
+                <p className="text-xs text-gray-600">Total Products</p>
+                <p className="text-base font-bold text-gray-800">{total}</p>
+              </div>
+            )}
             <ResponsiveContainer width="90%" height={345}>
               <PieChart>
                 <Pie
@@ -151,14 +157,6 @@ export default function FrameGroupChart() {
               </PieChart>
             </ResponsiveContainer>
             {/* Centered total label */}
-            {!showPercentage && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <div className="bg-white/90 px-4 py-1 rounded shadow text-center">
-                  <p className="text-xs text-gray-600">Total Motors</p>
-                  <p className="text-lg font-bold text-gray-800">{total}</p>
-                </div>
-              </div>
-            )}
           </div>
           <div className="flex-1 max-w-[100px] max-h-[375px] overflow-y-auto">
             <h3 className="text-base font-semibold mb-2 text-cyan-700">
