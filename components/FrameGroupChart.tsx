@@ -107,7 +107,7 @@ export default function FrameGroupChart() {
           onClick={() => setShowPercentage((prev) => !prev)}
           className="text-sm bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded"
         >
-          {showPercentage ? "Show Count" : "Show Percentage"}
+          {showPercentage ? "Count" : "Percentage"}
         </button>
       </div>
 
@@ -121,9 +121,9 @@ export default function FrameGroupChart() {
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 min-w-0 relative">
             {!showPercentage && (
-              <div className="absolute top-15 left-3 bg-white/90 px-2 py-1 rounded shadow text-left z-10">
-                <p className="text-xs text-gray-600">Total Products</p>
-                <p className="text-base font-bold text-gray-800">{total}</p>
+              <div className="absolute top-10 left-3 bg-white/90 px-2 py-1 rounded shadow max-w-30 min-w-30 text-left z-10">
+                <p className="text-xs flex justify-center text-gray-600">Total Products</p>
+                <p className="text-lg flex justify-center font-bold text-gray-800">{total}</p>
               </div>
             )}
             <ResponsiveContainer width="90%" height={345}>
@@ -158,7 +158,7 @@ export default function FrameGroupChart() {
             </ResponsiveContainer>
             {/* Centered total label */}
           </div>
-          <div className="flex-1 max-w-[100px] max-h-[375px] overflow-y-auto">
+          <div className="flex-1 max-w-[120px] max-h-[375px] overflow-y-auto">
             <h3 className="text-base font-semibold mb-2 text-cyan-700">
               Frames
             </h3>

@@ -39,10 +39,14 @@ function getISOWeekString(date: Date) {
   // Thursday in current week decides the year
   tempDate.setDate(tempDate.getDate() + 3 - ((tempDate.getDay() + 6) % 7));
   const week1 = new Date(tempDate.getFullYear(), 0, 4);
-  const weekNo = 1 + Math.round(
-    ((tempDate.getTime() - week1.getTime()) / 86400000
-      - 3 + ((week1.getDay() + 6) % 7)) / 7
-  );
+  const weekNo =
+    1 +
+    Math.round(
+      ((tempDate.getTime() - week1.getTime()) / 86400000 -
+        3 +
+        ((week1.getDay() + 6) % 7)) /
+        7
+    );
   return `${year}-W${String(weekNo).padStart(2, "0")}`;
 }
 
@@ -54,7 +58,9 @@ export default function CustomerBacklogTrends() {
   const nextWeek = new Date(today);
   nextWeek.setDate(today.getDate() + 7);
 
-  const [selectedCustomer, setSelectedCustomer] = useState<string>(customerOptions[0].id);
+  const [selectedCustomer, setSelectedCustomer] = useState<string>(
+    customerOptions[0].id
+  );
   const [startWeek, setStartWeek] = useState(getISOWeekString(fourWeeksAgo));
   const [endWeek, setEndWeek] = useState(getISOWeekString(nextWeek));
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -80,27 +86,16 @@ export default function CustomerBacklogTrends() {
   }, [selectedCustomer, startWeek, endWeek, mutate]);
 
   // Use only API data for chart
-const chartData: BacklogTrendItem[] =
-  data?.map((d: BacklogTrendItem) => ({
-    week: d.week,
-    inDock: d.inDock,
-    inProgress: d.inProgress,
-  })) ?? [];
+  const chartData: BacklogTrendItem[] =
+    data?.map((d: BacklogTrendItem) => ({
+      week: d.week,
+      inDock: d.inDock,
+      inProgress: d.inProgress,
+    })) ?? [];
 
   return (
     <div className="bg-white p-4 rounded-xl w-full h-full">
       <div className="flex flex-wrap gap-4 mb-4 items-end">
-        <select
-          value={selectedCustomer}
-          onChange={(e) => setSelectedCustomer(e.target.value)}
-          className="border px-2 py-1 rounded"
-        >
-          {customerOptions.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
         <input
           type="week"
           value={startWeek}
@@ -124,9 +119,20 @@ const chartData: BacklogTrendItem[] =
       </div>
 
       <div>
-        <h3 className="font-semibold mb-2 text-indigo-700">
+        <select
+          value={selectedCustomer}
+          onChange={(e) => setSelectedCustomer(e.target.value)}
+          className="border px-2 py-1 rounded"
+        >
+          {customerOptions.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {/* <h3 className="font-semibold mb-2 text-indigo-700">
           {customerOptions.find((c) => c.id === selectedCustomer)?.name} 
-        </h3>
+        </h3> */}
         <h3 className="flex justify-center">Backlog Trends</h3>
         {isPending ? (
           <p>Loading...</p>
@@ -137,7 +143,7 @@ const chartData: BacklogTrendItem[] =
             No data available for this period.
           </p>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={270}>
             <AreaChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="week" />

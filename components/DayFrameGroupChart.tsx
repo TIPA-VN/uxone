@@ -136,17 +136,14 @@ export default function DayFrameGroupChart() {
         </h2>
       </div>
 
-      <div className="absolute top-50 left-3/4 -translate-x-1/2 bg-white/90 px-4 py-1 rounded shadow text-center z-10">
+      <div className="absolute top-50 left-3/4 -translate-x-1/2 bg-white/90 px-4 py-1 min-w-30 rounded shadow text-center z-10">
         <p className="text-xs text-gray-500">Total Motors</p>
         <p className="text-base font-bold text-gray-800">{total}</p>
         <p className="text-xs text-gray-600">
           {new Date().toLocaleString("en-US", {
             month: "short",
             day: "numeric",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
+            year: "numeric"
           })}
         </p>
       </div>
