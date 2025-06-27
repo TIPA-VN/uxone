@@ -74,7 +74,7 @@ export default function FrameGroupChart() {
       });
 
       setTimeout(() => setRangeType(nextRange), 200);
-    }, 60 * 1000);
+    },3 * 60 * 1000);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -160,9 +160,9 @@ export default function FrameGroupChart() {
               </div>
             )}
           </div>
-          <div className="flex-1 max-w-[150px] max-h-[375px] overflow-y-auto">
+          <div className="flex-1 max-w-[100px] max-h-[375px] overflow-y-auto">
             <h3 className="text-base font-semibold mb-2 text-cyan-700">
-              Frame Group Details
+              Frames
             </h3>
             <ul className="space-y-2 text-sm">
               {chartData.map((item, idx) => (

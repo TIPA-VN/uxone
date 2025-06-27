@@ -17,11 +17,11 @@ const AdminPage = () => {
             <CustomerBacklogTrends />
           </div>
         </div>
-        <div className="flex gap-2 flex-col lg:flex-row">
-          <div className="w-full min-w-[450px] md:w-2/5 lg:w-2/5 max-h-[500px]">
+        <div className="flex gap-2 flex-col md:flex-row lg:flex-row">
+          <div className=" min-w-[300px] lg:w-2/5 max-h-[500px]">
             <DayFrameGroupChart />
           </div>
-          <div className="w-full min-w-[450px] md:w-3/5 lg:w-3/5 max-h-[500px]">
+          <div className=" min-w-[300px] lg:w-3/5 max-h-[500px]">
             <FrameGroupChart />
           </div>
         </div>

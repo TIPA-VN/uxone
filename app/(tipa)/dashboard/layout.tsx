@@ -7,8 +7,6 @@ export default function TipaLayout({
 }>) {
   return (
     <div className="h-screen flex ">
-      
-
       {/* Main content area */}
       <div className=" bg-gray-100 p-2 overflow-scroll">
         <QueryProvider>{children}</QueryProvider>
