@@ -160,7 +160,7 @@ export default function FrameGroupChart() {
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0 max-h-[375px] overflow-y-auto">
+          <div className="flex-1 max-w-[150px] max-h-[375px] overflow-y-auto">
             <h3 className="text-base font-semibold mb-2 text-cyan-700">
               Frame Group Details
             </h3>

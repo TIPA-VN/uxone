@@ -20,7 +20,7 @@ const AdminPage = () => {
           </div>
         </div>
         {/* BOTTOM CHART */}
-        <div className="flex gap-4 flex-col lg:flex-row">
+        <div className="flex gap-4 md:flex-row lg:flex-row">
           <div className="w-full min-w-[250px] lg:w-1/2 h-[300px]">
             <DayFrameGroupChart />
           </div>
@@ -29,10 +29,10 @@ const AdminPage = () => {
           </div>
         </div>
       </div>
-
       {/* RIGHT */}
       <div className="w-full lg:w-1/3 flex flex-col gap-8">
         <CustomerCards />
+
         <Announcements />
       </div>
     </div>

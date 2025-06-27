@@ -8,30 +8,26 @@ const AdminPage = () => {
   return (
     <div className="p-4 flex gap-4 flex-col md:flex-row">
       {/* LEFT */}
-      <div className="w-full lg:w-2/3 flex flex-col gap-8">
-        {/* MIDDLE CHARTS */}
-        <div className="flex gap-4 flex-col lg:flex-row">
-          {/* COUNT CHART */}
-          <div className="w-full min-w-[300px] lg:w-1/3 h-[450px]">
+      <div className="w-full lg:w-3/4 flex flex-col gap-8">
+        <div className="flex gap-2 flex-col lg:flex-row">
+          <div className="w-full min-w-[300px] lg:w-1/3 max-h-[500px]">
             <CountChart />
           </div>
-          <div className="w-full min-w-[250px] lg:w-2/3 h-[450px]">
+          <div className="w-full min-w-[250px] lg:w-2/3 max-h-[500px]">
             <CustomerBacklogTrends />
           </div>
         </div>
-        {/* BOTTOM CHART */}
-        <div className="flex gap-4 flex-col lg:flex-row">
-          <div className="w-full min-w-[250px] lg:w-1/2 h-[300px]">
+        <div className="flex gap-2 flex-col lg:flex-row">
+          <div className="w-full min-w-[350px] lg:w-1/2 max-h-[500px]">
             <DayFrameGroupChart />
           </div>
-          <div className="w-full min-w-[250px] lg:w-1/2 h-[300px]">
+          <div className="w-full min-w-[450px] lg:w-1/2 max-h-[500px]">
             <FrameGroupChart />
           </div>
         </div>
       </div>
-
       {/* RIGHT */}
-      <div className="w-full lg:w-1/3 flex flex-col gap-8">
+      <div className="w-full lg:w-1/4 flex flex-col gap-8">
         <CustomerCards />
         <Announcements />
       </div>

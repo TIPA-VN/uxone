@@ -132,7 +132,7 @@ export default function DayFrameGroupChart() {
     <div className="bg-white rounded-lg p-4 shadow relative">
       <div className="flex justify-center items-center gap-2 mb-3">
         <h2 className="text-lg font-semibold text-cyan-700">
-          Daily Production by Frame Group (Top 10)
+          Daily Production (Top 10)
         </h2>
       </div>
 
