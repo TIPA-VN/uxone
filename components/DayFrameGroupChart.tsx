@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 
 type FrameGroupCount = {
   frame: string;
@@ -29,7 +29,10 @@ export default function DayFrameGroupChart() {
   const [error, setError] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  const fetchData = async () => {
+  // Store interval id to clear on unmount
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(false);
@@ -51,7 +54,7 @@ export default function DayFrameGroupChart() {
         count: d.count,
       }));
 
-      const topN = 8;
+      const topN = 10;
       const sorted = [...processed].sort((a, b) => b.count - a.count);
       const top = sorted.slice(0, topN);
       const others = sorted.slice(topN);
@@ -71,15 +74,15 @@ export default function DayFrameGroupChart() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    const loadAndSchedule = async () => {
-      await fetchData();
-      setInterval(fetchData, 5 * 60 * 1000);
+    fetchData();
+    intervalRef.current = setInterval(fetchData, 5 * 60 * 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-    loadAndSchedule();
-  }, []);
+  }, [fetchData]);
 
   const handleBarClick = (data: FrameGroupCount) => {
     if (data.frame === "Others") {
@@ -93,10 +96,13 @@ export default function DayFrameGroupChart() {
     "#ec4899", "#22c55e",
   ];
 
-  const getBarColor = (frame: string, index: number) =>
-    frame === "Others" ? "#ea580c" : colorPalette[index % colorPalette.length];
+  const getBarColor = useCallback(
+    (frame: string, index: number) =>
+      frame === "Others" ? "#ea580c" : colorPalette[index % colorPalette.length],
+    [colorPalette]
+  );
 
-  const exportCSV = () => {
+  const exportCSV = useCallback(() => {
     const headers = ["Frame", "Count"];
     const rows = othersBreakdown.map((d) => [d.frame, d.count]);
     const csvContent = [headers, ...rows]
@@ -111,13 +117,13 @@ export default function DayFrameGroupChart() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, [othersBreakdown]);
 
   return (
     <div className="bg-white rounded-lg p-4 shadow relative">
       <div className="flex justify-center items-center gap-2 mb-3">
         <h2 className="text-lg font-semibold text-cyan-700">
-          Daily Production by Frame Group (Top 8 + Others)
+          Daily Production by Frame Group (Top 10)
         </h2>
       </div>
 
@@ -140,6 +146,8 @@ export default function DayFrameGroupChart() {
         <p>Loading chart...</p>
       ) : error ? (
         <p className="text-red-500">Failed to load chart data.</p>
+      ) : chartData.length === 0 ? (
+        <p className="text-gray-500 text-center">No data available.</p>
       ) : (
         <>
           <ResponsiveContainer width="100%" height={375}>
@@ -185,11 +193,16 @@ export default function DayFrameGroupChart() {
           </ResponsiveContainer>
 
           {showModal && (
-            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-[400px] max-h-[80vh] overflow-y-auto shadow-lg relative">
+            <div
+              className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto shadow-lg relative">
                 <button
                   onClick={() => setShowModal(false)}
                   className="absolute top-2 right-3 text-gray-500 hover:text-red-500 text-xl"
+                  aria-label="Close modal"
                 >
                   ×
                 </button>
