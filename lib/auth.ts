@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import Credentials from "next-auth/providers/credentials";
 import { ZodError } from "zod";
 import { signInSchema } from "@/lib/zod";
-import { verifyPassword, saltAndHashPassword } from "@/lib/hashPassword";
+import { verifyPassword } from "@/lib/hashPassword";
 import type { Session, User } from "next-auth";
 import { JWT } from "next-auth/jwt";
 

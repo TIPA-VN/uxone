@@ -4,7 +4,6 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { saltAndHashPassword } from "@/lib/hashPassword";
 
 export default function SignInPage() {
   const router = useRouter();
