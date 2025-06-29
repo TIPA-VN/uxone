@@ -64,7 +64,7 @@ export default function FrameGroupChart() {
       queryClient.prefetchQuery({
         queryKey: ["wo-components", nextRange],
         queryFn: async () => {
-          const res = await fetch("http://10.116.2.72:5002/api/wo-comp-query", {
+          const res = await fetch("http://10.116.2.72:8091/api/wo-comp-query", {
             method: "POST",
             body: JSON.stringify({ range_type: nextRange }),
             headers: { "Content-Type": "application/json" },
