@@ -1,11 +1,8 @@
-import React from 'react'
+import { saltAndHashPassword } from "@/lib/hashPassword";
+import React from "react";
 
 const HomePage = () => {
-  return (
-    <div>
-      HomePage
-    </div>
-  )
-}
+  return <div>HomePage</div>;
+};
 
-export default HomePage
+export default HomePage;

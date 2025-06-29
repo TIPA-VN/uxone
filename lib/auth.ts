@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import Credentials from "next-auth/providers/credentials";
 import { ZodError } from "zod";
 import { signInSchema } from "@/lib/zod";
-import { verifyPassword } from "@/lib/hashPassword";
+import { verifyPassword, saltAndHashPassword } from "@/lib/hashPassword";
 import type { Session, User } from "next-auth";
 import { JWT } from "next-auth/jwt";
 
@@ -27,6 +27,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (!user) return null;
+
 
           const passwordValid = await verifyPassword(
             password,
