@@ -5,7 +5,7 @@ export const useWOComponents = (rangeType: "day" | "week" | "month") =>
   useQuery({
     queryKey: ["wo-components", rangeType],
     queryFn: async () => {
-      const res = await fetch("http://10.116.2.72:5002/api/wo-comp-query", {
+      const res = await fetch("http://10.116.2.72:8091/api/wo-comp-query", {
         method: "POST",
         body: JSON.stringify({ range_type: rangeType }),
         headers: { "Content-Type": "application/json" },

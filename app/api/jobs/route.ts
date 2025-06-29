@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     const res = await fetch(
-      "http://10.116.2.72:5002/api/per-customer-backlogs",
+      "http://10.116.2.72:8091/api/per-customer-backlogs",
       {
         method: "POST",
         body: JSON.stringify({ business }),
