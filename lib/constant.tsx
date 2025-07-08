@@ -24,18 +24,16 @@ export const SidebarLinks = [
         icon: <ImBooks />,
       },
       {
-        route: "/lvm/planning",
+        route: "/lvm/pc",
         label: "Planning",
         icon: <ImCalendar />,
       },
       {
-        imgURL: "/assets/heart.svg",
         route: "/lvm/logistics",
         label: "Logistics",
         icon: <GiCargoShip />,
       },
       {
-        imgURL: "/assets/heart.svg",
         route: "/lvm/purchasing",
         label: "Purchasing",
         icon: <BsCart4 />,
