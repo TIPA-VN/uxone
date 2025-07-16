@@ -1,0 +1,279 @@
+
+## Enhanced JDE Server - Complete JSON Reference
+
+## Enhanced Sales Order Data Model
+
+With the comprehensive F4211 table structure, your JSON responses now include much richer data:
+
+### Complete Sales Order Line Item Object
+```json
+{
+  // Core identification
+  "so_number": 14082,
+  "order_type": "S1",
+  "business_unit": "M30",
+  "company_code": "M30",
+  "line_number": 1.0,
+  
+  // Customer information
+  "sold_to": 123456,
+  "ship_to": 123457,
+  
+  // Item information
+  "item_code": 98765,
+  "item_name": "MOTOR-V8-350",
+  "description1": "V8 350HP Motor Assembly",
+  "description2": "Premium Performance Package",
+  
+  // Quantities and measures
+  "quantity_ordered": 2.0,
+  "quantity_shipped": 1.0,
+  "quantity_backordered": 1.0,
+  "quantity_cancelled": 0.0,
+  "unit_of_measure": "EA",
+  
+  // Pricing information
+  "unit_price": 5500.0,
+  "unit_cost": 4200.0,
+  "extended_price": 11000.0,
+  "extended_cost": 8400.0,
+  "price_effective_date": 125180,
+  "price_effective_date_iso": "2025-06-29",
+  
+  // Status information
+  "next_status": "520",
+  "last_status": "510",
+  "number_of_changes": 3,
+  
+  // Date information (Julian format + ISO conversion)
+  "order_date": 125195,
+  "order_date_iso": "2025-07-14",
+  "requested_date": 125200,
+  "requested_date_iso": "2025-07-19",
+  "promised_date": 125205,
+  "promised_date_iso": "2025-07-24",
+  "original_promise_date": 125202,
+  "original_promise_date_iso": "2025-07-21",
+  
+  // Reference information
+  "reference": "PO-2025-0847",
+  "reference_number": "CUSTOMER-PO-12345",
+  
+  // Business information
+  "payment_terms_code": "N30",
+  "transaction_originator": "SALES01",
+  "fiscal_year": 25,
+  
+  // Customer object (when include_customer=True)
+  "customer": {
+    "address_number": 123456,
+    "name": "ACME MOTORS INC",
+    "search_type": "C",
+    "business_unit": "M30"
+  }
+}
+```
+
+## Tool Examples with Enhanced Data
+
+### 1. get_sales_order - Enhanced Response
+
+**Input:**
+```json
+{
+  "tool": "get_sales_order",
+  "arguments": {
+    "so_number": 14082,
+    "order_type": "S1", 
+    "company_code": "M30"
+  }
+}
+```
+
+**Enhanced Response:**
+```json
+{
+  "so_number": 14082,
+  "order_type": "S1",
+  "company_code": "M30",
+  "line_count": 2,
+  "customer": {
+    "address_number": 123456,
+    "name": "ACME MOTORS INC",
+    "search_type": "C",
+    "business_unit": "M30"
+  },
+  "order_lines": [
+    {
+      "so_number": 14082,
+      "order_type": "S1",
+      "business_unit": "M30",
+      "company_code": "M30",
+      "line_number": 1.0,
+      "sold_to": 123456,
+      "ship_to": 123457,
+      "item_code": 98765,
+      "item_name": "MOTOR-V8-350",
+      "description1": "V8 350HP Motor Assembly",
+      "description2": "Premium Performance Package",
+      "quantity_ordered": 2.0,
+      "quantity_shipped": 1.0,
+      "quantity_backordered": 1.0,
+      "quantity_cancelled": 0.0,
+      "unit_of_measure": "EA",
+      "unit_price": 5500.0,
+      "unit_cost": 4200.0,
+      "extended_price": 11000.0,
+      "extended_cost": 8400.0,
+      "price_effective_date": 125180,
+      "price_effective_date_iso": "2025-06-29",
+      "next_status": "520",
+      "last_status": "510",
+      "number_of_changes": 3,
+      "order_date": 125195,
+      "order_date_iso": "2025-07-14",
+      "requested_date": 125200,
+      "requested_date_iso": "2025-07-19",
+      "promised_date": 125205,
+      "promised_date_iso": "2025-07-24",
+      "original_promise_date": 125202,
+      "original_promise_date_iso": "2025-07-21",
+      "reference": "PO-2025-0847",
+      "reference_number": "CUSTOMER-PO-12345",
+      "payment_terms_code": "N30",
+      "transaction_originator": "SALES01",
+      "fiscal_year": 25
+    },
+    {
+      "so_number": 14082,
+      "order_type": "S1",
+      "business_unit": "M30",
+      "company_code": "M30",
+      "line_number": 2.0,
+      "sold_to": 123456,
+      "ship_to": 123457,
+      "item_code": 98766,
+      "item_name": "TRANS-AUTO-6SP",
+      "description1": "6-Speed Automatic Transmission",
+      "description2": "Heavy Duty Performance",
+      "quantity_ordered": 1.0,
+      "quantity_shipped": 1.0,
+      "quantity_backordered": 0.0,
+      "quantity_cancelled": 0.0,
+      "unit_of_measure": "EA",
+      "unit_price": 3200.0,
+      "unit_cost": 2400.0,
+      "extended_price": 3200.0,
+      "extended_cost": 2400.0,
+      "price_effective_date": 125180,
+      "price_effective_date_iso": "2025-06-29",
+      "next_status": "999",
+      "last_status": "560",
+      "number_of_changes": 1,
+      "order_date": 125195,
+      "order_date_iso": "2025-07-14",
+      "requested_date": 125200,
+      "requested_date_iso": "2025-07-19",
+      "promised_date": 125198,
+      "promised_date_iso": "2025-07-17",
+      "original_promise_date": 125198,
+      "original_promise_date_iso": "2025-07-17",
+      "reference": "PO-2025-0847",
+      "reference_number": "CUSTOMER-PO-12345",
+      "payment_terms_code": "N30",
+      "transaction_originator": "SALES01",
+      "fiscal_year": 25
+    }
+  ]
+}
+```
+
+## Enhanced Business Intelligence Capabilities
+
+### Order Analysis Data Points
+With the enhanced model, you can now analyze:
+
+#### **Financial Metrics:**
+- `unit_price` vs `unit_cost` = **Profit Margin**
+- `extended_price` vs `extended_cost` = **Line Profitability**
+- `payment_terms_code` = **Cash Flow Impact**
+
+#### **Operational Metrics:**
+- `quantity_ordered` vs `quantity_shipped` = **Fulfillment Rate**
+- `quantity_backordered` = **Backlog Analysis**
+- `quantity_cancelled` = **Order Cancellation Rate**
+- `number_of_changes` = **Order Stability**
+
+#### **Delivery Performance:**
+- `requested_date` vs `promised_date` = **Promise Variance**
+- `original_promise_date` vs `promised_date` = **Promise Changes**
+- `order_date` to `promised_date` = **Lead Time**
+
+#### **Customer Service:**
+- `ship_to` vs `sold_to` = **Multi-location Customers**
+- `reference_number` = **Customer PO Tracking**
+- `last_status` vs `next_status` = **Process Flow**
+
+### Sample Business Queries You Can Now Answer
+
+#### **Profitability Analysis:**
+```json
+{
+  "query": "get_customer_orders",
+  "analysis": "Calculate profit margins across all customer orders",
+  "formula": "(extended_price - extended_cost) / extended_price * 100"
+}
+```
+
+#### **Delivery Performance:**
+```json
+{
+  "query": "search_orders_by_date_range", 
+  "analysis": "On-time delivery performance",
+  "formula": "promised_date <= requested_date"
+}
+```
+
+#### **Order Fulfillment:**
+```json
+{
+  "query": "get_sales_order",
+  "analysis": "Fulfillment rate by line",
+  "formula": "quantity_shipped / quantity_ordered * 100"
+}
+```
+
+## Status Code Meanings (Motor Manufacturing Context)
+
+### **Typical JDE Status Codes:**
+- **`510`**: Order Entry Complete
+- **`520`**: Credit Check/Hold
+- **`540`**: Released to Warehouse
+- **`560`**: Pick Release
+- **`580`**: Shipped
+- **`999`**: Invoiced/Complete
+
+### **Payment Terms Examples:**
+- **`N30`**: Net 30 days
+- **`N60`**: Net 60 days
+- **`COD`**: Cash on Delivery
+- **`CIA`**: Cash in Advance
+
+## Enhanced Date Fields
+
+All Julian dates now automatically include ISO conversions:
+
+### **Date Field Pairs:**
+- `order_date` → `order_date_iso`
+- `requested_date` → `requested_date_iso`
+- `promised_date` → `promised_date_iso`
+- `original_promise_date` → `original_promise_date_iso`
+- `price_effective_date` → `price_effective_date_iso`
+
+### **Business Rules:**
+- **Order Date**: When the order was entered
+- **Requested Date**: When customer wants delivery
+- **Promised Date**: When you committed to deliver
+- **Original Promise Date**: First delivery commitment (tracks changes)
+
+This enhanced data model provides comprehensive motor manufacturing business intelligence with detailed financial, operational, and delivery metrics! 🚀
