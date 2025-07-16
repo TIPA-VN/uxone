@@ -18,6 +18,8 @@ interface ApiResponse {
   data?: TableData;
 }
 
+const CS_AGENT_URL = process.env.NEXT_PUBLIC_CS_AGENT_URL || 'http://10.116.2.72:5678/webhook/cs-agent-prompt'//
+
 type ApiResponseArray = ApiResponse[];
 
 type TableData = Record<string, unknown>[] | Record<string, unknown> | null;
@@ -73,7 +75,7 @@ const SalesAIAgent: React.FC = () => {
   const [inputValue, setInputValue] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [tableData, setTableData] = useState<TableData>(null);
-  const [webhookUrl] = useState<string>('http://10.116.2.72:5678/webhook/cs-agent-prompt');
+  const [webhookUrl] = useState<string>(CS_AGENT_URL);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
