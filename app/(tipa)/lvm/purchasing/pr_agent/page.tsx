@@ -85,7 +85,7 @@ const PopupLauncher: React.FC = () => {
                     isDarkMode: false,
                     tableData: null
                 };
-                this.webhookUrl = 'http://10.116.2.72:5678/webhook-test/pr-agent-prompt';
+                this.webhookUrl = 'http://10.116.2.72:5678/webhook/pr-agent-prompt';
                 this.messagesEndRef = null;
                 this.isInitialized = false;
                 this.eventsbound = false;
