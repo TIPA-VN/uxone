@@ -7,6 +7,8 @@ import { IoHome } from "react-icons/io5";
 import { LiaPencilRulerSolid, LiaToolsSolid } from "react-icons/lia";
 import { MdEngineering } from "react-icons/md";
 import { VscSettingsGear } from "react-icons/vsc";
+import { RiCustomerService2Fill } from "react-icons/ri";
+
 
 export const SidebarLinks = [
   {
@@ -24,9 +26,9 @@ export const SidebarLinks = [
         icon: <ImBooks />,
       },
       {
-        route: "/lvm/pc",
-        label: "Planning",
-        icon: <ImCalendar />,
+        route: "/lvm/cs",
+        label: "Customer Care",
+        icon: <RiCustomerService2Fill />,
       },
       {
         route: "/lvm/logistics",
@@ -37,6 +39,11 @@ export const SidebarLinks = [
         route: "/lvm/purchasing",
         label: "Purchasing",
         icon: <BsCart4 />,
+      },
+            {
+        route: "/lvm/pc",
+        label: "Planning",
+        icon: <ImCalendar />,
       },
       {
         imgURL: "/assets/heart.svg",
