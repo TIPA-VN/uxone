@@ -96,7 +96,7 @@ const SOUploadInterface: React.FC = () => {
 
   // API Configuration
   const API_BASE_URL: string =
-    process.env.NEXT_PUBLIC_API_URL || "http://10.116.2.72:5002";
+    process.env.NEXT_PUBLIC_API_URL || "http://10.116.2.72:8091";
 
   const updateProgress = useCallback((updates: Partial<ProgressState>) => {
     setState((prev) => ({

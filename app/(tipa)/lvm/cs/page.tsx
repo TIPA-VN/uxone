@@ -1,60 +1,64 @@
 'use client';
 import React from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calculator, FileText, Image, Code, Database, LucideIcon } from 'lucide-react';
+import { FaRobot, FaFileAlt, FaImage, FaCode, FaDatabase } from "react-icons/fa";
+import { IconType } from 'react-icons';
 
 interface Tool {
   id: string;
   name: string;
   description: string;
-  icon: LucideIcon; // More specific type
+  icon: IconType; // Changed from LucideIcon to IconType
+  path: string; // Added path property
 }
 
 const tools: Tool[] = [
   {
-    id: 'so_request',
-    name: 'Change Request Date',
-    description: 'Change the request date of work orders',
-    icon: Calculator,
+    id: 'cs-agent',
+    name: 'CS Agent',
+    description: 'Customer Service Agent for handling customer inquiries',
+    icon: FaRobot,
+    path: '/chat/cs-chatbox', // Specify your custom path here
   },
   {
     id: 'generate_wo',
     name: 'Generate WO',
     description: 'Generate work orders from SO',
-    icon: FileText,
+    icon: FaFileAlt, // React Icons equivalent of FileText
+    path: '/tools/generate-wo', // Specify your custom path here
   },
   {
     id: 'image-editor',
     name: 'Image Editor',
     description: 'Edit and process images',
-    icon: Image,
+    icon: FaImage, // React Icons equivalent of Image
+    path: '/tools/image-editor', // Specify your custom path here
   },
   {
     id: 'code-editor',
     name: 'Code Editor',
     description: 'Write and edit code',
-    icon: Code,
+    icon: FaCode, // React Icons equivalent of Code
+    path: '/tools/code-editor', // Specify your custom path here
   },
   {
     id: 'data-analyzer',
     name: 'Data Analyzer',
     description: 'Analyze data and create charts',
-    icon: Database,
+    icon: FaDatabase, // React Icons equivalent of Database
+    path: '/tools/data-analyzer', // Specify your custom path here
   },
 ];
 
 export default function ToolSelectionPage() {
-  const router = useRouter();
-
-  const handleToolClick = (toolId: string) => {
-    router.push(`./tools/${toolId}`);
+  const handleToolClick = (path: string) => {
+    window.open(path, '_blank', 'noopener,noreferrer');
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent, toolId: string) => {
+  const handleKeyDown = (event: React.KeyboardEvent, path: string) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      handleToolClick(toolId);
+      handleToolClick(path);
     }
   };
 
@@ -70,10 +74,10 @@ export default function ToolSelectionPage() {
           const IconComponent = tool.icon;
           return (
             <Card 
-              key={tool.id} 
+              key={tool.id}
               className="cursor-pointer hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-              onClick={() => handleToolClick(tool.id)}
-              onKeyDown={(e) => handleKeyDown(e, tool.id)}
+              onClick={() => handleToolClick(tool.path)}
+              onKeyDown={(e) => handleKeyDown(e, tool.path)}
               tabIndex={0}
               role="button"
               aria-label={`Select ${tool.name} tool`}
