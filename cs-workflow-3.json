@@ -1,0 +1,274 @@
+{
+  "name": "Order Issue Monitoring",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "monitoring-trigger",
+      "name": "Every 2 Hours",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:4040/agent/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"question\": \"What orders are overdue, stuck, or have critical issues?\",\n  \"context\": {\n    \"task_type\": \"monitoring\",\n    \"urgency\": \"high\",\n    \"automated\": true,\n    \"check_types\": [\"overdue\", \"stuck\", \"shipping_issues\", \"payment_issues\"]\n  }\n}",
+        "options": {}
+      },
+      "id": "check-issues",
+      "name": "Check for Issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "confidence-check",
+              "leftValue": "={{ $json.confidence }}",
+              "rightValue": 0.7,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "issue-keywords",
+              "leftValue": "={{ $json.answer }}",
+              "rightValue": "overdue|urgent|critical|stuck|issue|problem|delay",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "evaluate-severity",
+      "name": "Issues Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Analyze the issues and categorize by severity\nconst issueData = $input.first().json;\nconst answer = issueData.answer || '';\nconst confidence = issueData.confidence || 0;\n\n// Determine severity based on keywords\nlet severity = 'low';\nif (answer.toLowerCase().includes('critical') || answer.toLowerCase().includes('urgent')) {\n  severity = 'critical';\n} else if (answer.toLowerCase().includes('overdue') || answer.toLowerCase().includes('stuck')) {\n  severity = 'high';\n} else if (answer.toLowerCase().includes('delay') || answer.toLowerCase().includes('issue')) {\n  severity = 'medium';\n}\n\n// Extract any order numbers mentioned\nconst orderMatches = answer.match(/order[s]?\\s*#?(\\d+)/gi) || [];\nconst orderNumbers = orderMatches.map(match => {\n  const num = match.match(/\\d+/);\n  return num ? parseInt(num[0]) : null;\n}).filter(Boolean);\n\n// Create alert data\nconst alertData = {\n  timestamp: new Date().toISOString(),\n  severity: severity,\n  confidence: confidence,\n  issue_description: answer,\n  affected_orders: orderNumbers,\n  alert_id: `ALERT_${Date.now()}`,\n  requires_immediate_action: severity === 'critical',\n  \n  // Format for different notification channels\n  notifications: {\n    slack: {\n      color: severity === 'critical' ? '#ff0000' : severity === 'high' ? '#ff8800' : '#ffaa00',\n      emoji: severity === 'critical' ? '🚨' : severity === 'high' ? '⚠️' : '📋',\n      title: `${severity.toUpperCase()} Order Issues Detected`\n    },\n    email: {\n      priority: severity === 'critical' ? 'High' : 'Normal',\n      subject: `${severity.toUpperCase()}: Order Monitoring Alert`\n    }\n  }\n};\n\nreturn alertData;"
+      },
+      "id": "analyze-severity",
+      "name": "Analyze Issue Severity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"text\": \"{{ $json.notifications.slack.emoji }} {{ $json.notifications.slack.title }}\",\n  \"attachments\": [\n    {\n      \"color\": \"{{ $json.notifications.slack.color }}\",\n      \"fields\": [\n        {\n          \"title\": \"Severity\",\n          \"value\": \"{{ $json.severity.toUpperCase() }}\",\n          \"short\": true\n        },\n        {\n          \"title\": \"Confidence\",\n          \"value\": \"{{ Math.round($json.confidence * 100) }}%\",\n          \"short\": true\n        },\n        {\n          \"title\": \"Affected Orders\",\n          \"value\": \"{{ $json.affected_orders.length > 0 ? $json.affected_orders.join(', ') : 'Multiple/Unknown' }}\",\n          \"short\": true\n        },\n        {\n          \"title\": \"Alert ID\",\n          \"value\": \"{{ $json.alert_id }}\",\n          \"short\": true\n        },\n        {\n          \"title\": \"Issue Description\",\n          \"value\": \"{{ $json.issue_description }}\",\n          \"short\": false\n        }\n      ],\n      \"footer\": \"Order Monitoring System\",\n      \"ts\": {{ Math.floor(Date.now() / 1000) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "send-slack-alert",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "critical-check",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        }
+      },
+      "id": "check-critical",
+      "name": "Critical Issue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "alerts@yourcompany.com",
+        "toEmail": "management@yourcompany.com,operations@yourcompany.com",
+        "subject": "🚨 CRITICAL: {{ $json.notifications.email.subject }}",
+        "emailFormat": "html",
+        "html": "=<h2 style=\"color: #ff0000;\">🚨 CRITICAL ORDER ISSUE DETECTED</h2>\n\n<p><strong>Alert ID:</strong> {{ $json.alert_id }}</p>\n<p><strong>Severity:</strong> {{ $json.severity.toUpperCase() }}</p>\n<p><strong>Confidence:</strong> {{ Math.round($json.confidence * 100) }}%</p>\n<p><strong>Detection Time:</strong> {{ $json.timestamp }}</p>\n\n<h3>Issue Description:</h3>\n<p>{{ $json.issue_description }}</p>\n\n<h3>Affected Orders:</h3>\n<p>{{ $json.affected_orders.length > 0 ? $json.affected_orders.join(', ') : 'Multiple or unknown orders affected' }}</p>\n\n<h3>Immediate Actions Required:</h3>\n<ul>\n<li>Review affected orders immediately</li>\n<li>Contact customers if necessary</li>\n<li>Coordinate with operations team</li>\n<li>Update order status as needed</li>\n</ul>\n\n<p><em>This is an automated alert from the Order Monitoring System.</em></p>",
+        "options": {}
+      },
+      "id": "send-critical-email",
+      "name": "Send Critical Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1340, 150]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:4040/alerts/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ $json }}",
+        "options": {}
+      },
+      "id": "log-alert",
+      "name": "Log Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Every 2 Hours": {
+      "main": [
+        [
+          {
+            "node": "Check for Issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Issues": {
+      "main": [
+        [
+          {
+            "node": "Issues Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Issues Found?": {
+      "main": [
+        [
+          {
+            "node": "Analyze Issue Severity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Analyze Issue Severity": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Critical Issue?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critical Issue?": {
+      "main": [
+        [
+          {
+            "node": "Send Critical Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Critical Email": {
+      "main": [
+        [
+          {
+            "node": "Log Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-07-19T12:00:00.000Z",
+  "versionId": "1"
+}

@@ -8,8 +8,8 @@ interface Tool {
   id: string;
   name: string;
   description: string;
-  icon: IconType; // Changed from LucideIcon to IconType
-  path: string; // Added path property
+  icon: IconType;
+  path: string;
 }
 
 const tools: Tool[] = [
@@ -18,47 +18,66 @@ const tools: Tool[] = [
     name: 'CS Agent',
     description: 'Customer Service Agent for handling customer inquiries',
     icon: FaRobot,
-    path: '/chat/cs-chatbox', // Specify your custom path here
+    path: '/chat/cs-chatbox',
   },
   {
     id: 'generate_wo',
     name: 'Generate WO',
     description: 'Generate work orders from SO',
-    icon: FaFileAlt, // React Icons equivalent of FileText
-    path: '/tools/generate-wo', // Specify your custom path here
+    icon: FaFileAlt,
+    path: '/tools/generate-wo',
   },
   {
     id: 'image-editor',
     name: 'Image Editor',
     description: 'Edit and process images',
-    icon: FaImage, // React Icons equivalent of Image
-    path: '/tools/image-editor', // Specify your custom path here
+    icon: FaImage,
+    path: '/tools/image-editor',
   },
   {
     id: 'code-editor',
     name: 'Code Editor',
     description: 'Write and edit code',
-    icon: FaCode, // React Icons equivalent of Code
-    path: '/tools/code-editor', // Specify your custom path here
+    icon: FaCode,
+    path: '/tools/code-editor',
   },
   {
     id: 'data-analyzer',
     name: 'Data Analyzer',
     description: 'Analyze data and create charts',
-    icon: FaDatabase, // React Icons equivalent of Database
-    path: '/tools/data-analyzer', // Specify your custom path here
+    icon: FaDatabase,
+    path: '/tools/data-analyzer',
   },
 ];
 
 export default function ToolSelectionPage() {
-  const handleToolClick = (path: string) => {
-    window.open(path, '_blank', 'noopener,noreferrer');
+  const handleToolClick = (path: string, toolName: string) => {
+    // Define popup window features
+    const windowFeatures = [
+      'width=1200',
+      'height=800',
+      'scrollbars=yes',
+      'resizable=yes',
+      'toolbar=no',
+      'menubar=no',
+      'location=no',
+      'directories=no',
+      'status=no'
+    ].join(',');
+
+    // Open popup window
+    const popup = window.open(path, `${toolName}_popup`, windowFeatures);
+    
+    // Focus the popup window if it was successfully created
+    if (popup) {
+      popup.focus();
+    }
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent, path: string) => {
+  const handleKeyDown = (event: React.KeyboardEvent, path: string, toolName: string) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      handleToolClick(path);
+      handleToolClick(path, toolName);
     }
   };
 
@@ -76,8 +95,8 @@ export default function ToolSelectionPage() {
             <Card 
               key={tool.id}
               className="cursor-pointer hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-              onClick={() => handleToolClick(tool.path)}
-              onKeyDown={(e) => handleKeyDown(e, tool.path)}
+              onClick={() => handleToolClick(tool.path, tool.name)}
+              onKeyDown={(e) => handleKeyDown(e, tool.path, tool.name)}
               tabIndex={0}
               role="button"
               aria-label={`Select ${tool.name} tool`}
