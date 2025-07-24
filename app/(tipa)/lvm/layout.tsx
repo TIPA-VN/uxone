@@ -12,20 +12,21 @@ export default function TipaLayout({
   return (
     <div className="h-screen flex">
       {/* Sidebar  */}
-      <div className="w-[14%] md:w-[8%] lg:w-[16%] xl:w-[12%] bg-gray-800 text-white flex flex-col">
+      <div className="w-16 lg:w-64 bg-gray-800 text-white flex flex-col relative">
         {/* Fixed Logo Section */}
         <div className="p-4 border-b border-gray-700">
           <Link
             href="/"
-            className="flex justify-center gap-2 text-center cursor-pointer"
+            className="flex items-center justify-center lg:justify-start gap-2 text-center cursor-pointer"
           >
             <Image
               src={"/images/tipa_logo.png"}
               alt="tipa_logo"
-              width={50}
-              height={50}
+              width={40}
+              height={40}
+              className="flex-shrink-0"
             />
-            <span className="hidden lg:block items-center justify-center pt-3 text-xl font-bold">
+            <span className="hidden lg:block text-xl font-bold">
               TipaWeb
             </span>
           </Link>
@@ -38,7 +39,7 @@ export default function TipaLayout({
       </div>
 
       {/* Main content area */}
-      <div className="w-[86%] md:w-[92%] lg:w-[84%] xl:w-[86%] bg-gray-100 flex flex-col">
+      <div className="flex-1 bg-gray-100 flex flex-col">
         {/* Fixed Navbar */}
         <div className="sticky top-0 z-10 bg-white shadow-sm p-2">
           <Navbar />

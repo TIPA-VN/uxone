@@ -1,23 +1,32 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = []
+  engineType      = "binary"
 }
 
 model User {
-  id             String  @id @default(cuid())
-  tipaId         String  @unique
-  role           String  @default("USER")
+  id             String   @id @default(cuid())
+  username       String   @unique // Employee code from central API
+  role           String   @default("USER")
   name           String?
   hashedPassword String
-  email          String  @unique
+  email          String   @unique
   image          String?
+  department     String? // emp_dept from central API
+  departmentName String? // emp_dept_name from central API
+  position       String? // emp_pos from central API
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@map("users")
 }
 
 model SOPeriodBacklog {

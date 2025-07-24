@@ -1,22 +1,27 @@
-import NextAuth, { DefaultSession } from "next-auth";
+import { DefaultSession, DefaultUser } from "next-auth";
+import { JWT } from "next-auth/jwt";
+import { Prisma, User as PrismaUser } from "@prisma/client";
 
 declare module "next-auth" {
-  interface Session {
+  interface Session extends DefaultSession {
     user: {
-      tipaId: string;
+      id: string;
+      username: string;
       role: string;
+      department: string | null;
+      departmentName: string | null;
+      position: string | null;
     } & DefaultSession["user"];
   }
 
-  interface User {
-    tipaId: string;
-    role: string;
-  }
+  interface User extends Omit<PrismaUser, "hashedPassword" | "createdAt" | "updatedAt"> {}
 }
 
 declare module "next-auth/jwt" {
-  interface JWT {
-    tipaId: string;
-    role: string;
-  }
+  interface JWT extends Omit<PrismaUser, "hashedPassword" | "createdAt" | "updatedAt"> {}
 }
+
+// Export Prisma types for use in other files
+export type UserCreateData = Prisma.UserCreateInput;
+export type UserUpdateData = Prisma.UserUpdateInput;
+export type UserWhereUnique = Prisma.UserWhereUniqueInput;

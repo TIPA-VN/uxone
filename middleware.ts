@@ -1,46 +1,101 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
+import { hasPermission } from "@/lib/rbac";
 
-// Define protected paths and required roles
-const roleBasedRoutes: Record<string, string[]> = {
-  "/admin": ["admin"],
-  "/lvm": ["admin", "manager"],
-  "/dashboard": ["admin", "manager"],
-}; 
+// Routes that require specific permissions
+const PROTECTED_ROUTES = {
+  "/admin/users": ["manage_users"],
+  "/lvm": ["view_lvm"],
+  "/lvm/cs": ["view_cs"],
+  "/lvm/purchasing": ["view_purchasing"],
+  "/dashboard": ["view_dashboard"],
+} as const;
 
-export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+// Helper function to handle CORS
+function corsResponse(response: NextResponse) {
+  response.headers.set("Access-Control-Allow-Credentials", "true");
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET,DELETE,PATCH,POST,PUT"
+  );
+  response.headers.set(
+    "Access-Control-Allow-Headers",
+    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+  );
+  return response;
+}
 
-  const { pathname } = req.nextUrl;
+export default auth((req) => {
+  const { nextUrl } = req;
+  const isAuth = !!req.auth;
 
-  // Public route — allow
-  if (pathname.startsWith("/auth") || pathname === "/") {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return corsResponse(new NextResponse(null, { status: 200 }));
+  }
+
+  // Handle API routes
+  if (nextUrl.pathname.startsWith("/api/")) {
+    const response = NextResponse.next();
+    return corsResponse(response);
+  }
+
+  // Public routes
+  if (
+    nextUrl.pathname === "/auth/signin" ||
+    nextUrl.pathname === "/auth/error" ||
+    nextUrl.pathname === "/"
+  ) {
     return NextResponse.next();
   }
 
-  // Not logged in — redirect to login
-  if (!token) {
-    const loginUrl = new URL("/auth/signin", req.url);
-    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+  // Check if user is authenticated
+  if (!isAuth) {
+    let callbackUrl = nextUrl.pathname;
+    if (nextUrl.search) {
+      callbackUrl += nextUrl.search;
+    }
+
+    const encodedCallbackUrl = encodeURIComponent(callbackUrl);
+
+    return NextResponse.redirect(
+      new URL(`/auth/signin?callbackUrl=${encodedCallbackUrl}`, nextUrl)
+    );
   }
 
-  // Role-based protection
-  for (const path in roleBasedRoutes) {
-    if (pathname.startsWith(path)) {
-      const allowedRoles = roleBasedRoutes[path];
-      const userRole = token.role as string | undefined;
+  // Check route permissions
+  const userRole = req.auth?.user?.role;
+  const userDepartment = req.auth?.user?.department;
+  
+  for (const [route, permissions] of Object.entries(PROTECTED_ROUTES)) {
+    if (nextUrl.pathname.startsWith(route)) {
+      const hasAccess = permissions.some((permission) =>
+        hasPermission(userRole ?? "", permission, userDepartment)
+      );
 
-      if (!allowedRoles.includes(userRole || "")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
+      if (!hasAccess) {
+        return NextResponse.redirect(
+          new URL("/auth/error?error=AccessDenied", nextUrl)
+        );
       }
     }
   }
 
   return NextResponse.next();
-}
+})
 
+// Configure middleware matcher
 export const config = {
-  matcher: ["/lvm/:path*", "/dashboard/:path*", "/auth/:path*", "/"], // customize your protected routes
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    "/((?!_next/static|_next/image|favicon.ico|public/).*)",
+  ],
 };
