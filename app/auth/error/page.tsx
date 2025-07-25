@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-export default function AuthError({
-  searchParams,
-}: {
-  searchParams: { error: string };
-}) {
-  const error = searchParams?.error || "An error occurred";
+export default async function AuthError({ searchParams }: { searchParams: any }) {
+  const params = await searchParams;
+  // Support both URLSearchParams and plain object
+  const error =
+    typeof params.get === "function"
+      ? params.get("error")
+      : params?.error || "An error occurred";
 
   const getErrorMessage = (error: string) => {
     switch (error) {

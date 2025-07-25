@@ -26,6 +26,10 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  notifications  Notification[]
+  documents      Document[] @relation("UserDocuments")
+  projects       Project[]
+
   @@map("users")
 }
 
@@ -39,4 +43,58 @@ model SOPeriodBacklog {
   inDock       Float
   inProgress   Float
   recordedAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?  // Optional: link to related resource
+  type      String?  // Optional: type of notification (info, warning, etc.)
+  createdAt DateTime @default(now())
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  fileName      String
+  filePath      String // local path or S3 key
+  fileType      String // e.g. pdf, docx, dwg
+  size          Int
+  version       Int      @default(1)
+  metadata      Json     // type, project, part, etc.
+  ownerId       String
+  owner         User     @relation("UserDocuments", fields: [ownerId], references: [id])
+  department    String?
+  accessRoles   String[] // roles allowed to view/edit
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  // Versioning
+  parentId      String?  // for version history (null for latest)
+  parent        Document? @relation("DocumentVersion", fields: [parentId], references: [id])
+  versions      Document[] @relation("DocumentVersion")
+  // Workflow hooks (future)
+  workflowState String?  // e.g. draft, review, approved
+  workflowMeta  Json?
+  projectId     String?
+  project       Project? @relation(fields: [projectId], references: [id])
+}
+
+model Project {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id])
+  departments   String[] // departments requiring approval
+  approvalState Json     // { department: status, ... }
+  status        String   @default("started") // started, pending, approved, released
+  released      Boolean  @default(false)
+  releasedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  // Optional: link to documents
+  documents     Document[]
 }

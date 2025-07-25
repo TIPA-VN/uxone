@@ -13,7 +13,11 @@ import { BsCart4 } from "react-icons/bs";
 import { LiaPencilRulerSolid, LiaToolsSolid } from "react-icons/lia";
 import { HiOutlineShieldCheck, HiOutlineUserGroup } from "react-icons/hi";
 import { MdEngineering } from "react-icons/md";
+import { MdSpaceDashboard } from "react-icons/md";
 import { TfiAnnouncement } from "react-icons/tfi";
+import { ImCalendar } from "react-icons/im";
+import { RiCustomerService2Fill } from "react-icons/ri";
+import { FaRegChartBar } from "react-icons/fa";
 
 interface MenuItem {
   id: string;
@@ -24,178 +28,125 @@ interface MenuItem {
   subItems?: MenuItem[];
 }
 
-const menuItems: MenuItem[] = [
+const menuItems = [
   {
-    id: "home",
-    name: "Home",
-    href: "/dashboard",
-    icon: <IoHome className="w-5 h-5" />,
-    permission: PERMISSIONS.VIEW_DASHBOARD,
+    imgURL: "/assets/home.svg",
+    route: "/lvm",
+    label: "Home",
+    icon: <IoHome size={22} />,
   },
   {
-    id: "projects",
-    name: "Projects",
-    href: "/projects/dashboard",
-    icon: <ImBooks className="w-5 h-5" />,
-    permission: PERMISSIONS.VIEW_DASHBOARD,
+    route: "/lvm/projects",
+    label: "Projects",
+    icon: <ImBooks size={22} />,
   },
   {
-    id: "lvm",
-    name: "LVM",
-    href: "/lvm/dashboard",
-    icon: <MdEngineering className="w-5 h-5" />,
-    permission: PERMISSIONS.VIEW_LVM,
-    subItems: [
-      {
-        id: "lvm-logistics",
-        name: "Logistics",
-        href: "/lvm/logistics",
-        icon: <GiCargoShip className="w-5 h-5" />,
-        permission: PERMISSIONS.VIEW_LVM,
-      },
-      {
-        id: "lvm-purchasing",
-        name: "Mua Hàng",
-        href: "/lvm/purchasing",
-        icon: <BsCart4 className="w-5 h-5" />,
-        permission: PERMISSIONS.VIEW_PURCHASING,
-      },
-      {
-        id: "lvm-qa",
-        name: "QA",
-        href: "/lvm/qa",
-        icon: <LiaPencilRulerSolid className="w-5 h-5" />,
-        permission: PERMISSIONS.VIEW_LVM,
-      },
-      {
-        id: "lvm-qc",
-        name: "QC",
-        href: "/lvm/qc",
-        icon: <HiOutlineShieldCheck className="w-5 h-5" />,
-        permission: PERMISSIONS.VIEW_LVM,
-      },
-      {
-        id: "lvm-pm",
-        name: "PM",
-        href: "/lvm/pm",
-        icon: <MdEngineering className="w-5 h-5" />,
-        permission: PERMISSIONS.VIEW_LVM,
-      },
-      {
-        id: "lvm-fm",
-        name: "FM",
-        href: "/lvm/fm",
-        icon: <LiaToolsSolid className="w-5 h-5" />,
-        permission: PERMISSIONS.VIEW_LVM,
-      },
-      {
-        id: "lvm-hra",
-        name: "Nhân Sự",
-        href: "/lvm/hra",
-        icon: <HiOutlineUserGroup className="w-5 h-5" />,
-        permission: PERMISSIONS.VIEW_LVM,
-      },
-    ],
+    route: "/lvm/dashboard",
+    label: "Dashboard",
+    icon: <MdSpaceDashboard size={22} />,
+  },
+  // Customer Service
+  {
+    imgURL: "/assets/community.svg",
+    route: "/lvm/cs",
+    label: "Customer Service",
+    icon: <RiCustomerService2Fill size={22} />,
   },
   {
-    id: "announcements",
-    name: "Thông Báo",
-    href: "/announcement",
-    icon: <TfiAnnouncement className="w-5 h-5" />,
-    permission: PERMISSIONS.VIEW_DASHBOARD,
+    imgURL: "/assets/heart.svg",
+    route: "/lvm/logistics",
+    label: "Logistics",
+    icon: <GiCargoShip size={22} />,
   },
   {
-    id: "user-management",
-    name: "User Management",
-    href: "/admin/users",
-    permission: PERMISSIONS.MANAGE_USERS,
+    imgURL: "/assets/heart.svg",
+    route: "/lvm/purchasing",
+    label: "Procurement",
+    icon: <BsCart4 size={22} />,
+  },
+  {
+    imgURL: "/assets/search.svg",
+    route: "/lvm/pc",
+    label: "Prod. Planning",
+    icon: <ImCalendar size={20} />,
+  },
+  // Sales
+  {
+    imgURL: "/assets/heart.svg",
+    route: "/lvm/sales",
+    label: "Sales",
+    icon: <FaRegChartBar size={22} />,
+  },
+  {
+    imgURL: "/assets/heart.svg",
+    route: "/lvm/qa",
+    label: "Quality Assurance",
+    icon: <LiaPencilRulerSolid size={23} />,
+  },
+  {
+    imgURL: "/assets/create.svg",
+    route: "/lvm/qc",
+    label: "Quality Control",
+    icon: <HiOutlineShieldCheck size={23} />,
+  },
+  {
+    imgURL: "/assets/search.svg",
+    route: "/lvm/pm",
+    label: "Production Maintenance",
+    icon: <MdEngineering size={24} />,
+  },
+  {
+    imgURL: "/assets/search.svg",
+    route: "/lvm/fm",
+    label: "Facility Management",
+    icon: <LiaToolsSolid size={22} />,
+  },
+  {
+    imgURL: "/assets/community.svg",
+    route: "/lvm/hra",
+    label: "Human Resources",
+    icon: <HiOutlineUserGroup size={22} />,
   },
 ];
 
 export default function Menu() {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const { hasPermission } = usePermissions(
-    session?.user?.role,
-    session?.user?.department
-  );
-
-  const filteredMenuItems = menuItems.filter((item) => {
-    const hasMainPermission = hasPermission(item.permission);
-    if (item.subItems) {
-      const hasSubPermissions = item.subItems.some((subItem) =>
-        hasPermission(subItem.permission)
-      );
-      return hasMainPermission || hasSubPermissions;
-    }
-    return hasMainPermission;
-  });
 
   return (
-    <nav className="space-y-1">
-      {filteredMenuItems.map((item) => {
-        const isMainActive = pathname === item.href;
-        const hasSubActive = item.subItems?.some(
-          (subItem) => pathname === subItem.href
-        );
-
+    <nav className="space-y-2">
+      {menuItems.map((item) => {
+        const isActive = pathname === item.route;
         return (
-          <div key={item.id}>
-            <Link
-              href={item.href}
-              className={cn(
-                "flex items-center px-4 py-2 text-sm font-medium rounded-md group",
-                isMainActive || hasSubActive
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              )}
-            >
-              {item.icon && (
-                <span className="flex-shrink-0 mr-3">{item.icon}</span>
-              )}
-              <span className="hidden lg:block">{item.name}</span>
-              <span className="lg:hidden absolute left-full ml-2 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-200">
-                {item.name}
-              </span>
-            </Link>
-
-            {item.subItems && (isMainActive || hasSubActive) && (
-              <div className="ml-4 mt-1 space-y-1">
-                {item.subItems
-                  .filter((subItem) => hasPermission(subItem.permission))
-                  .map((subItem) => (
-                    <Link
-                      key={subItem.id}
-                      href={subItem.href}
-                      className={cn(
-                        "flex items-center px-4 py-2 text-sm font-medium rounded-md group",
-                        pathname === subItem.href
-                          ? "bg-gray-100 text-gray-900"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      )}
-                    >
-                      {subItem.icon && (
-                        <span className="flex-shrink-0 mr-3">{subItem.icon}</span>
-                      )}
-                      <span className="hidden lg:block">{subItem.name}</span>
-                      <span className="lg:hidden absolute left-full ml-2 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-200">
-                        {subItem.name}
-                      </span>
-                    </Link>
-                  ))}
-              </div>
+          <Link
+            key={item.route}
+            href={item.route}
+            className={cn(
+              // Responsive: row on lg, col on small
+              "flex flex-col lg:flex-row items-center lg:items-center text-center lg:text-left mx-auto px-4 py-2 text-sm font-medium rounded-md group transition-colors duration-200",
+              isActive
+                ? "bg-gray-400 text-gray-700"
+                : "text-slate-200 hover:bg-gray-400 hover:text-gray-600"
             )}
-          </div>
+            style={{ fontFamily: "Roboto, sans-serif", width: "100%" }}
+          >
+            {item.icon && (
+              <span
+                className="text-sky-200 mb-1 lg:mb-0 lg:mr-3"
+                style={{ fontFamily: "Roboto, sans-serif" }}
+              >
+                {item.icon}
+              </span>
+            )}
+            {/* Show label only on large screens */}
+            <span
+              className="hidden lg:block text-slate-200"
+              style={{ fontFamily: "Roboto, sans-serif" }}
+            >
+              {item.label}
+            </span>
+          </Link>
         );
       })}
-
-      {/* Show department info if available */}
-      {session?.user?.department && (
-        <div className="mt-8 px-4 py-2 text-sm text-gray-500">
-          <span className="hidden lg:inline">Department: </span>
-          <span>{session.user.department}</span>
-        </div>
-      )}
     </nav>
   );
 }

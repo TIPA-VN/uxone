@@ -12,7 +12,7 @@ export default function TipaLayout({
   return (
     <div className="h-screen flex">
       {/* Sidebar  */}
-      <div className="w-16 lg:w-64 bg-gray-800 text-white flex flex-col relative">
+      <div className="w-20 lg:w-56 bg-gray-800 text-white flex flex-col relative">
         {/* Fixed Logo Section */}
         <div className="p-4 border-b border-gray-700">
           <Link
