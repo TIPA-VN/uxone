@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-export default async function AuthError({ searchParams }: { searchParams: any }) {
+export default async function AuthError({ searchParams }: { searchParams: Record<string, string> | URLSearchParams }) {
   const params = await searchParams;
   // Support both URLSearchParams and plain object
-  const error =
-    typeof params.get === "function"
-      ? params.get("error")
-      : params?.error || "An error occurred";
+  let error: string = "An error occurred";
+  if (typeof params.get === "function") {
+    error = params.get("error") || error;
+  } else if (typeof params === "object" && "error" in params) {
+    error = params.error || error;
+  }
 
   const getErrorMessage = (error: string) => {
     switch (error) {

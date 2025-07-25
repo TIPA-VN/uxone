@@ -3,9 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useSession } from "next-auth/react";
-import { usePermissions } from "@/lib/rbac";
-import { PERMISSIONS } from "@/lib/rbac";
 import { IoHome } from "react-icons/io5";
 import { ImBooks } from "react-icons/im";
 import { GiCargoShip } from "react-icons/gi";
@@ -14,19 +11,9 @@ import { LiaPencilRulerSolid, LiaToolsSolid } from "react-icons/lia";
 import { HiOutlineShieldCheck, HiOutlineUserGroup } from "react-icons/hi";
 import { MdEngineering } from "react-icons/md";
 import { MdSpaceDashboard } from "react-icons/md";
-import { TfiAnnouncement } from "react-icons/tfi";
 import { ImCalendar } from "react-icons/im";
 import { RiCustomerService2Fill } from "react-icons/ri";
 import { FaRegChartBar } from "react-icons/fa";
-
-interface MenuItem {
-  id: string;
-  name: string;
-  href: string;
-  icon?: React.ReactNode;
-  permission: string;
-  subItems?: MenuItem[];
-}
 
 const menuItems = [
   {

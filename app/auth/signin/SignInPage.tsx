@@ -14,8 +14,8 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 export default function SignInPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
   const {
     register,
@@ -28,7 +28,6 @@ export default function SignInPage() {
   const onSubmit = async (data: SignInInput) => {
     try {
       setLoading(true);
-      setError("");
 
       const result = await signIn("credentials", {
         redirect: false,

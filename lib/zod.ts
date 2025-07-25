@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EmployeePosition, UserRole } from "./rbac";
 
 export const signInSchema = z.object({
   username: z
@@ -14,21 +15,29 @@ export const signInSchema = z.object({
 
 export type SignInInput = z.infer<typeof signInSchema>;
 
-// Role mapping configuration
-export const ROLE_MAPPING = {
-  "SENIOR MANAGER": "SENIOR MANAGER",
-  "MANAGER": "MANAGER",
-  "SUPERVISOR": "SUPERVISOR",
-  "STAFF": "USER",
-} as const;
+// Function to convert position string to enum format
+export function normalizePosition(position: string): EmployeePosition {
+  // Remove spaces and convert to uppercase
+  const normalized = position.replace(/\s+/g, '_').toUpperCase();
+  return normalized as EmployeePosition;
+}
 
-// Define all possible roles including both mapped and unmapped roles
-export const ROLES = {
-  ADMIN: "ADMIN",
-  SENIOR_MANAGER: "SENIOR MANAGER",
-  MANAGER: "MANAGER",
-  SUPERVISOR: "SUPERVISOR",
-  USER: "USER",
-} as const;
-
-export type UserRole = typeof ROLES[keyof typeof ROLES];
+// Role mapping based on position
+export function mapPositionToRole(position: string): UserRole {
+  const normalizedPos = position.toUpperCase();
+  
+  if (normalizedPos.includes('GENERAL_DIRECTOR') || normalizedPos.includes('GENERAL DIRECTOR')) {
+    return UserRole.SUPER_ADMIN;
+  }
+  
+  if (normalizedPos.includes('SENIOR_MANAGER') || normalizedPos.includes('SENIOR MANAGER') ||
+      normalizedPos.includes('ASSISTANT_GENERAL_MANAGER') || normalizedPos.includes('ASSISTANT GENERAL MANAGER')) {
+    return UserRole.ADMIN;
+  }
+  
+  if (normalizedPos.includes('MANAGER') || normalizedPos.includes('CHIEF')) {
+    return UserRole.MANAGER;
+  }
+  
+  return UserRole.USER;
+}

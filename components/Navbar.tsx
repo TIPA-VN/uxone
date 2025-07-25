@@ -1,13 +1,13 @@
 "use client";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { Dialog } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 
-// Notification type
-interface Notification {
+// Types
+type Notification = {
   id: string;
   userId: string;
   title: string;
@@ -18,20 +18,42 @@ interface Notification {
   createdAt: string;
 }
 
+type User = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  username: string;
+  department: string | null;
+  departmentName: string | null;
+  role: string | null;
+}
+
+type UserOption = {
+  value: string;
+  label: string;
+}
+
 function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   // Fetch initial notifications
   const fetchNotifications = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/notifications");
+      if (!res.ok) throw new Error('Failed to fetch notifications');
       const data = await res.json();
+      console.log('Fetched notifications:', data);
       setNotifications(data);
     } catch (e) {
-      setError(e);
+      console.error('Error fetching notifications:', e);
+      if (e instanceof Error) {
+        setError(e);
+      } else {
+        setError(new Error(String(e)));
+      }
     } finally {
       setLoading(false);
     }
@@ -39,29 +61,59 @@ function useNotifications() {
 
   useEffect(() => {
     fetchNotifications();
+
     // Real-time SSE connection
     const evtSource = new EventSource("/api/notifications/stream");
+    
     evtSource.onmessage = (event) => {
       try {
+        console.log('Received SSE message:', event.data);
         const notif = JSON.parse(event.data);
+        if (notif.type === 'heartbeat') return;
+        if (!notif.id) {
+          console.log('Skipping notification without id:', notif);
+          return;
+        }
+        console.log('Parsed notification:', notif);
         setNotifications((prev) => {
           // Avoid duplicates by id
-          if (prev.some((n) => n.id === notif.id)) return prev;
+          if (prev.some((n) => n.id === notif.id)) {
+            console.log('Duplicate notification, skipping');
+            return prev;
+          }
+          console.log('Adding new notification');
           return [notif, ...prev];
         });
-      } catch {}
+      } catch (error) {
+        console.error('Error handling SSE message:', error);
+      }
     };
-    evtSource.onerror = () => {
+
+    evtSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
       evtSource.close();
     };
+
+    evtSource.onopen = () => {
+      console.log('SSE connection opened');
+    };
+
     return () => {
+      console.log('Closing SSE connection');
       evtSource.close();
     };
   }, []);
 
+  const unreadCount = useMemo(() => 
+    notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  console.log('Current notifications:', { total: notifications.length, unread: unreadCount });
+
   return {
     notifications,
-    unreadCount: notifications.filter((n) => !n.read).length,
+    unreadCount,
     loading,
     error,
     refetch: fetchNotifications,
@@ -82,9 +134,6 @@ const DEPARTMENTS = [
   { value: "sales", label: "Sales" },
 ];
 
-const USERS: { value: string; label: string }[] = [];
-// For demo, leave USERS empty. You can populate with real users later.
-
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -99,21 +148,19 @@ const Navbar = () => {
     notifications,
     unreadCount,
     loading: notifLoading,
-    refetch: refetchNotifications,
     setNotifications,
   } = useNotifications();
 
   const [announceTarget, setAnnounceTarget] = useState("users");
-  const [userOptions, setUserOptions] = useState<{ value: string; label: string }[]>([]);
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
 
   // Announcement form
-  const { register, handleSubmit, reset, formState: { isSubmitting }, watch, getValues, setValue } = useForm();
+  const { register, reset, formState: { isSubmitting }, watch, getValues, setValue } = useForm();
   const canAnnounce = ["ADMIN", "HR", "SENIOR MANAGER"].includes(user?.role?.toUpperCase() || "");
-  const watchBroadcast = watch("broadcast");
-  const watchDepartments = watch("departments") || [];
-  const watchUsers = watch("users") || [];
+  console.log("canAnnounce:", canAnnounce, "user:", user);
+  // Removed unused watchBroadcast, watchDepartments, watchUsers
 
-  const onAnnounce = async (data: any) => {
+  const onAnnounce = async (data: Record<string, unknown>) => {
     setAnnounceStatus(null);
     setAnnounceConfirm(false);
     try {
@@ -145,9 +192,42 @@ const Navbar = () => {
     if (announceTarget === "users") {
       fetch("/api/notifications/users")
         .then(res => res.json())
-        .then(users => setUserOptions(users.map((u: any) => ({ value: u.id, label: `${u.name || u.email} (${u.department || "-"})` }))));
+        .then((users: User[]) => {
+          if (!Array.isArray(users)) {
+            console.error("Expected array from /api/notifications/users, got:", users);
+            setUserOptions([]);
+            return;
+          }
+          const mappedUsers: UserOption[] = users.map((user: User): UserOption => ({
+            value: user.id,
+            label: `${user.name || user.username} (${user.department || "-"})`
+          }));
+          setUserOptions(mappedUsers);
+        });
     }
   }, [announceTarget]);
+
+  useEffect(() => {
+    if (
+      announceTarget === "users" &&
+      session?.user?.id // Only run if session and user are loaded
+    ) {
+      fetch("/api/notifications/users")
+        .then(res => res.json())
+        .then((users: User[]) => {
+          if (!Array.isArray(users)) {
+            console.error("Expected array from /api/notifications/users, got:", users);
+            setUserOptions([]);
+            return;
+          }
+          const mappedUsers: UserOption[] = users.map((user: User): UserOption => ({
+            value: user.id,
+            label: `${user.name || user.username} (${user.department || "-"})`
+          }));
+          setUserOptions(mappedUsers);
+        });
+    }
+  }, [announceTarget, session?.user?.id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -163,14 +243,7 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const markAsRead = async (id: string) => {
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-  };
+  // Removed unused handleNotificationClick
 
   return (
     <div className="flex items-center justify-between p-4 bg-indigo-100 shadow-md text-slate-600 rounded-lg relative">
@@ -192,7 +265,7 @@ const Navbar = () => {
         {/* Message icon triggers announcement dialog for authorized users */}
         <div
           className="rounded-full w-7 h-7 flex items-center justify-center cursor-pointer"
-          onClick={() => { if (canAnnounce) setAnnounceOpen(true); }}
+          onClick={() => setAnnounceOpen(true)}
           title={canAnnounce ? "Send Announcement" : undefined}
         >
           <Image
@@ -212,7 +285,7 @@ const Navbar = () => {
             height={20}
           />
           {unreadCount > 0 && (
-            <div className="absolute -top-3 -right-3 w-5 h-5 flex items-center justify-center bg-rose-600 text-white rounded-full text-xs">
+            <div className="absolute -top-2 -right-2 min-w-[20px] h-5 flex items-center justify-center bg-rose-600 text-white rounded-full text-xs px-1">
               {unreadCount}
             </div>
           )}
@@ -228,16 +301,41 @@ const Navbar = () => {
                   {notifications.map((n) => (
                     <li
                       key={n.id}
-                      className={`p-2 text-sm cursor-pointer rounded transition ${n.read ? "bg-gray-50" : "bg-sky-50 font-semibold"}`}
-                      onClick={async () => { await markAsRead(n.id); refetchNotifications(); }}
+                      className={`p-2 text-sm cursor-pointer rounded transition ${
+                        n.read ? "bg-gray-50" : "bg-sky-50 font-semibold"
+                      }`}
+                      onClick={async () => {
+                        console.log("Marking as read:", n);
+                        if (!n.id) {
+                          alert("Notification is missing an ID and cannot be marked as read.");
+                          return;
+                        }
+                        await fetch("/api/notifications", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: n.id }),
+                        });
+                        setNotifications((prev) =>
+                          prev.map((notif) =>
+                            notif.id === n.id ? { ...notif, read: true } : notif
+                          )
+                        );
+                        if (n.link) {
+                          window.location.href = n.link;
+                        }
+                      }}
                     >
                       <div className="flex justify-between items-center">
-                        <span>{n.title}</span>
-                        <span className="text-xs text-gray-400 ml-2">{new Date(n.createdAt).toLocaleString()}</span>
+                        <span>{n.title || "No Title"}</span>
+                        <span className="text-xs text-gray-400 ml-2">
+                          {new Date(n.createdAt).toLocaleString()}
+                        </span>
                       </div>
-                      <div className="text-xs text-gray-600 mt-1">{n.message}</div>
+                      <div className="text-xs text-gray-600 mt-1">{n.message || "No Message"}</div>
                       {n.link && (
-                        <a href={n.link} className="text-xs text-blue-600 underline mt-1 inline-block">View</a>
+                        <div className="text-xs text-blue-600 underline mt-1">
+                          View
+                        </div>
                       )}
                     </li>
                   ))}
@@ -340,10 +438,6 @@ const Navbar = () => {
           <div className="flex justify-between text-gray-700">
             <span className="font-semibold">Department Name:</span>
             <span>{user?.departmentName || "-"}</span>
-          </div>
-          <div className="flex justify-between text-gray-700">
-            <span className="font-semibold">Position:</span>
-            <span>{user?.position || "-"}</span>
           </div>
         </div>
       </Dialog>

@@ -1,0 +1,6 @@
+DATABASE_URL=postgresql://postgres:Sud01234@10.116.2.72:5432/uxonedb?schema=SCHEMA
+
+NEXT_PUBLIC_API_URL=http://10.116.2.72:8091
+
+NEXT_PUBLIC_CS_AGENT_URL=http://10.116.2.72:5678/webhook/cs-agent-prompt
+NEXT_PUBLIC_PR_AGENT_URL=http://10.116.2.72:5678/webhook/pr-agent-prompt

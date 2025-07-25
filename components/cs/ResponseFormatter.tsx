@@ -80,7 +80,8 @@ const GeneralCard: React.FC<CardProps> = ({ content, isDarkMode }) => {
   );
 };
 
-const renderTable = (dataArray: any[], isDarkMode: boolean) => {
+// Use Array<Record<string, unknown>> for table data
+const renderTable = (dataArray: Array<Record<string, unknown>>, isDarkMode: boolean) => {
   if (!Array.isArray(dataArray) || dataArray.length === 0) return <div>No data available.</div>;
   const headers = Object.keys(dataArray[0]);
   return (
@@ -100,7 +101,7 @@ const renderTable = (dataArray: any[], isDarkMode: boolean) => {
             <tr key={idx} className={idx % 2 === 0 ? (isDarkMode ? 'bg-gray-900' : 'bg-gray-50') : ''}>
               {headers.map((header) => (
                 <td key={header} className="px-3 py-2 text-xs border-b border-gray-200">
-                  {row[header] !== undefined && row[header] !== null ? row[header].toString() : ''}
+                  {row[header] !== undefined && row[header] !== null ? row[header]?.toString() : ''}
                 </td>
               ))}
             </tr>
@@ -114,29 +115,41 @@ const renderTable = (dataArray: any[], isDarkMode: boolean) => {
 const ResponseFormatter: React.FC<ResponseFormatterProps> = ({ content, isDarkMode }) => {
   console.log('ResponseFormatter content:', content);
   // Try to parse content as JSON and extract structured_data
-  let parsed: any = null;
-  let structuredData: any = null;
+  let parsed: unknown = null;
+  let structuredData: unknown = null;
   try {
     parsed = JSON.parse(content);
-    if (parsed && typeof parsed === 'object' && parsed.structured_data) {
-      structuredData = parsed.structured_data;
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'structured_data' in parsed &&
+      (parsed as Record<string, unknown>).structured_data
+    ) {
+      structuredData = (parsed as Record<string, { structured_data?: unknown }>).structured_data;
     }
-  } catch (e) {
+  } catch {
     // Not JSON, fallback to original logic
   }
 
   // If structured_data.sales_orders is present and is an array, render as table
-  if (structuredData && Array.isArray(structuredData.sales_orders)) {
+  if (
+    structuredData &&
+    typeof structuredData === 'object' &&
+    'sales_orders' in structuredData &&
+    Array.isArray((structuredData as Record<string, unknown>).sales_orders)
+  ) {
+    const salesOrdersArr = (structuredData as Record<string, unknown>).sales_orders as Array<Record<string, unknown>>;
+    const answer = (structuredData as Record<string, unknown>).answer as string | undefined;
     return (
       <div className="space-y-4">
-        {structuredData.answer && (
-          <div className={`p-2 rounded font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{structuredData.answer}</div>
+        {answer && (
+          <div className={`p-2 rounded font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{answer}</div>
         )}
-        {renderTable(structuredData.sales_orders, isDarkMode)}
+        {renderTable(salesOrdersArr, isDarkMode)}
       </div>
     );
   }
-  
+
   const formatHeaders = (text: string): string => {
     return text
       .replace(/^## \*\*(.*?)\*\*/gm, '<h2 class="text-lg font-bold mb-4">$1</h2>')
@@ -150,14 +163,12 @@ const ResponseFormatter: React.FC<ResponseFormatterProps> = ({ content, isDarkMo
   const extractSectionContent = (content: string, sectionKeywords: string[]): string => {
     const lines = content.split('\n');
     const sectionLines: string[] = [];
-    
     for (const line of lines) {
       const lowerLine = line.toLowerCase();
       if (sectionKeywords.some(keyword => lowerLine.includes(keyword.toLowerCase()))) {
         sectionLines.push(line);
       }
     }
-    
     return sectionLines.join('\n');
   };
 

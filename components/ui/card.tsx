@@ -1,4 +1,4 @@
-import * as React from "react"
+import React from "react";
 
 import { cn } from "@/lib/utils"
 
@@ -90,8 +90,6 @@ export {
   CardDescription,
   CardContent,
 }
-
-import React from "react";
 
 export function Dialog({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!open) return null;

@@ -1,5 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+
+// Add Project type
+type Project = {
+  id: string;
+  name: string;
+  departments: string[];
+  status: string;
+  approvalState?: Record<string, any>; // allow array/object for logs
+  createdAt: string;
+  // add other fields as needed
+};
 
 const DEPARTMENTS = [
   { value: "logistics", label: "Logistics" },
@@ -12,6 +24,7 @@ const DEPARTMENTS = [
   { value: "hra", label: "Human Resources" },
   { value: "cs", label: "Customer Service" },
   { value: "sales", label: "Sales" },
+  { value: "LVM-EXPAT", label: "LVM EXPATS" },
 ];
 
 export default function ProjectsPage() {
@@ -20,7 +33,7 @@ export default function ProjectsPage() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const fetchProjects = async () => {
     const res = await fetch("/api/projects");
@@ -117,16 +130,37 @@ export default function ProjectsPage() {
             <tbody>
               {projects.map(proj => (
                 <tr key={proj.id} className="border-b">
-                  <td className="py-1 font-semibold">{proj.name}</td>
+                  <td className="py-1 font-semibold">
+                    <Link 
+                      href={`/lvm/projects/${proj.id}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {proj.name}
+                    </Link>
+                  </td>
                   <td className="py-1">{(proj.departments || []).join(", ")}</td>
                   <td className="py-1">{proj.status}</td>
                   <td className="py-1">
-                    {proj.approvalState && Object.entries(proj.approvalState).map(([dept, stat]: any) => (
-                      <div key={dept} className="flex items-center gap-1">
-                        <span className="text-xs font-medium">{dept}:</span>
-                        <span className="text-xs capitalize" style={{ color: stat === "approved" ? "green" : stat === "pending" ? "orange" : stat === "disapproved" ? "red" : undefined }}>{stat}</span>
-                      </div>
-                    ))}
+                    {proj.approvalState && Object.entries(proj.approvalState).map(([dept, statObj]: [string, any]) => {
+                      // If statObj is an array, get the latest log
+                      const logs = Array.isArray(statObj) ? statObj : statObj ? [statObj] : [];
+                      const latest = logs.length > 0 ? logs[logs.length - 1] : null;
+                      const status = latest ? latest.status : statObj;
+                      const timestamp = latest ? latest.timestamp : null;
+                      const user = latest ? latest.user : null;
+                      return (
+                        <div key={dept} className="flex items-center gap-1">
+                          <span className="text-xs font-medium">{dept}:</span>
+                          <span className="text-xs capitalize" style={{ color: status === "APPROVED" ? "green" : status === "PENDING" ? "orange" : status === "REJECTED" ? "red" : undefined }}>{status}</span>
+                          {timestamp && (
+                            <span className="ml-1 text-xs text-gray-400">{new Date(timestamp).toLocaleString()}</span>
+                          )}
+                          {user && (
+                            <span className="ml-1 text-xs text-blue-600">by {user}</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </td>
                   <td className="py-1">{new Date(proj.createdAt).toLocaleString()}</td>
                 </tr>

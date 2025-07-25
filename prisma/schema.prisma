@@ -1,60 +1,49 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = []
-  engineType      = "binary"
-}
-
 model User {
-  id             String   @id @default(cuid())
-  username       String   @unique // Employee code from central API
-  role           String   @default("USER")
+  id             String         @id @default(cuid())
   name           String?
-  hashedPassword String
-  email          String   @unique
+  email          String?        @unique
+  username       String         @unique
+  department     String?
+  departmentName String?
+  role           String?
+  hashedPassword String?        // Optional since we use central auth
   image          String?
-  department     String? // emp_dept from central API
-  departmentName String? // emp_dept_name from central API
-  position       String? // emp_pos from central API
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
+  // Relations
   notifications  Notification[]
-  documents      Document[] @relation("UserDocuments")
+  documents      Document[]     @relation("UserDocuments")
   projects       Project[]
 
   @@map("users")
 }
 
-model SOPeriodBacklog {
-  id           String   @id @default(cuid())
-  week         String // e.g. "2024-W23"
-  customerId   String
-  customerName String
-  business     String
-  backlogs     Float
-  inDock       Float
-  inProgress   Float
-  recordedAt   DateTime @default(now())
-}
-
+// Keep existing models unchanged
 model Notification {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   title     String
   message   String
-  read      Boolean  @default(false)
   link      String?  // Optional: link to related resource
   type      String?  // Optional: type of notification (info, warning, etc.)
+  read      Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@map("notifications")
 }
 
 model Document {
@@ -80,6 +69,15 @@ model Document {
   workflowMeta  Json?
   projectId     String?
   project       Project? @relation(fields: [projectId], references: [id])
+
+  @@map("documents")
+}
+
+enum ProjectStatus {
+  STARTED
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Project {
@@ -90,11 +88,13 @@ model Project {
   owner         User     @relation(fields: [ownerId], references: [id])
   departments   String[] // departments requiring approval
   approvalState Json     // { department: status, ... }
-  status        String   @default("started") // started, pending, approved, released
+  status        ProjectStatus @default(STARTED)
   released      Boolean  @default(false)
   releasedAt    DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   // Optional: link to documents
   documents     Document[]
+
+  @@map("projects")
 }

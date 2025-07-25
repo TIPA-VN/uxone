@@ -24,7 +24,8 @@ export default function TipaLayout({
               alt="tipa_logo"
               width={40}
               height={40}
-              className="flex-shrink-0"
+              className="flex-shrink-0 w-auto h-auto"
+              style={{ width: '40px', height: '40px' }}
             />
             <span className="hidden lg:block text-xl font-bold">
               TipaWeb

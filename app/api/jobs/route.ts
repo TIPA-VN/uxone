@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getISOWeekString } from "@/lib/utils";
 
+// Force Node.js runtime for Prisma
+export const runtime = 'nodejs'
+
 type BacklogItem = {
   customer_name?: string;
   customer_id?: string;

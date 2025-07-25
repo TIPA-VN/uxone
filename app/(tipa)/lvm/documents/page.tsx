@@ -1,6 +1,20 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 
+type Document = {
+  id: string;
+  fileName: string;
+  filePath: string;
+  department?: string;
+  createdAt: string;
+  metadata?: {
+    type?: string;
+    project?: string;
+    [key: string]: unknown;
+  };
+  // add other fields as needed
+};
+
 const DEPARTMENTS = [
   { value: "logistics", label: "Logistics" },
   { value: "procurement", label: "Procurement" },
@@ -22,7 +36,7 @@ export default function DocumentUploadPage() {
   const [accessRoles, setAccessRoles] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-  const [docs, setDocs] = useState<any[]>([]);
+  const [docs, setDocs] = useState<Document[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocs = async () => {
@@ -54,7 +68,7 @@ export default function DocumentUploadPage() {
       setMeta({ type: "", project: "", part: "", description: "" });
       setDepartment("");
       setAccessRoles([]);
-      fileInputRef.current?.value && (fileInputRef.current.value = "");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       fetchDocs();
     } else {
       setUploadStatus("Upload failed.");

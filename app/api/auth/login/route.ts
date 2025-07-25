@@ -1,64 +1,72 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { NextResponse } from "next/server"
+import bcrypt from "bcryptjs"
+
+// Force Node.js runtime for bcrypt
+export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { username, password } = body;
+    const body = await request.json()
+    const { username, password } = body
+    console.log('Login request:', { username })
 
-    // Hash the password before sending to central API
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const centralResponse = await fetch("http://10.116.3.138:8888/api/web_check_login", {
+    // Use a specific salt (3)
+    const salt = bcrypt.genSaltSync(3)
+    const hashedPassword = bcrypt.hashSync(password, salt)
+    console.log('Password hashing:', { salt, hashedPassword })
+
+    // Call central authentication API
+    const response = await fetch("http://10.116.3.138:8888/api/web_check_login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password: hashedPassword }),
-    });
-    const centralData = await centralResponse.json();
+    })
 
-    if (!centralResponse.ok || centralData.message !== "OK") {
-      return NextResponse.json({ message: "err", content: centralData.message || "Invalid password" }, { status: 401 });
+    const data = await response.json()
+    console.log('Central API response:', { 
+      status: response.status, 
+      data,
+      requestBody: { username, hashedPassword }
+    })
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: data.content || data.message || "Authentication failed" },
+        { status: 401 }
+      )
     }
 
-    if (!centralData.emp_code) {
-      return NextResponse.json({ message: "err", content: "Central API did not return emp_code (username)" }, { status: 401 });
+    if (data.message !== "OK") {
+      return NextResponse.json(
+        { error: data.content || "Invalid credentials" },
+        { status: 401 }
+      )
     }
 
-    console.log("Central API response:", centralData);
-    // Upsert user in local database
-    const userData = {
-      username: centralData.emp_code,
-      name: centralData.emp_name,
-      email: centralData.email || `${centralData.emp_code}@tipa.co.th`,
-      department: centralData.emp_dept,
-      departmentName: centralData.emp_dept_name,
-      position: centralData.emp_pos,
-      role: centralData.role || "USER",
-      image: centralData.image || null,
-      hashedPassword: 'centrally-authenticated',
-    };
+    if (!data.emp_code) {
+      return NextResponse.json(
+        { error: "Missing employee code" },
+        { status: 401 }
+      )
+    }
 
-    const user = await prisma.user.upsert({
-      where: { username: userData.username },
-      update: userData,
-      create: userData,
-    });
-
-    return NextResponse.json({
+    const result = {
       message: "OK",
-      emp_code: userData.username,
-      emp_pos: userData.position,
-      emp_dept: userData.department,
-      emp_dept_name: userData.departmentName,
-      emp_name: userData.name,
-      email: userData.email,
-      role: userData.role,
-      image: userData.image,
-    });
+      id: data.emp_code, // Use emp_code as ID
+      emp_code: data.emp_code,
+      emp_pos: data.emp_pos,
+      emp_dept: data.emp_dept,
+      emp_dept_name: data.emp_dept_name,
+      emp_name: data.emp_name,
+      email: data.email || `${data.emp_code}@tipa.co.th`,
+    }
+    console.log('Login success:', result)
+    return NextResponse.json(result)
   } catch (error) {
+    console.error("Auth error:", error)
     return NextResponse.json(
-      { message: "err", error: error instanceof Error ? error.message : "Unknown error" },
+      { error: error instanceof Error ? error.message : "Authentication failed" },
       { status: 401 }
-    );
+    )
   }
 } 
