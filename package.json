@@ -22,6 +22,7 @@
     "@tanstack/react-query": "^5.80.10",
     "@tanstack/react-table": "^8.21.3",
     "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.519.0",

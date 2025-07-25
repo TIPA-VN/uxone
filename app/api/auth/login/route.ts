@@ -1,39 +1,59 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { username, password } = body;
 
-    // Try to find user by email or username
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: username },
-          { username: username },
-        ],
-      },
+    // Hash the password before sending to central API
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const centralResponse = await fetch("http://10.116.3.138:8888/api/web_check_login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password: hashedPassword }),
+    });
+    const centralData = await centralResponse.json();
+
+    if (!centralResponse.ok || centralData.message !== "OK") {
+      return NextResponse.json({ message: "err", content: centralData.message || "Invalid password" }, { status: 401 });
+    }
+
+    if (!centralData.emp_code) {
+      return NextResponse.json({ message: "err", content: "Central API did not return emp_code (username)" }, { status: 401 });
+    }
+
+    console.log("Central API response:", centralData);
+    // Upsert user in local database
+    const userData = {
+      username: centralData.emp_code,
+      name: centralData.emp_name,
+      email: centralData.email || `${centralData.emp_code}@tipa.co.th`,
+      department: centralData.emp_dept,
+      departmentName: centralData.emp_dept_name,
+      position: centralData.emp_pos,
+      role: centralData.role || "USER",
+      image: centralData.image || null,
+      hashedPassword: 'centrally-authenticated',
+    };
+
+    const user = await prisma.user.upsert({
+      where: { username: userData.username },
+      update: userData,
+      create: userData,
     });
 
-    if (!user) {
-      return NextResponse.json({ message: "err", content: "User not found" }, { status: 401 });
-    }
-
-    // For dev: compare plain text password
-    if (user.hashedPassword !== password) {
-      return NextResponse.json({ message: "err", content: "Invalid password" }, { status: 401 });
-    }
-
-    // Mock response structure expected by NextAuth logic
     return NextResponse.json({
       message: "OK",
-      emp_code: user.username,
-      emp_pos: user.role,
-      emp_dept: user.department,
-      emp_dept_name: user.departmentName,
-      emp_name: user.name,
-      email: user.email,
+      emp_code: userData.username,
+      emp_pos: userData.position,
+      emp_dept: userData.department,
+      emp_dept_name: userData.departmentName,
+      emp_name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      image: userData.image,
     });
   } catch (error) {
     return NextResponse.json(
