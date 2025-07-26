@@ -21,7 +21,7 @@ export const SidebarLinks = [
         icon: <IoHome />,
       },
       {
-        route: "/projects/dashboard",
+        route: "/lvm/projects",
         label: "Projects",
         icon: <ImBooks />,
       },

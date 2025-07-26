@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Plus, Calendar, Users, CheckCircle, XCircle, Clock, AlertCircle, Menu } from "lucide-react";
 
 // Add Project type
@@ -12,6 +13,7 @@ type Project = {
   status: string;
   approvalState?: Record<string, any>; // allow array/object for logs
   createdAt: string;
+  ownerId?: string;
   // add other fields as needed
 };
 
@@ -56,6 +58,8 @@ const getStatusColor = (status: string) => {
 };
 
 export default function ProjectsPage() {
+  const { data: session } = useSession();
+  const user = session?.user;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
@@ -224,157 +228,259 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {/* Projects List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Project List</h2>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Users className="w-4 h-4" />
-                <span>{projects.length} project{projects.length !== 1 ? 's' : ''}</span>
+        {/* Projects List - Two Sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Projects I Own */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Projects I Own</h2>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Users className="w-4 h-4" />
+                  <span>{projects.filter(p => p.ownerId === user?.id).length} project{projects.filter(p => p.ownerId === user?.id).length !== 1 ? 's' : ''}</span>
+                </div>
               </div>
+            </div>
+
+            <div className="overflow-x-auto overflow-y-visible">
+              {projects.filter(p => p.ownerId === user?.id).length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <AlertCircle className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-1">No owned projects</h3>
+                  <p className="text-xs text-gray-600 mb-3">Create a project to get started</p>
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Create Project
+                  </button>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Project
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {projects.filter(p => p.ownerId === user?.id).map((proj, index) => (
+                      <tr 
+                        key={proj.id} 
+                        className={`hover:bg-gray-50 transition-colors ${
+                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                        }`}
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                              <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <span className="text-xs font-medium text-blue-600">
+                                  {proj.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-2">
+                              <Link 
+                                href={`/lvm/projects/${proj.id}`}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              >
+                                {proj.name}
+                              </Link>
+                              {proj.description && (
+                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                                  {proj.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {getStatusIcon(proj.status)}
+                            <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(proj.status)}`}>
+                              {proj.status || "UNKNOWN"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMenuToggle(proj.id);
+                              }}
+                              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                            >
+                              <Menu className="w-3 h-3 text-gray-500" />
+                            </button>
+                            
+                            {openMenuId === proj.id && (
+                              <div 
+                                className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-20"
+                                onClick={handleMenuClick}
+                              >
+                                <Link
+                                  href={`/lvm/projects/${proj.id}`}
+                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+                                >
+                                  MAIN
+                                </Link>
+                                <Link
+                                  href={`/lvm/projects/${proj.id}?tab=kpi`}
+                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+                                >
+                                  KPI
+                                </Link>
+                                <Link
+                                  href={`/lvm/projects/${proj.id}?tab=production`}
+                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+                                >
+                                  PRODUCTION
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
 
-          <div className="overflow-x-auto overflow-y-visible">
-            {projects.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-8 h-8 text-gray-400" />
+          {/* Projects I Belong To */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Projects I Belong To</h2>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Users className="w-4 h-4" />
+                  <span>{projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).length} project{projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).length !== 1 ? 's' : ''}</span>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-                <p className="text-gray-600 mb-4">Get started by creating your first project</p>
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Project
-                </button>
               </div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Project
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Departments
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {projects.map((proj, index) => (
-                    <tr 
-                      key={proj.id} 
-                      className={`hover:bg-gray-50 transition-colors ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                      }`}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <span className="text-sm font-medium text-blue-600">
-                                {proj.name.charAt(0).toUpperCase()}
-                              </span>
+            </div>
+
+            <div className="overflow-x-auto overflow-y-visible">
+              {projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <AlertCircle className="w-6 h-6 text-green-400" />
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-1">No projects to review</h3>
+                  <p className="text-xs text-gray-600">You'll see projects here when they're assigned to your department</p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Project
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).map((proj, index) => (
+                      <tr 
+                        key={proj.id} 
+                        className={`hover:bg-gray-50 transition-colors ${
+                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                        }`}
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                              <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
+                                <span className="text-xs font-medium text-green-600">
+                                  {proj.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-2">
+                              <Link 
+                                href={`/lvm/projects/${proj.id}`}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              >
+                                {proj.name}
+                              </Link>
+                              {proj.description && (
+                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                                  {proj.description}
+                                </p>
+                              )}
                             </div>
                           </div>
-                          <div className="ml-3">
-                            <Link 
-                              href={`/lvm/projects/${proj.id}`}
-                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {getStatusIcon(proj.status)}
+                            <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(proj.status)}`}>
+                              {proj.status || "UNKNOWN"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMenuToggle(proj.id);
+                              }}
+                              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
                             >
-                              {proj.name}
-                            </Link>
-                            {proj.description && (
-                              <p className="text-xs text-gray-500 mt-1 line-clamp-1">
-                                {proj.description}
-                              </p>
+                              <Menu className="w-3 h-3 text-gray-500" />
+                            </button>
+                            
+                            {openMenuId === proj.id && (
+                              <div 
+                                className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-20"
+                                onClick={handleMenuClick}
+                              >
+                                <Link
+                                  href={`/lvm/projects/${proj.id}`}
+                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+                                >
+                                  MAIN
+                                </Link>
+                                <Link
+                                  href={`/lvm/projects/${proj.id}?tab=kpi`}
+                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+                                >
+                                  KPI
+                                </Link>
+                                <Link
+                                  href={`/lvm/projects/${proj.id}?tab=production`}
+                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+                                >
+                                  PRODUCTION
+                                </Link>
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1">
-                          {(proj.departments || []).map(dept => (
-                            <span 
-                              key={dept}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                            >
-                              {DEPARTMENTS.find(d => d.value === dept)?.label || dept}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {getStatusIcon(proj.status)}
-                          <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(proj.status)}`}>
-                            {proj.status || "UNKNOWN"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <Calendar className="w-4 h-4 mr-1 text-gray-400" />
-                          {new Date(proj.createdAt).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMenuToggle(proj.id);
-                            }}
-                            className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
-                          >
-                            <Menu className="w-3 h-3 text-gray-500" />
-                          </button>
-                          
-                          {openMenuId === proj.id && (
-                            <div 
-                              className="absolute right-0 top-full mt-1 w-28 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-20"
-                              onClick={handleMenuClick}
-                            >
-                              <Link
-                                href={`/lvm/projects/${proj.id}`}
-                                className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                              >
-                                MAIN
-                              </Link>
-                              <Link
-                                href={`/lvm/projects/${proj.id}?tab=kpi`}
-                                className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                              >
-                                KPI
-                              </Link>
-                              <Link
-                                href={`/lvm/projects/${proj.id}?tab=production`}
-                                className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                              >
-                                PRODUCTION
-                              </Link>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       </div>

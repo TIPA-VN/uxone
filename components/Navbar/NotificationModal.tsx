@@ -324,10 +324,50 @@ export function NotificationModal({
           {/* Action Buttons */}
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2">
-              <button className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium">
+              <button 
+                onClick={async () => {
+                  // Mark all notifications as read
+                  const unreadNotifications = notifications.filter(n => !n.read);
+                  if (unreadNotifications.length === 0) return;
+                  
+                  try {
+                    await fetch("/api/notifications/mark-all-read", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                    });
+                    
+                    setNotifications((prev: Notification[]) =>
+                      prev.map((notif: Notification) => ({ ...notif, read: true }))
+                    );
+                  } catch (error) {
+                    console.error("Failed to mark all as read:", error);
+                  }
+                }}
+                disabled={notifications.filter(n => !n.read).length === 0}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+              >
                 Mark All as Read
               </button>
-              <button className="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs font-medium">
+              <button 
+                onClick={async () => {
+                  if (notifications.length === 0) return;
+                  
+                  if (confirm("Are you sure you want to clear all notifications? This action cannot be undone.")) {
+                    try {
+                      await fetch("/api/notifications/clear-all", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                      });
+                      
+                      setNotifications([]);
+                    } catch (error) {
+                      console.error("Failed to clear all notifications:", error);
+                    }
+                  }
+                }}
+                disabled={notifications.length === 0}
+                className="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+              >
                 Clear All
               </button>
             </div>

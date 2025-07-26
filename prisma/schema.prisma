@@ -28,6 +28,8 @@ model User {
   documents      Document[]     @relation("UserDocuments")
   projects       Project[]
   notes          Note[]
+  ownedTasks     Task[]         @relation("TaskOwner")
+  assignedTasks  Task[]         @relation("TaskAssignee")
 
   @@map("users")
 }
@@ -102,6 +104,7 @@ model Project {
   documents     Document[]
   notes         Note[]
   comments      ProjectComment[]
+  tasks         Task[]
 
   @@map("projects")
 }
@@ -131,4 +134,70 @@ model ProjectComment {
   timestamp DateTime @default(now())
 
   @@map("project_comments")
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+  CANCELLED
+  OVERDUE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  ownerId       String
+  owner         User         @relation("TaskOwner", fields: [ownerId], references: [id])
+  assigneeId    String?      // Individual assignee
+  assignee      User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignedDepartments String[] // Departments assigned to this task
+  status        TaskStatus   @default(PENDING)
+  priority      TaskPriority @default(MEDIUM)
+  requestDate   DateTime     @default(now()) // When task was created/requested
+  dueDate       DateTime?    // When task should be completed
+  finishedDate  DateTime?    // When task was actually completed
+  projectId     String?      // Optional: link to project
+  project       Project?     @relation(fields: [projectId], references: [id])
+  attachments   TaskAttachment[]
+  comments      TaskComment[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("tasks")
+}
+
+model TaskAttachment {
+  id          String   @id @default(cuid())
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fileName    String
+  filePath    String
+  fileType    String
+  size        Int
+  uploadedBy  String
+  uploadedAt  DateTime @default(now())
+
+  @@map("task_attachments")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  text      String
+  authorId  String
+  author    String   // Store author name for display
+  timestamp DateTime @default(now())
+
+  @@map("task_comments")
 }
