@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { CheckCircle, XCircle, Clock, AlertCircle, Check, Factory, MoreVertical, Eye, Download, Menu, Upload, Trash2, RotateCcw, Calendar } from "lucide-react";
 import { PDFTools } from "@/components/PDFTools";
@@ -69,11 +69,12 @@ const getStatusIcon = (status: string | undefined) => {
 
 export default function ProjectDetailsPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const projectId = params?.id as string;
   const [project, setProject] = useState<Project | null>(null);
   // Add a MAIN tab
   const [activeTab, setActiveTab] = useState<string>("");
-  const [userSelectedTab, setUserSelectedTab] = useState(false);
+  const [urlTabHandled, setUrlTabHandled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [docs, setDocs] = useState<Document[]>([]);
@@ -131,28 +132,45 @@ export default function ProjectDetailsPage() {
       });
   }, [projectId]);
 
-  // Set activeDept to user's department after project loads, but preserve current tab if it's valid
+  // Handle URL parameters for tab navigation and set initial tab
   useEffect(() => {
-    if (project && Array.isArray(project.departments) && project.departments.length > 0) {
-      // Only set to user's department if current activeTab is not a valid department and user hasn't manually selected a tab
-      const isValidCurrentTab = activeTab && project.departments.includes(activeTab);
-      if (!isValidCurrentTab && !userSelectedTab) {
-        // Try to set to user's department, fallback to first department if user's department not in project
-        const userDepartment = user?.department?.toLowerCase();
-        const projectDepartmentsLower = project.departments.map(dept => dept.toLowerCase());
-        const userDeptInProject = userDepartment && projectDepartmentsLower.includes(userDepartment);
-        
-        // Find the original case version of the user's department in project
-        const originalCaseUserDept = userDepartment ? 
-          project.departments.find(dept => dept.toLowerCase() === userDepartment) : null;
-        
-        const newTab = userDeptInProject ? (originalCaseUserDept || userDepartment) : project.departments[0];
-        setActiveTab(newTab);
+    // Only handle URL parameters once
+    if (urlTabHandled) return;
+    
+    // Try multiple ways to get the tab parameter
+    const tabParam = searchParams.get('tab') || new URLSearchParams(window.location.search).get('tab');
+    
+    if (tabParam) {
+      // Map URL parameters to tab names
+      const tabMapping: Record<string, string> = {
+        'kpi': 'ANALYTICS',
+        'production': 'PRODUCTION',
+        'main': 'MAIN'
+      };
+      
+      const mappedTab = tabMapping[tabParam.toLowerCase()];
+      if (mappedTab) {
+        setActiveTab(mappedTab);
+        setUrlTabHandled(true);
+        return;
       }
-    } else {
-      setActiveTab("");
     }
-  }, [project, user?.department, userSelectedTab]);
+    
+    // If no URL parameter and project is loaded, set default department
+    if (project && Array.isArray(project.departments) && project.departments.length > 0 && !activeTab) {
+      // Try to set to user's department, fallback to first department if user's department not in project
+      const userDepartment = user?.department?.toLowerCase();
+      const projectDepartmentsLower = project.departments.map(dept => dept.toLowerCase());
+      const userDeptInProject = userDepartment && projectDepartmentsLower.includes(userDepartment);
+      
+      // Find the original case version of the user's department in project
+      const originalCaseUserDept = userDepartment ? 
+        project.departments.find(dept => dept.toLowerCase() === userDepartment) : null;
+      
+      const newTab = userDeptInProject ? (originalCaseUserDept || userDepartment) : project.departments[0];
+      setActiveTab(newTab);
+    }
+  }, [searchParams, project, user?.department, urlTabHandled]);
 
   useEffect(() => {
     if (!projectId || !activeTab || activeTab === "MAIN") return;
@@ -559,7 +577,6 @@ export default function ProjectDetailsPage() {
                 }`}
               onClick={() => {
                 setActiveTab(dept);
-                setUserSelectedTab(true);
               }}
             >
               {DEPARTMENTS.find(d => d.value === dept)?.label || dept}
@@ -581,7 +598,6 @@ export default function ProjectDetailsPage() {
           }`}
           onClick={() => {
             setActiveTab("MAIN");
-            setUserSelectedTab(true);
           }}
         >
           MAIN
@@ -601,7 +617,6 @@ export default function ProjectDetailsPage() {
           }`}
           onClick={() => {
             setActiveTab("ANALYTICS");
-            setUserSelectedTab(true);
           }}
         >
           KPI
@@ -621,7 +636,6 @@ export default function ProjectDetailsPage() {
           }`}
           onClick={() => {
             setActiveTab("PRODUCTION");
-            setUserSelectedTab(true);
           }}
         >
           PRODUCTION
