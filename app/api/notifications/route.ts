@@ -15,9 +15,9 @@ export async function GET() {
     if (!session?.user?.id) {
       return NextResponse.json([], { status: 401 });
     }
-    // Use raw query to fetch notifications
+    // Use raw query to fetch notifications, filter out hidden
     const notifications = await prisma.$queryRawUnsafe(
-      `SELECT * FROM notifications WHERE "userId" = '${session.user.id}' ORDER BY "createdAt" DESC`
+      `SELECT * FROM notifications WHERE "userId" = '${session.user.id}' AND hidden = false ORDER BY "createdAt" DESC`
     );
     // Filter out notifications without id
     const filtered = (notifications as Record<string, unknown>[]).filter((n) => n.id);
@@ -142,6 +142,14 @@ export async function PATCH(req: NextRequest) {
     );
     if (!existing || (Array.isArray(existing) && existing.length === 0)) {
       return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+    }
+    // If body.hidden === true, set hidden=true
+    if (body.hidden === true) {
+      const updated = await prisma.$queryRawUnsafe(
+        `UPDATE notifications SET hidden = true WHERE id = '${body.id}' RETURNING *`
+      );
+      const notification = Array.isArray(updated) ? updated[0] : updated;
+      return NextResponse.json(notification);
     }
     // Update notification as read
     const updated = await prisma.$queryRawUnsafe(

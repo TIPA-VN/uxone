@@ -89,11 +89,6 @@ export async function PATCH(req: NextRequest, context: any) {
     });
 
     // Create notification
-    console.log("Creating notification for project:", project.id);
-    console.log("Project owner ID:", project.ownerId);
-    console.log("Action:", actionUpper);
-    console.log("Department:", department);
-    
     try {
       const notification = await prisma.notification.create({
         data: {
@@ -104,7 +99,6 @@ export async function PATCH(req: NextRequest, context: any) {
           link: `/lvm/projects/${project.id}`,
         },
       });
-      console.log("Notification created successfully:", notification.id);
       
       // Send notification through SSE
       sendNotification(notification, project.ownerId);

@@ -42,6 +42,7 @@ model Notification {
   link      String?  // Optional: link to related resource
   type      String?  // Optional: type of notification (info, warning, etc.)
   read      Boolean  @default(false)
+  hidden    Boolean  @default(false) // User has hidden this notification
   createdAt DateTime @default(now())
 
   @@map("notifications")
@@ -93,11 +94,14 @@ model Project {
   status        ProjectStatus @default(STARTED)
   released      Boolean  @default(false)
   releasedAt    DateTime?
+  requestDate   DateTime? // Overall project due date
+  departmentDueDates Json? // { department: dueDate, ... }
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   // Optional: link to documents
   documents     Document[]
   notes         Note[]
+  comments      ProjectComment[]
 
   @@map("projects")
 }
@@ -114,4 +118,17 @@ model Note {
   createdAt   DateTime @default(now())
 
   @@map("notes")
+}
+
+model ProjectComment {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  text      String
+  type      String   // 'comment' or 'update'
+  authorId  String
+  author    String   // Store author name for display
+  timestamp DateTime @default(now())
+
+  @@map("project_comments")
 }

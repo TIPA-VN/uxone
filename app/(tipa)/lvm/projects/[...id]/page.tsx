@@ -2,9 +2,11 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { CheckCircle, XCircle, Clock, AlertCircle, Check, Factory, MoreVertical, Eye, Download, Menu, Upload, Trash2, RotateCcw } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertCircle, Check, Factory, MoreVertical, Eye, Download, Menu, Upload, Trash2, RotateCcw, Calendar } from "lucide-react";
 import { PDFTools } from "@/components/PDFTools";
 import { DocumentViewer } from "@/components/DocumentViewer";
+import { ProjectAnalytics } from "@/components/ProjectAnalytics";
+import { DueDateEditor } from "@/components/DueDateEditor";
 
 type Project = {
   id: string;
@@ -14,6 +16,8 @@ type Project = {
   departments: string[];
   approvalState?: Record<string, any>; // allow array/object for logs
   ownerId?: string;
+  requestDate?: string;
+  departmentDueDates?: Record<string, string>;
   // add other fields as needed
 };
 
@@ -69,10 +73,12 @@ export default function ProjectDetailsPage() {
   const [project, setProject] = useState<Project | null>(null);
   // Add a MAIN tab
   const [activeTab, setActiveTab] = useState<string>("");
+  const [userSelectedTab, setUserSelectedTab] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [docs, setDocs] = useState<Document[]>([]);
   const [productionDocs, setProductionDocs] = useState<Document[]>([]);
+  const [allDocs, setAllDocs] = useState<Document[]>([]); // All documents for the project
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -80,6 +86,19 @@ export default function ProjectDetailsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: session } = useSession();
   const user = session?.user;
+  
+  // Comment and updates state
+  const [comments, setComments] = useState<Array<{
+    id: string;
+    text: string;
+    author: string;
+    authorId: string;
+    timestamp: string;
+    type: 'comment' | 'update';
+  }>>([]);
+  const [newComment, setNewComment] = useState("");
+  const [commentType, setCommentType] = useState<'comment' | 'update'>('comment');
+  const [submittingComment, setSubmittingComment] = useState(false);
   
   // Pagination state for document upload table
   const [currentDocPage, setCurrentDocPage] = useState(1);
@@ -93,11 +112,10 @@ export default function ProjectDetailsPage() {
   const [viewerDoc, setViewerDoc] = useState<Document | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
-  // DEBUG: Log session user, activeDept, and approvalState
-  console.log("Session user:", user);
-  console.log("User department:", user?.department);
-  console.log("Active department:", activeTab);
-  console.log("Project approvalState:", project?.approvalState);
+  // Due dates editor state
+  const [showDueDateEditor, setShowDueDateEditor] = useState(false);
+  const [dueDateEditorDepartment, setDueDateEditorDepartment] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (!projectId) return;
@@ -108,26 +126,17 @@ export default function ProjectDetailsPage() {
         let proj = Array.isArray(data)
           ? data.find((p: any) => String(p.id) === String(projectId))
           : data;
-        console.log("Looking for projectId:", projectId, "in", Array.isArray(data) ? data.map((p: any) => p.id) : data);
         setProject(proj);
         setLoading(false);
-        // Extra debug: log departments and approvalState
-        if (proj) {
-          console.log("Set project:", proj);
-          console.log("Set project.departments:", proj.departments);
-          console.log("Set project.approvalState:", proj.approvalState);
-        } else {
-          console.error("Project not found for id:", projectId, "API response:", data);
-        }
       });
   }, [projectId]);
 
   // Set activeDept to user's department after project loads, but preserve current tab if it's valid
   useEffect(() => {
     if (project && Array.isArray(project.departments) && project.departments.length > 0) {
-      // Only set to user's department if current activeTab is not a valid department
+      // Only set to user's department if current activeTab is not a valid department and user hasn't manually selected a tab
       const isValidCurrentTab = activeTab && project.departments.includes(activeTab);
-      if (!isValidCurrentTab) {
+      if (!isValidCurrentTab && !userSelectedTab) {
         // Try to set to user's department, fallback to first department if user's department not in project
         const userDepartment = user?.department?.toLowerCase();
         const projectDepartmentsLower = project.departments.map(dept => dept.toLowerCase());
@@ -143,7 +152,7 @@ export default function ProjectDetailsPage() {
     } else {
       setActiveTab("");
     }
-  }, [project, activeTab, user?.department]);
+  }, [project, user?.department, userSelectedTab]);
 
   useEffect(() => {
     if (!projectId || !activeTab || activeTab === "MAIN") return;
@@ -189,6 +198,50 @@ export default function ProjectDetailsPage() {
       });
   }, [projectId, uploading]);
 
+  // Fetch all documents for the project
+  useEffect(() => {
+    if (!projectId) return;
+    fetch(`/api/documents?projectId=${projectId}`)
+      .then(res => res.json())
+      .then(data => {
+        // Sort all documents by last updated (createdAt)
+        const sortedData = data.sort((a: Document, b: Document) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setAllDocs(sortedData);
+      });
+  }, [projectId, uploading]);
+
+  // Fetch comments for the project
+  useEffect(() => {
+    if (!projectId) return;
+    fetch(`/api/projects/comments?projectId=${projectId}`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        // Check if data is an array before sorting
+        if (Array.isArray(data)) {
+          // Sort comments by timestamp (newest first)
+          const sortedComments = data.sort((a: any, b: any) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          setComments(sortedComments);
+        } else {
+          console.error('Invalid data format received:', data);
+          setComments([]);
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching comments:', error);
+        // If API doesn't exist yet or other error, use empty array
+        setComments([]);
+      });
+  }, [projectId]);
+
   // Always default approvalState to an object
   const approvalState = project?.approvalState || {};
 
@@ -228,7 +281,7 @@ export default function ProjectDetailsPage() {
     if (!file) return;
     
     // Check for name duplication
-    const existingDoc = docs.find(doc => doc.fileName === file.name);
+    const existingDoc = allDocs.find(doc => doc.fileName === file.name);
     if (existingDoc) {
       setUploadStatus("File with this name already exists. Please rename the file or choose a different one.");
       return;
@@ -354,6 +407,63 @@ export default function ProjectDetailsPage() {
     setViewerDoc(null);
   };
 
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user) return;
+    
+    setSubmittingComment(true);
+    try {
+      const commentData = {
+        text: newComment.trim(),
+        type: commentType,
+        author: user.name || user.username || 'Unknown User',
+        projectId: projectId,
+      };
+      
+      const res = await fetch('/api/projects/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(commentData),
+      });
+      
+      if (res.ok) {
+        const savedComment = await res.json();
+        setComments(prev => [savedComment, ...prev]);
+        setNewComment("");
+        setCommentType('comment');
+      } else {
+        console.error('Failed to submit comment');
+      }
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleSaveDueDates = async (requestDate: string, departmentDueDates: Record<string, string>) => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/due-dates`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestDate: requestDate || null,
+          departmentDueDates
+        }),
+      });
+      
+      if (res.ok) {
+        const updatedProject = await res.json();
+        setProject(updatedProject);
+        setShowDueDateEditor(false);
+      } else {
+        console.error('Failed to save due dates');
+      }
+    } catch (error) {
+      console.error('Error saving due dates:', error);
+    }
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -380,11 +490,9 @@ export default function ProjectDetailsPage() {
 
   // Defensive fallback rendering for missing departments or approvalState
   if (project && (!Array.isArray(project.departments) || project.departments.length === 0)) {
-    console.error("No departments found for this project. Value:", project.departments);
     return <div className="p-8 text-red-600">No departments found for this project.</div>;
   }
   if (project && !project.approvalState) {
-    console.error("No approvalState found for this project. Value:", project.approvalState);
     return <div className="p-8 text-red-600">No approval state found for this project.</div>;
   }
 
@@ -398,20 +506,44 @@ export default function ProjectDetailsPage() {
       <div className="flex flex-wrap gap-1 border-b mb-4" role="tablist" aria-label="Department Tabs">
         {(project.departments || []).map((dept: string) => {
           const isActive = activeTab === dept;
-          const getTabColor = (dept: string) => {
+          const getTabColor = (dept: string, active: boolean) => {
             switch(dept) {
-              case 'logistics': return 'border-emerald-500 text-emerald-600 bg-emerald-50 hover:bg-emerald-100';
-              case 'procurement': return 'border-blue-500 text-blue-600 bg-blue-50 hover:bg-blue-100';
-              case 'pc': return 'border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100';
-              case 'qa': return 'border-teal-500 text-teal-600 bg-teal-50 hover:bg-teal-100';
-              case 'qc': return 'border-cyan-500 text-cyan-600 bg-cyan-50 hover:bg-cyan-100';
-              case 'pm': return 'border-indigo-500 text-indigo-600 bg-indigo-50 hover:bg-indigo-100';
-              case 'fm': return 'border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100';
-              case 'hra': return 'border-pink-500 text-pink-600 bg-pink-50 hover:bg-pink-100';
-              case 'cs': return 'border-lime-500 text-lime-600 bg-lime-50 hover:bg-lime-100';
-              case 'sales': return 'border-orange-500 text-orange-600 bg-orange-50 hover:bg-orange-100';
-              case 'LVM-EXPAT': return 'border-violet-500 text-violet-600 bg-violet-50 hover:bg-violet-100';
-              default: return 'border-gray-500 text-gray-600 bg-gray-50 hover:bg-gray-100';
+              case 'logistics': return active
+                ? 'bg-emerald-500 text-white border-emerald-600'
+                : 'border-emerald-500 text-emerald-600 bg-emerald-50 hover:bg-emerald-100';
+              case 'procurement': return active
+                ? 'bg-blue-500 text-white border-blue-600'
+                : 'border-blue-500 text-blue-600 bg-blue-50 hover:bg-blue-100';
+              case 'pc': return active
+                ? 'bg-sky-500 text-white border-sky-600'
+                : 'border-sky-500 text-sky-600 bg-sky-50 hover:bg-sky-100';
+              case 'qa': return active
+                ? 'bg-teal-500 text-white border-teal-600'
+                : 'border-teal-500 text-teal-600 bg-teal-50 hover:bg-teal-100';
+              case 'qc': return active
+                ? 'bg-cyan-500 text-white border-cyan-600'
+                : 'border-cyan-500 text-cyan-600 bg-cyan-50 hover:bg-cyan-100';
+              case 'pm': return active
+                ? 'bg-indigo-500 text-white border-indigo-600'
+                : 'border-indigo-500 text-indigo-600 bg-indigo-50 hover:bg-indigo-100';
+              case 'fm': return active
+                ? 'bg-amber-500 text-white border-amber-600'
+                : 'border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100';
+              case 'hra': return active
+                ? 'bg-pink-500 text-white border-pink-600'
+                : 'border-pink-500 text-pink-600 bg-pink-50 hover:bg-pink-100';
+              case 'cs': return active
+                ? 'bg-lime-500 text-white border-lime-600'
+                : 'border-lime-500 text-lime-600 bg-lime-50 hover:bg-lime-100';
+              case 'sales': return active
+                ? 'bg-orange-500 text-white border-orange-600'
+                : 'border-orange-500 text-orange-600 bg-orange-50 hover:bg-orange-100';
+              case 'LVM-EXPAT': return active
+                ? 'bg-violet-500 text-white border-violet-600'
+                : 'border-violet-500 text-violet-600 bg-violet-50 hover:bg-violet-100';
+              default: return active
+                ? 'bg-gray-500 text-white border-gray-600'
+                : 'border-gray-500 text-gray-600 bg-gray-50 hover:bg-gray-100';
             }
           };
           return (
@@ -422,12 +554,13 @@ export default function ProjectDetailsPage() {
               aria-controls={`dept-pane-${dept}`}
               id={`dept-tab-${dept}`}
               tabIndex={isActive ? 0 : -1}
-              className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
-                isActive 
-                  ? `border-b-2 bg-white shadow-sm ${getTabColor(dept).split(' ')[0]} ${getTabColor(dept).split(' ')[1]}`
-                  : `border-transparent ${getTabColor(dept)}`
-              }`}
-              onClick={() => setActiveTab(dept)}
+                              className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+                  getTabColor(dept, isActive)
+                }`}
+              onClick={() => {
+                setActiveTab(dept);
+                setUserSelectedTab(true);
+              }}
             >
               {DEPARTMENTS.find(d => d.value === dept)?.label || dept}
             </button>
@@ -446,9 +579,32 @@ export default function ProjectDetailsPage() {
               ? "border-b-2 bg-white shadow-sm border-slate-500 text-slate-700" 
               : "border-transparent border-slate-500 text-slate-600 bg-slate-50 hover:bg-slate-100"
           }`}
-          onClick={() => setActiveTab("MAIN")}
+          onClick={() => {
+            setActiveTab("MAIN");
+            setUserSelectedTab(true);
+          }}
         >
           MAIN
+        </button>
+        {/* ANALYTICS tab */}
+        <button
+          key="ANALYTICS"
+          role="tab"
+          aria-selected={activeTab === "ANALYTICS"}
+          aria-controls="analytics-pane"
+          id="analytics-tab"
+          tabIndex={activeTab === "ANALYTICS" ? 0 : -1}
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+            activeTab === "ANALYTICS" 
+              ? "border-b-2 bg-white shadow-sm border-sky-500 text-sky-700" 
+              : "border-transparent border-sky-500 text-sky-600 bg-sky-50 hover:bg-sky-100"
+          }`}
+          onClick={() => {
+            setActiveTab("ANALYTICS");
+            setUserSelectedTab(true);
+          }}
+        >
+          KPI
         </button>
         {/* PRODUCTION tab */}
         <button
@@ -463,7 +619,10 @@ export default function ProjectDetailsPage() {
               ? "border-b-2 bg-white shadow-sm border-orange-500 text-orange-700" 
               : "border-transparent border-orange-500 text-orange-600 bg-orange-50 hover:bg-orange-100"
           }`}
-          onClick={() => setActiveTab("PRODUCTION")}
+          onClick={() => {
+            setActiveTab("PRODUCTION");
+            setUserSelectedTab(true);
+          }}
         >
           PRODUCTION
         </button>
@@ -475,25 +634,246 @@ export default function ProjectDetailsPage() {
           id="main-pane"
           role="tabpanel"
           aria-labelledby="main-tab"
-          className="p-4 sm:p-6 min-h-[120px] border border-gray-200 bg-gray-50 rounded-lg text-sm"
+          className="p-2 sm:p-3 min-h-[400px] border border-gray-200 bg-gray-50 rounded-lg"
         >
-          <div className="mb-2">
-            <span className="font-semibold">Project Name: </span>{project.name}
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Left Panel: Project Status and Approval History */}
+            <div className="lg:w-1/2 w-full">
+              {/* Project Overview split into two cards */}
+              <div className="flex flex-col md:flex-row gap-2 mb-2">
+                {/* Left Card: Name, Status, Description */}
+                <div className="bg-white rounded-lg shadow p-2 flex-1 min-w-[180px]">
+                  <h3 className="font-semibold text-base mb-2 text-gray-800">Project Overview</h3>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-600">Project Name:</span>
+                      <span className="font-semibold text-gray-800">{project.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-600">Status:</span>
+                      <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full ${
+                        project.status === "APPROVED" ? "bg-green-100 text-green-800" :
+                        project.status === "PENDING" ? "bg-orange-100 text-orange-800" :
+                        project.status === "REJECTED" ? "bg-red-100 text-red-800" :
+                        "bg-gray-100 text-gray-800"
+                      }`}>
+                        {project.status || "UNKNOWN"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <span className="font-medium text-gray-600">Description:</span>
+                      <span className="text-gray-800 text-right max-w-xs text-xs">
+                        {project.description || <span className="text-gray-400 italic">No description</span>}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {/* Right Card: Edit Due Dates, Request Date, Department Due Dates */}
+                <div className="bg-white rounded-lg shadow p-2 flex-1 min-w-[180px]">
+                  <div className="flex flex-col gap-2">
+                    {/* Edit Due Dates Button - Only for project owner */}
+                    {project.ownerId === user?.id && (
+                      <div className="flex justify-end mb-1">
+                        <button
+                          onClick={() => {
+                            setShowDueDateEditor(true);
+                          }}
+                          className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 shadow-sm ${
+                            showDueDateEditor 
+                              ? 'bg-green-600 text-white hover:bg-green-700' 
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
+                        >
+                          <Calendar className="w-3 h-3" />
+                          {showDueDateEditor ? 'Due Date Editor Open' : 'Edit Due Dates'}
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-start">
+                      <span className="font-bold text-gray-800 text-[10px]">Project Request Date:</span>
+                      <span className="text-gray-900 font-semibold text-right max-w-xs text-xs">
+                        {project.requestDate ? new Date(project.requestDate).toLocaleDateString() : <span className="text-gray-400 italic">Not set</span>}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <span className="font-bold text-gray-800 text-[10px]">Department Due Dates:</span>
+                      <div className="text-gray-800 text-right max-w-xs text-xs">
+                        {project.departmentDueDates && Object.entries(project.departmentDueDates).length > 0 ? (
+                          <ul className="list-none p-0 m-0">
+                            {Object.entries(project.departmentDueDates).map(([dept, date]) => (
+                              <li key={dept} className="text-[10px] text-gray-500">
+                                 {DEPARTMENTS.find(d => d.value === dept)?.label || dept}: {new Date(date).toLocaleDateString()}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-gray-400 italic">Not set</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-2">
+                <h3 className="font-semibold text-base mb-2 text-gray-800">Approval Status by Department</h3>
+                <div className="space-y-2">
+                  {(project.departments || []).map((dept: string) => {
+                    const statusObj = approvalState[dept];
+                    const logs = Array.isArray(statusObj) ? statusObj : statusObj ? [statusObj] : [];
+                    const latest = logs.length > 0 ? logs[logs.length - 1] : null;
+                    const status = latest ? latest.status : statusObj;
+                    const timestamp = latest ? latest.timestamp : null;
+                    const user = latest ? latest.user : null;
+                    const deptLabel = DEPARTMENTS.find(d => d.value === dept)?.label || dept;
+                    
+                    return (
+                      <div key={dept} className="border border-gray-200 rounded-lg p-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-800 text-xs">{deptLabel}</span>
+                          <div className="flex items-center gap-1">
+                            {getStatusIcon(status)}
+                            <span className={`text-[10px] font-medium px-1 py-0.5 rounded-full ${
+                              status === "APPROVED" ? "bg-green-100 text-green-800" :
+                              status === "REJECTED" ? "bg-red-100 text-red-800" :
+                              status === "PENDING" ? "bg-orange-100 text-orange-800" :
+                              "bg-gray-100 text-gray-800"
+                            }`}>
+                              {status || "NOT STARTED"}
+                            </span>
+                          </div>
+                        </div>
+                        {timestamp && (
+                          <div className="text-[10px] text-gray-500">
+                            {new Date(timestamp).toLocaleString()}
+                            {user && <span className="ml-1 text-blue-600">by {user}</span>}
+                          </div>
+                        )}
+                        {logs.length > 1 && (
+                          <div className="mt-1 pt-1 border-t border-gray-100">
+                            <div className="text-[10px] font-medium text-gray-600 mb-0.5">History:</div>
+                            <div className="space-y-0.5">
+                              {logs.slice(-3).map((log: any, idx: number) => {
+                                let color = '';
+                                if (log.status === 'REJECTED') color = 'text-red-600';
+                                else if (log.status === 'APPROVED') color = 'text-green-600';
+                                else if (log.status === 'PENDING') color = 'text-orange-600';
+                                return (
+                                  <div key={idx} className={`text-[10px] text-gray-500 ${color}`}>
+                                    {log.status} by {log.user} at {new Date(log.timestamp).toLocaleString()}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Panel: Comments and Updates */}
+            <div className="lg:w-1/2 w-full">
+              <div className="bg-white rounded-lg shadow p-2 h-full">
+                <h3 className="font-semibold text-base mb-2 text-gray-800">Comments & Updates</h3>
+                {/* Comment Form */}
+                <form onSubmit={handleSubmitComment} className="mb-2">
+                  <div className="flex gap-1 mb-2">
+                    <select
+                      value={commentType}
+                      onChange={(e) => setCommentType(e.target.value as 'comment' | 'update')}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="comment">💬 Comment</option>
+                      <option value="update">📝 Update</option>
+                    </select>
+                  </div>
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder={`Add a ${commentType}...`}
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    required
+                  />
+                  <div className="flex justify-end mt-1">
+                    <button
+                      type="submit"
+                      disabled={submittingComment || !newComment.trim()}
+                      className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    >
+                      {submittingComment ? (
+                        <>
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Posting...
+                        </>
+                      ) : (
+                        <>
+                          <span>{commentType === 'comment' ? '💬' : '📝'}</span>
+                          Post {commentType === 'comment' ? 'Comment' : 'Update'}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Comments List */}
+                <div className="border-t border-gray-200 pt-2">
+                  <h4 className="font-medium text-gray-700 mb-2 text-xs">Recent Activity</h4>
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {comments.length === 0 ? (
+                      <div className="text-gray-500 text-xs text-center py-4">
+                        No comments or updates yet. Be the first to add one!
+                      </div>
+                    ) : (
+                      comments.map((comment) => (
+                        <div key={comment.id} className="border border-gray-200 rounded-lg p-1">
+                          <div className="flex items-start justify-between mb-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-base">
+                                {comment.type === 'comment' ? '💬' : '📝'}
+                              </span>
+                              <span className="font-medium text-gray-800 text-xs">{comment.author}</span>
+                              <span className="text-[10px] text-gray-500">
+                                {new Date(comment.timestamp).toLocaleString()}
+                              </span>
+                            </div>
+                            <span className={`text-[10px] px-1 py-0.5 rounded-full ${
+                              comment.type === 'comment' 
+                                ? 'bg-blue-100 text-blue-800' 
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {comment.type === 'comment' ? 'Comment' : 'Update'}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-700 whitespace-pre-wrap">
+                            {comment.text}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mb-2">
-            <span className="font-semibold">Description: </span>{project.description || <span className="text-gray-400">No description</span>}
-          </div>
-          <div className="mb-2">
-            <span className="font-semibold">Status: </span>
-            <span className={`font-bold text-xs ${
-              project.status === "APPROVED" ? "text-green-600" :
-              project.status === "PENDING" ? "text-orange-600" :
-              project.status === "REJECTED" ? "text-red-600" :
-              "text-gray-600"
-            }`}>
-              {project.status || "UNKNOWN"}
-            </span>
-          </div>
+        </div>
+      ) : activeTab === "ANALYTICS" ? (
+        <div
+          id="analytics-pane"
+          role="tabpanel"
+          aria-labelledby="analytics-tab"
+          className="p-4 sm:p-6 min-h-[400px] border border-gray-200 bg-gray-50 rounded-lg"
+        >
+          <ProjectAnalytics
+            project={project}
+            approvalState={approvalState}
+            comments={comments}
+            docs={allDocs} // Pass allDocs to ProjectAnalytics
+            productionDocs={productionDocs}
+          />
         </div>
       ) : activeTab === "PRODUCTION" ? (
         <div
@@ -916,65 +1296,7 @@ export default function ProjectDetailsPage() {
         })
       )}
 
-      {/* Approval Timeline only for MAIN tab */}
-      {activeTab === "MAIN" && (
-        <div className="p-4 sm:p-6 mt-8 border border-gray-200 bg-gray-50 rounded-lg">
-          <h2 className="text-lg font-bold mb-4">Approval Timeline</h2>
-          <div className="space-y-4">
-            {(project.departments || []).map((dept: string) => {
-              const statusObj = approvalState[dept];
-              // If statusObj is an array, get the latest log
-              const logs = Array.isArray(statusObj) ? statusObj : statusObj ? [statusObj] : [];
-              const latest = logs.length > 0 ? logs[logs.length - 1] : null;
-              const status = latest ? latest.status : statusObj;
-              const timestamp = latest ? latest.timestamp : null;
-              const user = latest ? latest.user : null;
-              const deptLabel = DEPARTMENTS.find(d => d.value === dept)?.label || dept;
-              return (
-                <div key={dept} className="flex items-center gap-4">
-                  <div className="flex-shrink-0">
-                    {getStatusIcon(status)}
-                  </div>
-                  <div className="flex-grow">
-                    <div className="font-medium">{deptLabel}</div>
-                    <div className="text-sm text-gray-500 capitalize">
-                      {status || "Not started"}
-                      {timestamp && (
-                        <span className="ml-2 text-xs text-gray-400">{new Date(timestamp).toLocaleString()}</span>
-                      )}
-                      {user && (
-                        <span className="ml-2 text-xs text-blue-600">by {user}</span>
-                      )}
-                      {/* Approval/reject history */}
-                      {logs.length > 1 && (
-                        <ul className="mt-1 text-xs">
-                          {logs.map((log: any, idx: number) => {
-                            let color = '';
-                            if (log.status === 'REJECTED') color = 'text-red-600';
-                            else if (log.status === 'APPROVED') color = 'text-green-600';
-                            else if (log.status === 'PENDING') color = 'text-orange-600';
-                            return (
-                              <li key={idx} className={color}>
-                                {log.status} by {log.user} at {new Date(log.timestamp).toLocaleString()}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                  {status === "APPROVED" && (
-                    <div className="text-sm text-green-600">✓ Approved</div>
-                  )}
-                  {status === "REJECTED" && (
-                    <div className="text-sm text-red-600">✗ Disapproved</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
 
       {/* Document Viewer Modal */}
       {viewerOpen && viewerDoc && (
@@ -997,6 +1319,27 @@ export default function ProjectDetailsPage() {
                 documentId={viewerDoc.id}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Due Date Editor Modal */}
+      {showDueDateEditor && project && (
+        <div 
+          className="fixed inset-0 bg-transparent flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDueDateEditor(false);
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <DueDateEditor
+              project={project}
+              departments={project.departments || []}
+              onSave={handleSaveDueDates}
+              onCancel={() => setShowDueDateEditor(false)}
+            />
           </div>
         </div>
       )}

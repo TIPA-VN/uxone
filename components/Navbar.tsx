@@ -138,6 +138,7 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [announceOpen, setAnnounceOpen] = useState(false);
   const [announceStatus, setAnnounceStatus] = useState<string | null>(null);
   const [announceConfirm, setAnnounceConfirm] = useState(false);
@@ -290,62 +291,181 @@ const Navbar = () => {
             </div>
           )}
           {notifOpen && (
-            <div className="absolute top-10 right-0 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-2">
-              <div className="font-semibold text-gray-800 mb-2">Notifications</div>
-              {notifLoading ? (
-                <div className="text-xs text-gray-400 p-2">Loading...</div>
-              ) : notifications.length === 0 ? (
-                <div className="text-xs text-gray-400 p-2">No notifications</div>
-              ) : (
-                <ul className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
-                  {notifications.map((n) => (
-                    <li
-                      key={n.id}
-                      className={`p-2 text-sm rounded transition ${
-                        n.read ? "bg-gray-50" : "bg-sky-50 font-semibold"
-                      }`}
-                    >
-                      <div 
-                        className="cursor-pointer"
-                        onClick={async () => {
-                          if (!n.id) {
-                            alert("Notification is missing an ID and cannot be marked as read.");
-                            return;
-                          }
-                          await fetch("/api/notifications", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ id: n.id }),
-                          });
-                          setNotifications((prev) =>
-                            prev.map((notif) =>
-                              notif.id === n.id ? { ...notif, read: true } : notif
-                            )
-                          );
-                        }}
+            <div className="absolute top-10 right-0 w-96 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                    <span className="font-semibold text-sm">Notifications</span>
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Notifications List */}
+              <div className="max-h-96 overflow-y-auto">
+                {notifLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <span className="ml-2 text-sm text-gray-500">Loading...</span>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm">No notifications</span>
+                    <span className="text-xs">You're all caught up!</span>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {notifications.map((n) => (
+                      <li
+                        key={n.id}
+                        className={`group transition-all duration-200 ${
+                          n.read 
+                            ? "bg-white hover:bg-gray-50" 
+                            : "bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500"
+                        }`}
                       >
-                        <div className="flex justify-between items-center">
-                          <span>{n.title || "No Title"}</span>
-                          <span className="text-xs text-gray-400 ml-2">
-                            {new Date(n.createdAt).toLocaleString()}
-                          </span>
+                        <div className="p-4">
+                          {/* Notification Header */}
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-3 flex-1">
+                              {/* Notification Icon */}
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                n.type === 'announcement' ? 'bg-purple-100 text-purple-600' :
+                                n.type === 'approval' ? 'bg-green-100 text-green-600' :
+                                n.type === 'comment' ? 'bg-blue-100 text-blue-600' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {n.type === 'announcement' ? (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                                  </svg>
+                                ) : n.type === 'approval' ? (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                ) : n.type === 'comment' ? (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                )}
+                              </div>
+                              
+                              {/* Title and Time */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <h4 className={`text-sm font-medium truncate ${
+                                    n.read ? 'text-gray-700' : 'text-gray-900'
+                                  }`}>
+                                    {n.title || "Notification"}
+                                  </h4>
+                                  <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                                    {(() => {
+                                      const date = new Date(n.createdAt);
+                                      const now = new Date();
+                                      const diffMs = now.getTime() - date.getTime();
+                                      const diffMins = Math.floor(diffMs / 60000);
+                                      const diffHours = Math.floor(diffMs / 3600000);
+                                      const diffDays = Math.floor(diffMs / 86400000);
+                                      
+                                      if (diffMins < 1) return 'Just now';
+                                      if (diffMins < 60) return `${diffMins}m ago`;
+                                      if (diffHours < 24) return `${diffHours}h ago`;
+                                      if (diffDays < 7) return `${diffDays}d ago`;
+                                      return date.toLocaleDateString();
+                                    })()}
+                                  </span>
+                                </div>
+                                
+                                {/* Message */}
+                                <p className={`text-xs mt-1 line-clamp-2 ${
+                                  n.read ? 'text-gray-500' : 'text-gray-600'
+                                }`}>
+                                  {n.message || "No message content"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center justify-between mt-3">
+                            <div className="flex items-center gap-2">
+                              {/* Mark as read button */}
+                              {!n.read && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!n.id) return;
+                                    
+                                    await fetch("/api/notifications", {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ id: n.id }),
+                                    });
+                                    
+                                    setNotifications((prev) =>
+                                      prev.map((notif) =>
+                                        notif.id === n.id ? { ...notif, read: true } : notif
+                                      )
+                                    );
+                                  }}
+                                  className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                                >
+                                  Mark as read
+                                </button>
+                              )}
+                            </div>
+                            
+                            {/* View link */}
+                            {n.link && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.location.href = n.link!;
+                                }}
+                                className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full hover:bg-blue-700 transition-colors font-medium"
+                              >
+                                View
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-600 mt-1">{n.message || "No Message"}</div>
-                      </div>
-                      {n.link && (
-                        <div 
-                          className="text-xs text-blue-600 underline mt-1 cursor-pointer hover:text-blue-800"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.location.href = n.link!;
-                          }}
-                        >
-                          View
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Footer */}
+              {notifications.length > 0 && (
+                <div className="bg-gray-50 px-4 py-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{notifications.length} notification{notifications.length !== 1 ? 's' : ''}</span>
+                    <button
+                      onClick={() => {
+                        setNotificationsModalOpen(true);
+                        setNotifOpen(false);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      View all
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -415,6 +535,7 @@ const Navbar = () => {
           </div>
         )}
       </div>
+      
       {/* Profile Dialog Popup */}
       <Dialog open={profileOpen} onClose={() => setProfileOpen(false)}>
         <div className="flex flex-col items-center mb-6">
@@ -447,6 +568,7 @@ const Navbar = () => {
           </div>
         </div>
       </Dialog>
+      
       {/* Announcement Dialog Popup */}
       <Dialog open={announceOpen} onClose={() => { setAnnounceOpen(false); setAnnounceStatus(null); setAnnounceConfirm(false); }}>
         <form
@@ -573,6 +695,249 @@ const Navbar = () => {
           </div>
         )}
       </Dialog>
+      
+      {/* Notifications Modal */}
+      {notificationsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  <h2 className="text-lg font-bold">All Notifications</h2>
+                  {unreadCount > 0 && (
+                    <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
+                      {unreadCount} unread
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setNotificationsModalOpen(false)}
+                  className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-white/10 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="p-3 border-b border-gray-200 bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                {/* Search */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                  <input
+                    type="text"
+                    placeholder="Search notifications..."
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                  />
+                </div>
+                
+                {/* Message Type Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                  <select className="w-full px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">
+                    <option value="">All Types</option>
+                    <option value="announcement">Announcements</option>
+                    <option value="approval">Approvals</option>
+                    <option value="comment">Comments</option>
+                    <option value="general">General</option>
+                  </select>
+                </div>
+                
+                {/* Project Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Project</label>
+                  <select className="w-full px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">
+                    <option value="">All Projects</option>
+                    <option value="project1">Project 1</option>
+                    <option value="project2">Project 2</option>
+                  </select>
+                </div>
+                
+                {/* Sender Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Sender</label>
+                  <select className="w-full px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">
+                    <option value="">All Senders</option>
+                    <option value="admin">Admin</option>
+                    <option value="manager">Manager</option>
+                    <option value="user">User</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center gap-2">
+                  <button className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium">
+                    Mark All as Read
+                  </button>
+                  <button className="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs font-medium">
+                    Clear All
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {notifications.length} total notifications
+                </div>
+              </div>
+            </div>
+
+            {/* Notifications List */}
+            <div className="flex-1 overflow-y-auto p-3">
+              {notifLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <span className="ml-2 text-sm text-gray-500">Loading notifications...</span>
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </div>
+                  <span className="text-base font-medium">No notifications found</span>
+                  <span className="text-xs">Try adjusting your filters</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`border rounded p-3 transition-all duration-200 ${
+                        n.read 
+                          ? "bg-white border-gray-200 hover:border-gray-300" 
+                          : "bg-blue-50 border-blue-200 hover:border-blue-300"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Notification Icon */}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          n.type === 'announcement' ? 'bg-purple-100 text-purple-600' :
+                          n.type === 'approval' ? 'bg-green-100 text-green-600' :
+                          n.type === 'comment' ? 'bg-blue-100 text-blue-600' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {n.type === 'announcement' ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                            </svg>
+                          ) : n.type === 'approval' ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ) : n.type === 'comment' ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-1">
+                            <div className="flex-1">
+                              <h3 className={`text-sm font-semibold ${
+                                n.read ? 'text-gray-700' : 'text-gray-900'
+                              }`}>
+                                {n.title || "Notification"}
+                              </h3>
+                              <p className={`text-xs mt-0.5 ${
+                                n.read ? 'text-gray-500' : 'text-gray-600'
+                              }`}>
+                                {n.message || "No message content"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-3">
+                              <span className="text-[10px] text-gray-400">
+                                {new Date(n.createdAt).toLocaleString()}
+                              </span>
+                              {!n.read && (
+                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 mt-2">
+                            {!n.read && (
+                              <button
+                                onClick={async () => {
+                                  if (!n.id) return;
+                                  
+                                  await fetch("/api/notifications", {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ id: n.id }),
+                                  });
+                                  
+                                  setNotifications((prev) =>
+                                    prev.map((notif) =>
+                                      notif.id === n.id ? { ...notif, read: true } : notif
+                                    )
+                                  );
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                              >
+                                Mark as read
+                              </button>
+                            )}
+                            
+                            {/* Action Icons */}
+                            <div className="flex items-center gap-1 ml-auto">
+                              {n.link && (
+                                <button
+                                  onClick={() => {
+                                    window.location.href = n.link!;
+                                  }}
+                                  className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                                  title="View Details"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </button>
+                              )}
+                              
+                              <button
+                                onClick={async () => {
+                                  await fetch('/api/notifications', {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: n.id, hidden: true })
+                                  });
+                                  setNotifications((prev) => prev.filter((notif) => notif.id !== n.id));
+                                }}
+                                className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                                title="Delete"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
