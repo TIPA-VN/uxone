@@ -14,6 +14,7 @@ import { MdSpaceDashboard } from "react-icons/md";
 import { ImCalendar } from "react-icons/im";
 import { RiCustomerService2Fill } from "react-icons/ri";
 import { FaRegChartBar } from "react-icons/fa";
+import { MdTask } from "react-icons/md";
 
 const menuItems = [
   {
@@ -31,6 +32,11 @@ const menuItems = [
     route: "/lvm/projects",
     label: "Projects",
     icon: <ImBooks size={22} />,
+  },
+  {
+    route: "/lvm/tasks",
+    label: "Tasks",
+    icon: <MdTask size={22} />,
   },
   // Customer Service
   {
