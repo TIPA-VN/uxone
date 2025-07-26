@@ -77,6 +77,9 @@ export async function GET(req: NextRequest) {
 // Helper to send notification to all or specific user
 export function sendNotification(notification: Record<string, unknown>, userId?: string) {
   try {
+    console.log("Sending notification:", notification.id, "to user:", userId);
+    console.log("Active clients:", clients.length);
+    
     const notifData = {
       ...notification,
       type: notification.type || 'notification'
@@ -84,27 +87,27 @@ export function sendNotification(notification: Record<string, unknown>, userId?:
 
     const data = `data: ${JSON.stringify(notifData)}\n\n`;
     
-
-
     if (userId) {
       // Send to specific user
       const userClients = clients.filter(c => c.userId === userId);
+      console.log("Found clients for user:", userId, "count:", userClients.length);
 
       userClients.forEach(c => {
         try {
           c.res.write(data);
-
+          console.log("Sent notification to client:", c.userId);
         } catch (error) {
           console.error(`Failed to send to client: ${userId}`, error);
         }
       });
     } else {
       // Broadcast to all
+      console.log("Broadcasting to all clients");
 
       clients.forEach(c => {
         try {
           c.res.write(data);
-
+          console.log("Sent notification to client:", c.userId);
         } catch (error) {
           console.error(`Failed to broadcast to client: ${c.userId}`, error);
         }

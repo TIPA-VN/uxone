@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { sendNotification } from "@/app/api/notifications/stream/route";
 
 export const runtime = 'nodejs';
 
@@ -88,15 +89,28 @@ export async function PATCH(req: NextRequest, context: any) {
     });
 
     // Create notification
-    await prisma.notification.create({
-      data: {
-        userId: project.ownerId,
-        title: `Project ${actionUpper === "APPROVED" ? "Approved" : "Disapproved"} by ${department.charAt(0).toUpperCase() + department.slice(1)}`,
-        message: `${department.charAt(0).toUpperCase() + department.slice(1)} has ${actionUpper} project "${project.name}"${status === "APPROVED" ? ". All approvals complete!" : ""}`,
-        type: actionUpper === "APPROVED" ? "success" : "warning",
-        link: `/lvm/projects/${project.id}`,
-      },
-    });
+    console.log("Creating notification for project:", project.id);
+    console.log("Project owner ID:", project.ownerId);
+    console.log("Action:", actionUpper);
+    console.log("Department:", department);
+    
+    try {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: project.ownerId,
+          title: `Project ${actionUpper === "APPROVED" ? "Approved" : "Disapproved"} by ${department.charAt(0).toUpperCase() + department.slice(1)}`,
+          message: `${department.charAt(0).toUpperCase() + department.slice(1)} has ${actionUpper} project "${project.name}"${status === "APPROVED" ? ". All approvals complete!" : ""}`,
+          type: actionUpper === "APPROVED" ? "success" : "warning",
+          link: `/lvm/projects/${project.id}`,
+        },
+      });
+      console.log("Notification created successfully:", notification.id);
+      
+      // Send notification through SSE
+      sendNotification(notification, project.ownerId);
+    } catch (error) {
+      console.error("Error creating notification:", error);
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

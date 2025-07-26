@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { Scissors } from 'lucide-react';
 
 interface PDFToolsProps {
   projectId: string;
@@ -196,7 +197,7 @@ export const PDFTools: React.FC<PDFToolsProps> = ({
       {/* Split PDF Tab */}
       {activeTab === 'split' && (
         <div>
-          <form onSubmit={handleSplitPDF} className="space-y-4">
+          <form onSubmit={handleSplitPDF} className="space-y-4 flex flex-col items-center">
             <div>
               <label className="block text-sm font-medium mb-2">
                 Select PDF to Split
@@ -213,8 +214,9 @@ export const PDFTools: React.FC<PDFToolsProps> = ({
             <button
               type="submit"
               disabled={!splitFile || splitLoading}
-              className="w-full bg-blue-600 text-white py-1 px-3 text-xs rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-1/2 bg-blue-600 text-white py-1 px-3 text-xs rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
             >
+              <Scissors className="w-3 h-3" />
               {splitLoading ? 'Splitting PDF...' : 'Split PDF'}
             </button>
           </form>

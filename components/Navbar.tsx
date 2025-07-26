@@ -301,39 +301,45 @@ const Navbar = () => {
                   {notifications.map((n) => (
                     <li
                       key={n.id}
-                      className={`p-2 text-sm cursor-pointer rounded transition ${
+                      className={`p-2 text-sm rounded transition ${
                         n.read ? "bg-gray-50" : "bg-sky-50 font-semibold"
                       }`}
-                      onClick={async () => {
-                  
-                        if (!n.id) {
-                          alert("Notification is missing an ID and cannot be marked as read.");
-                          return;
-                        }
-                        await fetch("/api/notifications", {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ id: n.id }),
-                        });
-                        setNotifications((prev) =>
-                          prev.map((notif) =>
-                            notif.id === n.id ? { ...notif, read: true } : notif
-                          )
-                        );
-                        if (n.link) {
-                          window.location.href = n.link;
-                        }
-                      }}
                     >
-                      <div className="flex justify-between items-center">
-                        <span>{n.title || "No Title"}</span>
-                        <span className="text-xs text-gray-400 ml-2">
-                          {new Date(n.createdAt).toLocaleString()}
-                        </span>
+                      <div 
+                        className="cursor-pointer"
+                        onClick={async () => {
+                          if (!n.id) {
+                            alert("Notification is missing an ID and cannot be marked as read.");
+                            return;
+                          }
+                          await fetch("/api/notifications", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ id: n.id }),
+                          });
+                          setNotifications((prev) =>
+                            prev.map((notif) =>
+                              notif.id === n.id ? { ...notif, read: true } : notif
+                            )
+                          );
+                        }}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span>{n.title || "No Title"}</span>
+                          <span className="text-xs text-gray-400 ml-2">
+                            {new Date(n.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">{n.message || "No Message"}</div>
                       </div>
-                      <div className="text-xs text-gray-600 mt-1">{n.message || "No Message"}</div>
                       {n.link && (
-                        <div className="text-xs text-blue-600 underline mt-1">
+                        <div 
+                          className="text-xs text-blue-600 underline mt-1 cursor-pointer hover:text-blue-800"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = n.link!;
+                          }}
+                        >
                           View
                         </div>
                       )}
