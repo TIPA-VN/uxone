@@ -19,22 +19,31 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get('projectId');
   const department = searchParams.get('department');
-  console.log("[GET /api/documents] projectId:", projectId, "department:", department);
+  const workflowState = searchParams.get('workflowState');
+  
   let docs;
-  if (projectId && department) {
+  if (projectId && department && workflowState) {
     docs = await prisma.$queryRawUnsafe(
-      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' AND "department" = '${department}' ORDER BY "createdAt" DESC LIMIT 50`
+      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' AND "department" = '${department}' AND "workflowState" = '${workflowState}' ORDER BY "createdAt" DESC`
+    );
+  } else if (projectId && workflowState) {
+    docs = await prisma.$queryRawUnsafe(
+      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' AND "workflowState" = '${workflowState}' ORDER BY "createdAt" DESC`
+    );
+  } else if (projectId && department) {
+    docs = await prisma.$queryRawUnsafe(
+      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' AND "department" = '${department}' ORDER BY "createdAt" DESC`
     );
   } else if (projectId) {
     docs = await prisma.$queryRawUnsafe(
-      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' ORDER BY "createdAt" DESC LIMIT 50`
+      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' ORDER BY "createdAt" DESC`
     );
   } else {
     docs = await prisma.$queryRawUnsafe(
       `SELECT * FROM "documents" ORDER BY "createdAt" DESC LIMIT 50`
     );
   }
-  console.log("[GET /api/documents] DB result:", util.inspect(docs, { depth: 3 }));
+  
   return NextResponse.json(docs);
 }
 
@@ -57,6 +66,24 @@ export async function POST(request: Request) {
   const department = formData.get("department") as string | null;
   const accessRoles = formData.getAll("accessRoles").map(String);
   const projectId = formData.get("projectId");
+  // Parse type from metadata
+  let docType = "";
+  try {
+    if (metadata) {
+      const metaObj = JSON.parse(metadata as string);
+      docType = metaObj.type || "";
+    }
+  } catch {}
+  // Versioning: find max version for same fileName, type, project, department
+  let version = 1;
+  if (file.name && docType && projectId && department) {
+    const existing = await prisma.$queryRawUnsafe<{ max_version: number }[]>(
+      `SELECT MAX("version") as max_version FROM "documents" WHERE "fileName" = '${file.name.replace(/'/g, "''")}' AND (metadata->>'type') = '${docType.replace(/'/g, "''")}' AND "projectId" = '${projectId}' AND "department" = '${department}'`
+    );
+    if (Array.isArray(existing) && existing.length > 0 && existing[0].max_version) {
+      version = Number(existing[0].max_version) + 1;
+    }
+  }
   // Save to DB using raw query
   const doc = await prisma.$queryRawUnsafe(
     `
@@ -80,7 +107,7 @@ export async function POST(request: Request) {
         '${`/uploads/projects/${fileName}`}',
         '${file.type}',
         ${file.size},
-        1,
+        ${version},
         '${metadata ? JSON.stringify(JSON.parse(metadata as string)) : '{}'}'::jsonb,
         '${session.user.id}',
         '${department}',
@@ -92,6 +119,6 @@ export async function POST(request: Request) {
       RETURNING *
     `
   );
-  console.log("[POST /api/documents] Inserted doc:", util.inspect(doc, { depth: 3 }));
+  
   return NextResponse.json({ id: doc });
 } 

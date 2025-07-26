@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   const userId = session?.user?.id || null;
 
-  console.log('Stream connection request:', { userId });
+
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
       // Add client to list
       clients.push({ userId, res });
-      console.log(`Client connected: ${userId}, Total clients: ${clients.length}`);
+  
 
       // Send initial heartbeat
       res.write('data: {"type":"heartbeat"}\n\n');
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         const idx = clients.findIndex((c) => c.res === res);
         if (idx !== -1) {
           clients.splice(idx, 1);
-          console.log(`Client disconnected: ${userId}, Total clients: ${clients.length}`);
+      
         }
         res.close();
       });
@@ -81,35 +81,30 @@ export function sendNotification(notification: Record<string, unknown>, userId?:
       ...notification,
       type: notification.type || 'notification'
     };
-    console.log("SSE sending notification:", notifData);
+
     const data = `data: ${JSON.stringify(notifData)}\n\n`;
     
-    console.log(`Sending notification:`, {
-      notification: notifData,
-      targetUserId: userId,
-      totalClients: clients.length,
-      allClients: clients.map(c => c.userId)
-    });
+
 
     if (userId) {
       // Send to specific user
       const userClients = clients.filter(c => c.userId === userId);
-      console.log(`Found ${userClients.length} clients for user ${userId}`);
+
       userClients.forEach(c => {
         try {
           c.res.write(data);
-          console.log(`Sent to client: ${userId}`);
+
         } catch (error) {
           console.error(`Failed to send to client: ${userId}`, error);
         }
       });
     } else {
       // Broadcast to all
-      console.log(`Broadcasting to ${clients.length} clients`);
+
       clients.forEach(c => {
         try {
           c.res.write(data);
-          console.log(`Broadcast to client: ${c.userId}`);
+
         } catch (error) {
           console.error(`Failed to broadcast to client: ${c.userId}`, error);
         }

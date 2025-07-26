@@ -24,9 +24,9 @@ export async function PATCH(req: NextRequest, context: any) {
     // Accept both 'approved'/'disapproved' and 'APPROVED'/'REJECTED'
     if (actionUpper === 'DISAPPROVED') actionUpper = 'REJECTED';
     if (actionUpper === 'APPROVED') actionUpper = 'APPROVED';
-    console.log('[PATCH /api/projects/[id]/approve] department:', department, 'action:', action, 'actionUpper:', actionUpper);
+
     if (!department || !["APPROVED", "REJECTED"].includes(actionUpper)) {
-      console.log('[PATCH /api/projects/[id]/approve] Invalid request:', { department, action, actionUpper });
+      
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, context: any) {
       ? {}
       : typeof project.approvalState === "object"
         ? project.approvalState
-        : JSON.parse(project.approvalState || '{}');
+        : JSON.parse(String(project.approvalState) || '{}');
 
     // Log all approvals/rejects as an array per department
     const prevLogs = Array.isArray(currentState[department]) ? currentState[department] : [];

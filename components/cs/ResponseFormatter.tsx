@@ -113,7 +113,7 @@ const renderTable = (dataArray: Array<Record<string, unknown>>, isDarkMode: bool
 };
 
 const ResponseFormatter: React.FC<ResponseFormatterProps> = ({ content, isDarkMode }) => {
-  console.log('ResponseFormatter content:', content);
+  
   // Try to parse content as JSON and extract structured_data
   let parsed: unknown = null;
   let structuredData: unknown = null;

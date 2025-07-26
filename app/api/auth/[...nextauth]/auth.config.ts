@@ -17,7 +17,7 @@ export const authConfig = {
         }
 
         try {
-          console.log('Auth attempt:', { username: credentials.username })
+      
           
           // Call central authentication API
           const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
@@ -33,7 +33,7 @@ export const authConfig = {
           })
 
           const data = await response.json()
-          console.log('Auth API response:', { status: response.status, data })
+  
 
           if (!response.ok) {
             throw new Error(data.error || data.content || data.message || 'Authentication failed')
@@ -77,14 +77,14 @@ export const authConfig = {
 
           const user = {
             id: dbUser.id, // Use the local DB user ID!
-            name: dbUser.name,
-            email: dbUser.email,
+            name: dbUser.name || dbUser.username,
+            email: dbUser.email || `${dbUser.username}@tipa.co.th`,
             username: dbUser.username,
-            department: dbUser.department,
-            departmentName: dbUser.departmentName,
-            role: dbUser.role,
+            department: dbUser.department || 'UNKNOWN',
+            departmentName: dbUser.departmentName || 'Unknown Department',
+            role: dbUser.role || 'USER',
           }
-          console.log('Auth success:', user)
+  
           return user
         } catch (error) {
           console.error('Auth error:', error)

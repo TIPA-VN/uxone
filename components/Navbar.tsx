@@ -45,7 +45,7 @@ function useNotifications() {
       const res = await fetch("/api/notifications");
       if (!res.ok) throw new Error('Failed to fetch notifications');
       const data = await res.json();
-      console.log('Fetched notifications:', data);
+      
       setNotifications(data);
     } catch (e) {
       console.error('Error fetching notifications:', e);
@@ -67,21 +67,21 @@ function useNotifications() {
     
     evtSource.onmessage = (event) => {
       try {
-        console.log('Received SSE message:', event.data);
+
         const notif = JSON.parse(event.data);
         if (notif.type === 'heartbeat') return;
         if (!notif.id) {
-          console.log('Skipping notification without id:', notif);
+
           return;
         }
-        console.log('Parsed notification:', notif);
+        
         setNotifications((prev) => {
           // Avoid duplicates by id
           if (prev.some((n) => n.id === notif.id)) {
-            console.log('Duplicate notification, skipping');
+
             return prev;
           }
-          console.log('Adding new notification');
+          
           return [notif, ...prev];
         });
       } catch (error) {
@@ -95,11 +95,11 @@ function useNotifications() {
     };
 
     evtSource.onopen = () => {
-      console.log('SSE connection opened');
+
     };
 
     return () => {
-      console.log('Closing SSE connection');
+
       evtSource.close();
     };
   }, []);
@@ -109,7 +109,7 @@ function useNotifications() {
     [notifications]
   );
 
-  console.log('Current notifications:', { total: notifications.length, unread: unreadCount });
+  
 
   return {
     notifications,
@@ -157,7 +157,7 @@ const Navbar = () => {
   // Announcement form
   const { register, reset, formState: { isSubmitting }, watch, getValues, setValue } = useForm();
   const canAnnounce = ["ADMIN", "HR", "SENIOR MANAGER"].includes(user?.role?.toUpperCase() || "");
-  console.log("canAnnounce:", canAnnounce, "user:", user);
+  
   // Removed unused watchBroadcast, watchDepartments, watchUsers
 
   const onAnnounce = async (data: Record<string, unknown>) => {
@@ -305,7 +305,7 @@ const Navbar = () => {
                         n.read ? "bg-gray-50" : "bg-sky-50 font-semibold"
                       }`}
                       onClick={async () => {
-                        console.log("Marking as read:", n);
+                  
                         if (!n.id) {
                           alert("Notification is missing an ID and cannot be marked as read.");
                           return;

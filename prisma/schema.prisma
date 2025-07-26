@@ -27,6 +27,7 @@ model User {
   notifications  Notification[]
   documents      Document[]     @relation("UserDocuments")
   projects       Project[]
+  notes          Note[]
 
   @@map("users")
 }
@@ -54,6 +55,7 @@ model Document {
   size          Int
   version       Int      @default(1)
   metadata      Json     // type, project, part, etc.
+  annotations   Json?    // Store Fabric.js canvas data
   ownerId       String
   owner         User     @relation("UserDocuments", fields: [ownerId], references: [id])
   department    String?
@@ -95,6 +97,21 @@ model Project {
   updatedAt     DateTime @updatedAt
   // Optional: link to documents
   documents     Document[]
+  notes         Note[]
 
   @@map("projects")
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  department  String
+  content     String
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  authorName  String
+  createdAt   DateTime @default(now())
+
+  @@map("notes")
 }

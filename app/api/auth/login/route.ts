@@ -8,12 +8,12 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { username, password } = body
-    console.log('Login request:', { username })
+  
 
     // Use a specific salt (3)
     const salt = bcrypt.genSaltSync(3)
     const hashedPassword = bcrypt.hashSync(password, salt)
-    console.log('Password hashing:', { salt, hashedPassword })
+
 
     // Call central authentication API
     const response = await fetch("http://10.116.3.138:8888/api/web_check_login", {
@@ -23,11 +23,7 @@ export async function POST(request: Request) {
     })
 
     const data = await response.json()
-    console.log('Central API response:', { 
-      status: response.status, 
-      data,
-      requestBody: { username, hashedPassword }
-    })
+
 
     if (!response.ok) {
       return NextResponse.json(
@@ -60,7 +56,7 @@ export async function POST(request: Request) {
       emp_name: data.emp_name,
       email: data.email || `${data.emp_code}@tipa.co.th`,
     }
-    console.log('Login success:', result)
+
     return NextResponse.json(result)
   } catch (error) {
     console.error("Auth error:", error)

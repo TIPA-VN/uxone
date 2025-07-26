@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { PDFTools } from "@/components/PDFTools";
 
 type Project = {
   id: string;
@@ -14,14 +15,23 @@ type Project = {
   // add other fields as needed
 };
 
-type Document = {
-  id: string;
-  fileName: string;
-  filePath: string;
-  createdAt: string;
-  metadata?: { type?: string; description?: string; [key: string]: unknown };
-  // add other fields as needed
-};
+  type Document = {
+    id: string;
+    fileName: string;
+    filePath: string;
+    createdAt: string;
+    version?: number;
+    department?: string;
+    metadata?: { 
+      type?: string; 
+      description?: string; 
+      approved?: boolean;
+      production?: boolean;
+      pageNumber?: number;
+      [key: string]: unknown 
+    };
+    // add other fields as needed
+  };
 
 const DEPARTMENTS = [
   { value: "logistics", label: "Logistics" },
@@ -417,19 +427,19 @@ export default function ProjectDetailsPage() {
                   </div>
                 </div>
               </div>
-              {/* Full-width: Document image preview below approval/upload panels (expand horizontally for dept tabs) */}
-              <div className="w-full flex flex-col items-center justify-center bg-gray-100 rounded-lg shadow p-2 min-h-[180px] mt-4">
-                <h3 className="font-semibold mb-1 text-sm">Document Preview</h3>
-                {imageDoc ? (
-                  <img
-                    src={imageDoc.filePath}
-                    alt={imageDoc.fileName}
-                    className="max-h-40 w-full object-contain rounded border"
-                  />
-                ) : (
-                  <div className="text-gray-400 text-xs">No image document found for this department.</div>
-                )}
-              </div>
+                             {/* PDF Tools Section */}
+               <div className="w-full bg-white rounded-lg shadow p-4 mt-4">
+                 <PDFTools 
+                   projectId={projectId} 
+                   department={dept} 
+                   onDocumentsUpdated={() => {
+                     // Refresh documents list
+                     fetch(`/api/documents?projectId=${projectId}&department=${dept}`)
+                       .then(res => res.json())
+                       .then((data: Document[]) => setDocs(data));
+                   }}
+                 />
+               </div>
             </div>
           );
         })

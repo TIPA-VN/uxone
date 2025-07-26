@@ -6,11 +6,7 @@ export async function middleware(request: NextRequest) {
   // Protect all routes under /lvm
   if (request.nextUrl.pathname.startsWith('/lvm')) {
     const session = await auth()
-    console.log('Middleware check:', { 
-      path: request.nextUrl.pathname,
-      hasSession: !!session,
-      sessionUser: session?.user 
-    })
+
 
     if (!session?.user) {
       const signInUrl = new URL('/auth/signin', request.url)

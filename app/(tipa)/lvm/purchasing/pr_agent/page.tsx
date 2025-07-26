@@ -73,11 +73,11 @@ const PopupLauncher: React.FC = () => {
     <div id="app" class="h-screen w-screen"></div>
     
     <script>
-        console.log('Script starting...');
+    
         
         class ProcurementAgent {
             constructor() {
-                console.log('ProcurementAgent constructor called');
+        
                 this.state = {
                     messages: [],
                     inputValue: '',
@@ -93,19 +93,19 @@ const PopupLauncher: React.FC = () => {
             }
 
             init() {
-                console.log('Init called, isInitialized:', this.isInitialized);
+
                 if (!this.isInitialized) {
                     this.render();
                     this.bindEvents();
                     this.isInitialized = true;
-                    console.log('Initialization complete');
+
                 }
             }
 
             setState(newState) {
                 const oldState = { ...this.state };
                 this.state = { ...this.state, ...newState };
-                console.log('State updated:', this.state);
+
                 
                 // Only update specific parts of the DOM instead of full re-render
                 this.updateDOM(oldState);
@@ -124,7 +124,7 @@ const PopupLauncher: React.FC = () => {
 
             // Enhanced message formatting for PO data
             formatPurchaseOrderData(content) {
-                console.log('Formatting PO data:', content.substring(0, 100) + '...');
+
                 // Check if content contains structured PO data
                 if (content.includes('Tổng số dòng PO mở') || content.includes('Total Open PO Lines') || 
                     (content.includes('PO:') && content.includes('Nhà cung cấp'))) {
@@ -145,13 +145,13 @@ const PopupLauncher: React.FC = () => {
                     urgent: this.extractNumber(content, /(?:Đơn hàng khẩn cấp|Urgent Orders)[:\\s*]*([\\d,]+)/)
                 };
 
-                console.log('Extracted metrics:', metrics);
+
 
                 // Extract PO details
                 const poMatches = content.match(/PO:\\s*(\\d+).*?(?=PO:|$)/gs) || [];
                 const poDetails = poMatches.map(po => this.extractPODetails(po));
 
-                console.log('Extracted PO details:', poDetails.length, 'items');
+
 
                 return this.generateFormattedHTML(metrics, poDetails);
             }
@@ -280,7 +280,7 @@ const PopupLauncher: React.FC = () => {
             }
 
             updateMessages() {
-                console.log('Updating messages...');
+
                 const messagesContainer = document.getElementById('messages-container');
                 if (!messagesContainer) {
                     console.error('Messages container not found');
@@ -302,7 +302,7 @@ const PopupLauncher: React.FC = () => {
                 }
 
                 messagesContainer.innerHTML = content;
-                console.log('Messages updated, content length:', content.length);
+
                 
                 // Re-initialize icons
                 if (window.lucide) {
@@ -443,13 +443,13 @@ const PopupLauncher: React.FC = () => {
             }
 
             async sendMessage() {
-                console.log('Send message called');
+
                 // Get the current input value from DOM directly
                 const input = document.getElementById('message-input');
                 const currentInput = input ? input.value.trim() : '';
                 
                 if (!currentInput || this.state.isLoading) {
-                    console.log('No input or loading, returning');
+    
                     return;
                 }
 
@@ -537,7 +537,7 @@ const PopupLauncher: React.FC = () => {
             }
 
             bindEvents() {
-                console.log('Binding events...');
+
                 // Prevent multiple event binding
                 if (this.eventsbound) return;
                 this.eventsbound = true;
@@ -581,11 +581,11 @@ const PopupLauncher: React.FC = () => {
                     }
                 });
 
-                console.log('Events bound successfully');
+
             }
 
             render() {
-                console.log('Rendering...');
+
                 const { isDarkMode } = this.state;
                 const app = document.getElementById('app');
                 
@@ -690,13 +690,13 @@ const PopupLauncher: React.FC = () => {
                     window.lucide.createIcons();
                 }
 
-                console.log('Render complete');
+
             }
         }
 
         // Initialize the app
         function initializeApp() {
-            console.log('Initializing app...');
+    
             try {
                 new ProcurementAgent();
             } catch (error) {

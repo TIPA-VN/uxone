@@ -13,13 +13,13 @@ async function main() {
       ],
       skipDuplicates: true,
     });
-    console.log(`Users created (or skipped if duplicate):`, usersResult);
+  
 
     const admin = await prisma.user.findUnique({ where: { username: "admin" } });
     if (!admin) {
       throw new Error("Admin user not found after creation. Seeding aborted.");
     }
-    console.log("Admin user:", admin);
+  
 
     // Create a project with multiple departments for approval
     const project = await prisma.project.create({
@@ -28,11 +28,11 @@ async function main() {
         description: "A sample project for workflow demo.",
         ownerId: admin.id,
         departments: ["logistics", "qa", "pc"],
-        approvalState: { logistics: "pending", qa: "pending", pc: "pending" },
-        status: "started",
+        approvalState: { logistics: "PENDING", qa: "PENDING", pc: "PENDING" },
+        status: "STARTED",
       },
     });
-    console.log("Project created:", project);
+  
 
     // Create a document for the project and logistics department
     const document = await prisma.document.create({
@@ -49,9 +49,9 @@ async function main() {
         projectId: project.id,
       },
     });
-    console.log("Document created:", document);
+  
 
-    console.log("Seeding completed successfully.");
+  
   } catch (e) {
     console.error("Seeding failed:", e);
     process.exit(1);

@@ -205,7 +205,7 @@ const SOProcessorPage = () => {
       throw new Error('No valid records found in CSV file');
     }
 
-    console.log(`Parsed ${data.length} unique records, skipped ${skippedRows} rows`);
+    
     return { data, warnings };
   };
 
@@ -224,9 +224,9 @@ const SOProcessorPage = () => {
       setCsvData(data);
       setParseWarnings(warnings);
       
-      console.log(`Parsed ${data.length} unique records`);
+
       if (warnings.length > 0) {
-        console.log(`Warnings: ${warnings.length}`);
+        
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to parse CSV");
@@ -258,7 +258,7 @@ const SOProcessorPage = () => {
         const uniqueBatch = batch.filter(row => !processedSOs.has(row.SO));
         
         if (uniqueBatch.length === 0) {
-          console.log(`Batch ${batchNumber}: All SOs already processed, skipping`);
+  
           continue;
         }
 
@@ -339,7 +339,7 @@ const SOProcessorPage = () => {
             },
           });
 
-          console.log(`Batch ${batchNumber}: ${batchSuccessCount} successful, ${failedWOs.length} failed`);
+  
 
         } catch (error) {
           const errorMessage =

@@ -39,6 +39,18 @@ export default function DocumentUploadPage() {
   const [docs, setDocs] = useState<Document[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const DOCUMENT_TYPES = [
+    "request",
+    "design",
+    "routing",
+    "testing",
+    "purchasing",
+    "quote",
+    "manufacturing",
+    "completed",
+    "released",
+  ];
+
   const fetchDocs = async () => {
     const res = await fetch("/api/documents");
     const data = await res.json();
@@ -51,6 +63,10 @@ export default function DocumentUploadPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
+    if (!meta.type) {
+      setUploadStatus("Please select a document type.");
+      return;
+    }
     setUploading(true);
     setUploadStatus(null);
     const formData = new FormData();
@@ -93,12 +109,17 @@ export default function DocumentUploadPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm mb-1">Type</label>
-            <input
-              type="text"
+            <select
               value={meta.type}
               onChange={e => setMeta(m => ({ ...m, type: e.target.value }))}
+              required
               className="border rounded px-3 py-2 w-full"
-            />
+            >
+              <option value="">Select type</option>
+              {DOCUMENT_TYPES.map((type) => (
+                <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm mb-1">Project</label>
