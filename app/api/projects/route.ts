@@ -1,85 +1,159 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-// Force Node.js runtime
-export const runtime = 'nodejs'
-
-type Project = {
-  id: string;
-  name: string;
-  description: string | null;
-  ownerId: string;
-  departments: string[];
-  approvalState: Record<string, string>;
-  status: string;
-  released: boolean;
-  releasedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  documents?: Array<{
-    id: string;
-    fileName: string;
-    filePath: string;
-  }>;
-}
-
-export async function GET(req: NextRequest) {
+// GET /api/projects - Get all projects with enhanced filtering and KPI data
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    let projects;
-    if (id) {
-      projects = await prisma.$queryRawUnsafe<Project[]>(
-        `SELECT p.*, COALESCE(json_agg(d.*) FILTER (WHERE d.id IS NOT NULL), '[]') as documents 
-          FROM projects p 
-          LEFT JOIN documents d ON d."projectId" = p.id 
-          WHERE p.id = '${id}'
-          GROUP BY p.id 
-          ORDER BY p."createdAt" DESC`
-      );
-    } else {
-      projects = await prisma.$queryRawUnsafe<Project[]>(
-        `SELECT p.*, COALESCE(json_agg(d.*) FILTER (WHERE d.id IS NOT NULL), '[]') as documents 
-          FROM projects p 
-          LEFT JOIN documents d ON d."projectId" = p.id 
-          WHERE p."ownerId" = '${session.user.id}'
-          GROUP BY p.id 
-          ORDER BY p."createdAt" DESC`
-      );
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const ownerId = searchParams.get("ownerId");
+    const memberId = searchParams.get("memberId");
+    const includeTasks = searchParams.get("includeTasks") === "true";
+    const includeMembers = searchParams.get("includeMembers") === "true";
+    const includeKPI = searchParams.get("includeKPI") === "true";
+
+    const where: any = {};
+
+    // Filter by status
+    if (status) {
+      where.status = status;
     }
 
-    // Ensure approvalState is always an object and departments is always an array
-    const projectsWithFixedFields = projects.map((proj: any) => {
-      // Fix approvalState
-      let approvalState = proj.approvalState;
-      if (typeof approvalState === 'string') {
-        try {
-          approvalState = JSON.parse(approvalState);
-        } catch {
-          approvalState = {};
-        }
-      }
-      if (!approvalState) approvalState = {};
+    // Filter by owner
+    if (ownerId) {
+      where.ownerId = ownerId;
+    }
 
-      // Fix departments
-      let departments = proj.departments;
-      if (typeof departments === 'string') {
-        departments = departments.replace(/[{}]/g, '').split(',').map((d: string) => d.trim()).filter(Boolean);
-      }
-      if (!Array.isArray(departments)) departments = [];
+    // Filter by team member
+    if (memberId) {
+      where.members = {
+        some: {
+          userId: memberId,
+        },
+      };
+    }
 
-      return { ...proj, approvalState, departments };
+    const include: any = {
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          department: true,
+          departmentName: true,
+        },
+      },
+              _count: {
+          select: {
+            tasks: true,
+            documents: true,
+            comments: true,
+            members: true,
+          },
+        },
+    };
+
+    // Include tasks if requested
+    if (includeTasks) {
+      include.tasks = {
+        include: {
+          assignee: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              department: true,
+              departmentName: true,
+            },
+          },
+          _count: {
+            select: {
+              subtasks: true,
+              comments: true,
+            },
+          },
+        },
+        orderBy: [
+          { priority: "desc" },
+          { dueDate: "asc" },
+          { createdAt: "desc" },
+        ],
+      };
+    }
+
+    // Include team members if requested
+    if (includeMembers) {
+      include.members = {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              department: true,
+              departmentName: true,
+            },
+          },
+        },
+        orderBy: { joinedAt: "asc" },
+      };
+    }
+
+    const projects = await prisma.project.findMany({
+      where,
+      include,
+              orderBy: [
+          { status: "asc" },
+          { startDate: "desc" },
+          { createdAt: "desc" },
+        ],
     });
 
-    return NextResponse.json(projectsWithFixedFields);
+    // Calculate KPI data if requested
+    if (includeKPI) {
+      const projectsWithKPI = await Promise.all(
+        projects.map(async (project) => {
+          const taskStats = await prisma.task.groupBy({
+            by: ["status"],
+            where: { projectId: project.id },
+            _count: { id: true },
+            _sum: {
+              estimatedHours: true,
+              actualHours: true,
+            },
+          });
+
+          const totalTasks = taskStats.reduce((sum, stat) => sum + stat._count.id, 0);
+          const completedTasks = taskStats.find(stat => stat.status === "COMPLETED")?._count.id || 0;
+          const totalEstimatedHours = taskStats.reduce((sum, stat) => sum + (stat._sum.estimatedHours || 0), 0);
+          const totalActualHours = taskStats.reduce((sum, stat) => sum + (stat._sum.actualHours || 0), 0);
+
+          return {
+            ...project,
+            kpi: {
+              totalTasks,
+              completedTasks,
+              completionPercentage: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
+              totalEstimatedHours,
+              totalActualHours,
+              efficiency: totalEstimatedHours > 0 ? (totalActualHours / totalEstimatedHours) * 100 : 0,
+            },
+          };
+        })
+      );
+
+      return NextResponse.json(projectsWithKPI);
+    }
+
+    return NextResponse.json(projects);
   } catch (error) {
-    console.error('Error fetching projects:', error);
+    console.error("Error fetching projects:", error);
     return NextResponse.json(
       { error: "Failed to fetch projects" },
       { status: 500 }
@@ -87,48 +161,234 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+// POST /api/projects - Create a new project
+export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    // Ensure all department values are uppercase
-    const departments = (body.departments || []).map((d: string) => d.toUpperCase());
-    const [project] = await prisma.$queryRawUnsafe<Project[]>(
-      `INSERT INTO projects (
-          id,
-          name,
-          description,
-          "ownerId",
-          departments,
-          "approvalState",
-          status,
-          released,
-          "createdAt",
-          "updatedAt"
-        ) VALUES (
-          gen_random_uuid(),
-          '${body.name}',
-          '${body.description}',
-          '${session.user.id}',
-          ARRAY[${departments.map((d: string) => `'${d}'`).join(', ')}]::text[],
-          '${(body.approvalState && Object.keys(body.approvalState).length > 0 ? JSON.stringify(body.approvalState) : '{}')}'::jsonb,
-          'STARTED',
-          false,
-          NOW(),
-          NOW()
-        )
-        RETURNING *`
-    );
+    const body = await request.json();
+    const {
+      name,
+      description,
+      status = "PLANNING",
+      startDate,
+      endDate,
+      budget,
+      departments = [],
+      tags = [],
+      teamMembers = [],
+    } = body;
 
-    return NextResponse.json(project);
+    if (!name) {
+      return NextResponse.json(
+        { error: "Project name is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify the current user exists in the database
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "User not found in database. Please log in again." },
+        { status: 400 }
+      );
+    }
+
+    // Validate team members exist
+    if (teamMembers.length > 0) {
+      const validUsers = await prisma.user.findMany({
+        where: { id: { in: teamMembers } },
+        select: { id: true },
+      });
+      const validUserIds = validUsers.map(user => user.id);
+      const invalidMembers = teamMembers.filter((id: string) => !validUserIds.includes(id));
+      
+      if (invalidMembers.length > 0) {
+        return NextResponse.json(
+          { error: `Invalid team members: ${invalidMembers.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    const project = await prisma.project.create({
+      data: {
+        name,
+        description,
+        status,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        endDate: endDate ? new Date(endDate) : null,
+        budget: budget ? parseFloat(budget) : null,
+        ownerId: currentUser.id, // Use the verified user ID
+        departments,
+        tags,
+        approvalState: {},
+        members: {
+          create: teamMembers.map((memberId: string) => ({
+            userId: memberId,
+            role: memberId === currentUser.id ? "owner" : "member",
+          })),
+        },
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            department: true,
+            departmentName: true,
+          },
+        },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true,
+                departmentName: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            tasks: true,
+            documents: true,
+            comments: true,
+            members: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(project, { status: 201 });
   } catch (error) {
-    console.error('Error creating project:', error);
+    console.error("Error creating project:", error);
+    
+    // Handle specific Prisma errors
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2003') {
+      return NextResponse.json(
+        { error: "Invalid user reference. Please log in again." },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Failed to create project" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH /api/projects - Update multiple projects (for bulk operations)
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { projectIds, updates } = body;
+
+    if (!projectIds || !Array.isArray(projectIds) || projectIds.length === 0) {
+      return NextResponse.json(
+        { error: "Project IDs array is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!updates || typeof updates !== "object") {
+      return NextResponse.json(
+        { error: "Updates object is required" },
+        { status: 400 }
+      );
+    }
+
+    // Handle date fields
+    const processedUpdates = { ...updates };
+    if (processedUpdates.startDate) {
+      processedUpdates.startDate = new Date(processedUpdates.startDate);
+    }
+    if (processedUpdates.endDate) {
+      processedUpdates.endDate = new Date(processedUpdates.endDate);
+    }
+    if (processedUpdates.budget) {
+      processedUpdates.budget = parseFloat(processedUpdates.budget);
+    }
+
+    // Update multiple projects
+    const updatedProjects = await prisma.project.updateMany({
+      where: {
+        id: { in: projectIds },
+        OR: [
+          { ownerId: session.user.id },
+          { members: { some: { userId: session.user.id } } },
+          { departments: { has: session.user.department } },
+        ],
+      },
+      data: processedUpdates,
+    });
+
+    return NextResponse.json({
+      message: `Updated ${updatedProjects.count} projects`,
+      count: updatedProjects.count,
+    });
+  } catch (error) {
+    console.error("Error updating projects:", error);
+    return NextResponse.json(
+      { error: "Failed to update projects" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/projects - Delete multiple projects
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const projectIds = searchParams.get("projectIds");
+
+    if (!projectIds) {
+      return NextResponse.json(
+        { error: "Project IDs are required" },
+        { status: 400 }
+      );
+    }
+
+    const ids = projectIds.split(",");
+
+    // Delete projects (cascade will handle related data)
+    const deletedProjects = await prisma.project.deleteMany({
+      where: {
+        id: { in: ids },
+        ownerId: session.user.id, // Only project owners can delete
+      },
+    });
+
+    return NextResponse.json({
+      message: `Deleted ${deletedProjects.count} projects`,
+      count: deletedProjects.count,
+    });
+  } catch (error) {
+    console.error("Error deleting projects:", error);
+    return NextResponse.json(
+      { error: "Failed to delete projects" },
       { status: 500 }
     );
   }

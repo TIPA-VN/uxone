@@ -30,6 +30,9 @@ model User {
   notes          Note[]
   ownedTasks     Task[]         @relation("TaskOwner")
   assignedTasks  Task[]         @relation("TaskAssignee")
+  createdTasks   Task[]         @relation("TaskCreator")
+  comments       Comment[]      @relation("CommentAuthor")
+  projectMembers ProjectMember[]
 
   @@map("users")
 }
@@ -79,34 +82,55 @@ model Document {
 }
 
 enum ProjectStatus {
-  STARTED
-  PENDING
-  APPROVED
-  REJECTED
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
 }
 
 model Project {
   id            String   @id @default(cuid())
   name          String
   description   String?
+  status        ProjectStatus @default(PLANNING)
+  startDate     DateTime @default(now())
+  endDate       DateTime?
+  budget        Float?
   ownerId       String
   owner         User     @relation(fields: [ownerId], references: [id])
   departments   String[] // departments requiring approval
   approvalState Json     // { department: status, ... }
-  status        ProjectStatus @default(STARTED)
   released      Boolean  @default(false)
   releasedAt    DateTime?
   requestDate   DateTime? // Overall project due date
   departmentDueDates Json? // { department: dueDate, ... }
+  tags          String[] // Project tags for categorization
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  // Optional: link to documents
+  
+  // Relations
   documents     Document[]
   notes         Note[]
-  comments      ProjectComment[]
+  comments      Comment[]      @relation("ProjectComments")
+  legacyComments ProjectComment[]
   tasks         Task[]
+  members       ProjectMember[]
 
   @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // 'owner', 'member', 'viewer'
+  joinedAt  DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@map("project_members")
 }
 
 model Note {
@@ -123,26 +147,31 @@ model Note {
   @@map("notes")
 }
 
-model ProjectComment {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
-  text      String
-  type      String   // 'comment' or 'update'
-  authorId  String
-  author    String   // Store author name for display
-  timestamp DateTime @default(now())
+// Unified Comment System
+model Comment {
+  id              String    @id @default(cuid())
+  content         String
+  authorId        String
+  author          User      @relation("CommentAuthor", fields: [authorId], references: [id])
+  taskId          String?   // Optional: link to task
+  task            Task?     @relation("TaskComments", fields: [taskId], references: [id], onDelete: Cascade)
+  projectId       String?   // Optional: link to project
+  project         Project?  @relation("ProjectComments", fields: [projectId], references: [id], onDelete: Cascade)
+  parentCommentId String?   // For threaded comments
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  replies         Comment[] @relation("CommentReplies")
+  mentions        String[]  // Array of user IDs mentioned
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  @@map("project_comments")
+  @@map("comments")
 }
 
 enum TaskStatus {
-  PENDING
+  TODO
   IN_PROGRESS
-  REVIEW
   COMPLETED
-  CANCELLED
-  OVERDUE
+  BLOCKED
 }
 
 enum TaskPriority {
@@ -153,27 +182,49 @@ enum TaskPriority {
 }
 
 model Task {
-  id            String       @id @default(cuid())
-  title         String
-  description   String?
-  ownerId       String
-  owner         User         @relation("TaskOwner", fields: [ownerId], references: [id])
-  assigneeId    String?      // Individual assignee
-  assignee      User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  id              String       @id @default(cuid())
+  title           String
+  description     String?
+  status          TaskStatus   @default(TODO)
+  priority        TaskPriority @default(MEDIUM)
+  projectId       String?      // Optional: link to project
+  project         Project?     @relation(fields: [projectId], references: [id])
+  parentTaskId    String?      // For subtasks
+  parentTask      Task?        @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  subtasks        Task[]       @relation("TaskHierarchy")
+  assigneeId      String?      // Individual assignee
+  assignee        User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy       String       // Task creator
+  creator         User         @relation("TaskCreator", fields: [createdBy], references: [id])
+  ownerId         String       // Task owner (can be different from creator)
+  owner           User         @relation("TaskOwner", fields: [ownerId], references: [id])
   assignedDepartments String[] // Departments assigned to this task
-  status        TaskStatus   @default(PENDING)
-  priority      TaskPriority @default(MEDIUM)
-  requestDate   DateTime     @default(now()) // When task was created/requested
-  dueDate       DateTime?    // When task should be completed
-  finishedDate  DateTime?    // When task was actually completed
-  projectId     String?      // Optional: link to project
-  project       Project?     @relation(fields: [projectId], references: [id])
-  attachments   TaskAttachment[]
-  comments      TaskComment[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  dueDate         DateTime?
+  estimatedHours  Float?
+  actualHours     Float?
+  tags            String[]     // Task tags for categorization
+  dependencies    TaskDependency[] @relation("DependentTask")
+  blockingTasks   TaskDependency[] @relation("BlockingTask")
+  attachments     TaskAttachment[]
+  comments        Comment[]    @relation("TaskComments")
+  legacyComments  TaskComment[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   @@map("tasks")
+}
+
+// Task Dependencies for blocking relationships
+model TaskDependency {
+  id              String   @id @default(cuid())
+  dependentTaskId String   // Task that depends on another
+  dependentTask   Task     @relation("DependentTask", fields: [dependentTaskId], references: [id], onDelete: Cascade)
+  blockingTaskId  String   // Task that blocks the dependent task
+  blockingTask    Task     @relation("BlockingTask", fields: [blockingTaskId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+
+  @@unique([dependentTaskId, blockingTaskId])
+  @@map("task_dependencies")
 }
 
 model TaskAttachment {
@@ -188,6 +239,20 @@ model TaskAttachment {
   uploadedAt  DateTime @default(now())
 
   @@map("task_attachments")
+}
+
+// Legacy models for backward compatibility
+model ProjectComment {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  text      String
+  type      String   // 'comment' or 'update'
+  authorId  String
+  author    String   // Store author name for display
+  timestamp DateTime @default(now())
+
+  @@map("project_comments")
 }
 
 model TaskComment {

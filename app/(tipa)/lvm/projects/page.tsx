@@ -144,7 +144,7 @@ export default function ProjectsPage() {
 
         {/* Create Project Form */}
         {showCreateForm && (
-          <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Create New Project</h2>
               <p className="text-sm text-gray-600 mt-1">Fill in the details below to create a new project</p>
@@ -231,7 +231,7 @@ export default function ProjectsPage() {
         {/* Projects List - Two Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Projects I Own */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">Projects I Own</h2>
@@ -242,7 +242,7 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible pb-16">
               {projects.filter(p => p.ownerId === user?.id).length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -327,7 +327,7 @@ export default function ProjectsPage() {
                             
                             {openMenuId === proj.id && (
                               <div 
-                                className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-20"
+                                className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
                                 onClick={handleMenuClick}
                               >
                                 <Link
@@ -361,7 +361,7 @@ export default function ProjectsPage() {
           </div>
 
           {/* Projects I Belong To */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">Projects I Belong To</h2>
@@ -372,7 +372,7 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible pb-16">
               {projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -450,7 +450,7 @@ export default function ProjectsPage() {
                             
                             {openMenuId === proj.id && (
                               <div 
-                                className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-20"
+                                className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
                                 onClick={handleMenuClick}
                               >
                                 <Link

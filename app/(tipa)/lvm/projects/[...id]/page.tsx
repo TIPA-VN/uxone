@@ -40,6 +40,32 @@ type Project = {
     // add other fields as needed
   };
 
+type Task = {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  assigneeId?: string;
+  assignee_name?: string;
+  assignee_username?: string;
+  assignee_department?: string;
+  dueDate?: string;
+  estimatedHours?: number;
+  actualHours?: number;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+type User = {
+  id: string;
+  name: string;
+  username: string;
+  department: string;
+  departmentName: string;
+};
+
 const DEPARTMENTS = [
   { value: "logistics", label: "Logistics" },
   { value: "procurement", label: "Procurement" },
@@ -67,6 +93,8 @@ const getStatusIcon = (status: string | undefined) => {
   }
 };
 
+
+
 export default function ProjectDetailsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -87,6 +115,22 @@ export default function ProjectDetailsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: session } = useSession();
   const user = session?.user;
+  
+  // Task management state
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    title: "",
+    description: "",
+    status: "TODO",
+    priority: "MEDIUM",
+    assigneeId: "",
+    dueDate: "",
+    estimatedHours: "",
+    tags: [] as string[],
+  });
   
   // Comment and updates state
   const [comments, setComments] = useState<Array<{
@@ -116,6 +160,10 @@ export default function ProjectDetailsPage() {
   // Due dates editor state
   const [showDueDateEditor, setShowDueDateEditor] = useState(false);
   const [dueDateEditorDepartment, setDueDateEditorDepartment] = useState<string | null>(null);
+
+  // Pagination state
+  // const [productionDocsPage, setProductionDocsPage] = useState(1);
+  // const [departmentDocsPage, setDepartmentDocsPage] = useState(1);
 
 
   useEffect(() => {
@@ -259,6 +307,109 @@ export default function ProjectDetailsPage() {
         setComments([]);
       });
   }, [projectId]);
+
+  // Fetch tasks for this project
+  const fetchTasks = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await fetch(`/api/tasks?projectId=${projectId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTasks(data);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
+  }, [projectId]);
+
+  // Fetch users for assignment
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users");
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, []);
+
+  // Create new task
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskForm.title.trim()) return;
+
+    setCreatingTask(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...taskForm,
+          projectId,
+          estimatedHours: taskForm.estimatedHours ? parseFloat(taskForm.estimatedHours) : null,
+        }),
+      });
+
+      if (res.ok) {
+        const newTask = await res.json();
+        setTasks(prev => [...prev, newTask]);
+        setTaskForm({
+          title: "",
+          description: "",
+          status: "TODO",
+          priority: "MEDIUM",
+          assigneeId: "",
+          dueDate: "",
+          estimatedHours: "",
+          tags: [],
+        });
+        setShowCreateTask(false);
+        setActionStatus("Task created successfully!");
+        setTimeout(() => setActionStatus(null), 3000);
+      } else {
+        const error = await res.json();
+        setActionStatus(`Failed to create task: ${error.error}`);
+        setTimeout(() => setActionStatus(null), 5000);
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      setActionStatus("Failed to create task");
+      setTimeout(() => setActionStatus(null), 5000);
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
+  // Update task status
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        setTasks(prev => prev.map(task => 
+          task.id === taskId ? { ...task, status: newStatus } : task
+        ));
+        setActionStatus("Task status updated!");
+        setTimeout(() => setActionStatus(null), 3000);
+      }
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
+  };
+
+  // Fetch tasks and users when tasks tab is active
+  useEffect(() => {
+    if (project && activeTab === "tasks") {
+      fetchTasks();
+      fetchUsers();
+    }
+  }, [project, activeTab, fetchTasks, fetchUsers]);
 
   // Always default approvalState to an object
   const approvalState = project?.approvalState || {};
@@ -517,6 +668,15 @@ export default function ProjectDetailsPage() {
   if (loading) return <div className="p-8">Loading...</div>;
   if (!project) return <div className="p-8 text-red-600">Project not found.</div>;
 
+  // Remove pagination logic
+  // const productionDocsStart = (productionDocsPage - 1) * ITEMS_PER_PAGE;
+  // const productionDocsEnd = productionDocsStart + ITEMS_PER_PAGE;
+  // const paginatedProductionDocs = productionDocs.slice(productionDocsStart, productionDocsEnd);
+
+  // const departmentDocsStart = (departmentDocsPage - 1) * ITEMS_PER_PAGE;
+  // const departmentDocsEnd = departmentDocsStart + ITEMS_PER_PAGE;
+  // const paginatedDepartmentDocs = docs.slice(departmentDocsStart, departmentDocsEnd);
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       {/* Status card removed from top */}
@@ -639,6 +799,25 @@ export default function ProjectDetailsPage() {
           }}
         >
           PRODUCTION
+        </button>
+        {/* TASKS tab */}
+        <button
+          key="TASKS"
+          role="tab"
+          aria-selected={activeTab === "tasks"}
+          aria-controls="tasks-pane"
+          id="tasks-tab"
+          tabIndex={activeTab === "tasks" ? 0 : -1}
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+            activeTab === "tasks" 
+              ? "border-b-2 bg-white shadow-sm border-purple-500 text-purple-700" 
+              : "border-transparent border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100"
+          }`}
+          onClick={() => {
+            setActiveTab("tasks");
+          }}
+        >
+          TASKS
         </button>
       </div>
 
@@ -898,7 +1077,7 @@ export default function ProjectDetailsPage() {
         >
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="font-semibold mb-4">Production Documents</h3>
-            <div className="bg-gray-100 rounded p-1 overflow-x-auto">
+            <div className="bg-gray-100 rounded p-1 overflow-x-auto pb-16">
               {productionDocs.length === 0 ? (
                 <div className="text-gray-400 text-xs">No production documents found.</div>
               ) : (
@@ -945,7 +1124,7 @@ export default function ProjectDetailsPage() {
                               <Menu className="w-4 h-4 text-gray-600" />
                             </button>
                             {dropdownOpen === doc.id && (
-                              <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                              <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-50">
                                 <button
                                   onClick={() => handleViewDoc(doc)}
                                   className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
@@ -959,6 +1138,226 @@ export default function ProjectDetailsPage() {
                                 >
                                   <Download className="w-4 h-4" />
                                   Download
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : activeTab === "tasks" ? (
+        <div
+          id="tasks-pane"
+          role="tabpanel"
+          aria-labelledby="tasks-tab"
+          className="p-4 sm:p-6 min-h-[200px] border border-gray-200 bg-gray-50 rounded-lg"
+        >
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold">Tasks</h3>
+              <button
+                onClick={() => setShowCreateTask(!showCreateTask)}
+                className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
+              >
+                {showCreateTask ? "Cancel" : "New Task"}
+              </button>
+            </div>
+
+            {/* Task Creation Form */}
+            {showCreateTask && (
+              <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <h4 className="font-medium text-purple-900 mb-3">Create New Task</h4>
+                <form onSubmit={handleCreateTask} className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Task Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={taskForm.title}
+                        onChange={(e) => setTaskForm(prev => ({ ...prev, title: e.target.value }))}
+                        required
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                        placeholder="Enter task title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Assignee
+                      </label>
+                      <select
+                        value={taskForm.assigneeId}
+                        onChange={(e) => setTaskForm(prev => ({ ...prev, assigneeId: e.target.value }))}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
+                      >
+                        <option value="">Select assignee</option>
+                        {users.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.name || user.username} ({user.department})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={taskForm.description}
+                      onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                      rows={2}
+                      placeholder="Enter task description"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Priority
+                      </label>
+                      <select
+                        value={taskForm.priority}
+                        onChange={(e) => setTaskForm(prev => ({ ...prev, priority: e.target.value }))}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
+                      >
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Due Date
+                      </label>
+                      <input
+                        type="date"
+                        value={taskForm.dueDate}
+                        onChange={(e) => setTaskForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Estimated Hours
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={taskForm.estimatedHours}
+                        onChange={(e) => setTaskForm(prev => ({ ...prev, estimatedHours: e.target.value }))}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Status
+                      </label>
+                      <select
+                        value={taskForm.status}
+                        onChange={(e) => setTaskForm(prev => ({ ...prev, status: e.target.value }))}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
+                      >
+                        <option value="TODO">To Do</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="BLOCKED">Blocked</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateTask(false)}
+                      className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={creatingTask || !taskForm.title.trim()}
+                      className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                    >
+                      {creatingTask ? "Creating..." : "Create Task"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Tasks List */}
+            <div className="bg-gray-100 rounded p-1 overflow-x-auto pb-16">
+              {tasks.length === 0 ? (
+                <div className="text-gray-400 text-xs">No tasks found for this project.</div>
+              ) : (
+                <table className="w-full text-xs min-w-[400px]">
+                  <thead>
+                    <tr className="border-b bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                      <th className="py-2 px-3 text-left font-medium text-xs w-1/3">Title</th>
+                      <th className="py-2 px-3 text-left font-medium text-xs w-1/3">Status</th>
+                      <th className="py-2 px-3 text-left font-medium text-xs w-1/3">Due Date</th>
+                      <th className="py-2 px-3 text-center font-medium text-xs w-1/10 min-w-[60px]">Option</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                                         {tasks.map((task, index) => (
+                       <tr key={task.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <td className="py-0.5 px-3 break-words w-1/3">{task.title}</td>
+                        <td className="py-0.5 px-3 w-1/3">
+                          <span className={`font-medium text-xs px-2 py-0.5 rounded-full ${
+                            task.status === "COMPLETED" ? "bg-green-100 text-green-800" :
+                            task.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-800" :
+                            task.status === "TODO" ? "bg-gray-100 text-gray-800" :
+                            "bg-red-100 text-red-800"
+                          }`}>
+                            {task.status}
+                          </span>
+                        </td>
+                        <td className="py-0.5 px-3 w-1/3">
+                          {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : <span className="text-gray-400 italic">No due date</span>}
+                        </td>
+                        <td className="py-0.5 px-3 w-1/10 min-w-[60px]">
+                          <div className="relative dropdown-container flex justify-center">
+                            <button
+                              onClick={() => toggleDropdown(task.id)}
+                              className="p-1 hover:bg-gray-100 rounded"
+                            >
+                              <Menu className="w-4 h-4 text-gray-600" />
+                            </button>
+                            {dropdownOpen === task.id && (
+                              <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                                <button
+                                  onClick={() => handleUpdateTaskStatus(task.id, "COMPLETED")}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-green-100 flex items-center gap-2"
+                                >
+                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                  Mark as Completed
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-blue-100 flex items-center gap-2"
+                                >
+                                  <Clock className="w-4 h-4 text-blue-600" />
+                                  Mark as In Progress
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateTaskStatus(task.id, "TODO")}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                                >
+                                  <XCircle className="w-4 h-4 text-gray-600" />
+                                  Mark as To Do
                                 </button>
                               </div>
                             )}
@@ -1249,7 +1648,7 @@ export default function ProjectDetailsPage() {
                                         <Menu className="w-4 h-4 text-gray-600" />
                                       </button>
                                       {dropdownOpen === doc.id && (
-                                        <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                                        <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-50">
                                           <button
                                             onClick={() => handleViewDoc(doc)}
                                             className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
@@ -1269,7 +1668,7 @@ export default function ProjectDetailsPage() {
                                     </div>
                                   </td>
                                 </tr>
-                              )})}
+                                )})}
                           </tbody>
                         </table>
                         

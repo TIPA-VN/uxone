@@ -1,9 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Plus, Calendar, Users, CheckCircle, XCircle, Clock, AlertCircle, Menu, FileText, MessageSquare, Paperclip } from "lucide-react";
+import { Plus, Calendar, Users, CheckCircle, XCircle, Clock, AlertCircle, Menu } from "lucide-react";
 
-// Task type definition
 type Task = {
   id: string;
   title: string;
@@ -51,10 +50,11 @@ const getStatusIcon = (status: string) => {
     case "IN_PROGRESS":
       return <Clock className="w-4 h-4 text-blue-500" />;
     case "REVIEW":
-      return <FileText className="w-4 h-4 text-orange-500" />;
+      return <Clock className="w-4 h-4 text-yellow-500" />;
     case "PENDING":
+      return <Clock className="w-4 h-4 text-orange-500" />;
     default:
-      return <Clock className="w-4 h-4 text-gray-400" />;
+      return <AlertCircle className="w-4 h-4 text-gray-400" />;
   }
 };
 
@@ -69,8 +69,9 @@ const getStatusColor = (status: string) => {
     case "IN_PROGRESS":
       return "bg-blue-100 text-blue-800 border-blue-200";
     case "REVIEW":
-      return "bg-orange-100 text-orange-800 border-orange-200";
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
     case "PENDING":
+      return "bg-orange-100 text-orange-800 border-orange-200";
     default:
       return "bg-gray-100 text-gray-800 border-gray-200";
   }
@@ -85,6 +86,7 @@ const getPriorityColor = (priority: string) => {
     case "MEDIUM":
       return "bg-yellow-100 text-yellow-800 border-yellow-200";
     case "LOW":
+      return "bg-green-100 text-green-800 border-green-200";
     default:
       return "bg-gray-100 text-gray-800 border-gray-200";
   }
@@ -103,10 +105,10 @@ export default function TasksPage() {
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const fetchTasks = async () => {
     const res = await fetch("/api/tasks");
@@ -126,8 +128,8 @@ export default function TasksPage() {
     setProjects(data);
   };
 
-  useEffect(() => { 
-    fetchTasks(); 
+  useEffect(() => {
+    fetchTasks();
     fetchUsers();
     fetchProjects();
   }, []);
@@ -137,20 +139,22 @@ export default function TasksPage() {
     setCreating(true);
     setStatus(null);
     
+    const taskData = {
+      title,
+      description,
+      assigneeId: assigneeId || null,
+      assignedDepartments,
+      priority,
+      dueDate: dueDate || null,
+      projectId: projectId || null,
+    };
+
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        title, 
-        description, 
-        assigneeId: assigneeId || null,
-        assignedDepartments, 
-        priority, 
-        dueDate: dueDate || null,
-        projectId: projectId || null
-      }),
+      body: JSON.stringify(taskData),
     });
-    
+
     if (res.ok) {
       setStatus("Task created successfully!");
       setTitle("");
@@ -189,7 +193,7 @@ export default function TasksPage() {
   }, [openMenuId]);
 
   const isOverdue = (dueDate: string) => {
-    return new Date(dueDate) < new Date() && new Date(dueDate).getTime() !== 0;
+    return new Date(dueDate) < new Date() && new Date(dueDate).getTime() !== new Date('1970-01-01').getTime();
   };
 
   return (
@@ -218,7 +222,7 @@ export default function TasksPage() {
 
         {/* Create Task Form */}
         {showCreateForm && (
-          <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Create New Task</h2>
               <p className="text-sm text-gray-600 mt-1">Fill in the details below to create a new task</p>
@@ -245,7 +249,7 @@ export default function TasksPage() {
                   <select
                     value={priority}
                     onChange={e => setPriority(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                   >
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
@@ -276,12 +280,12 @@ export default function TasksPage() {
                   <select
                     value={assigneeId}
                     onChange={e => setAssigneeId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                   >
                     <option value="">Select user (optional)</option>
                     {users.map(user => (
                       <option key={user.id} value={user.id}>
-                        {user.name || user.username} ({user.department})
+                        {user.username} - {user.departmentName}
                       </option>
                     ))}
                   </select>
@@ -291,7 +295,7 @@ export default function TasksPage() {
                     Due Date
                   </label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={dueDate}
                     onChange={e => setDueDate(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -299,12 +303,12 @@ export default function TasksPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Link to Project
+                    Related Project
                   </label>
                   <select
                     value={projectId}
                     onChange={e => setProjectId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                   >
                     <option value="">Select project (optional)</option>
                     {projects.map(project => (
@@ -369,7 +373,7 @@ export default function TasksPage() {
         {/* Tasks List - Two Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Tasks I Own */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">Tasks I Own</h2>
@@ -380,7 +384,7 @@ export default function TasksPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible pb-16">
               {tasks.filter(t => t.ownerId === user?.id).length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -467,7 +471,7 @@ export default function TasksPage() {
                             
                             {openMenuId === task.id && (
                               <div 
-                                className="absolute right-0 top-full mt-1 w-28 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-20"
+                                className="absolute right-0 top-full mt-1 w-28 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
                                 onClick={handleMenuClick}
                               >
                                 <a
@@ -495,7 +499,7 @@ export default function TasksPage() {
           </div>
 
           {/* Tasks Assigned to Me */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">Tasks Assigned to Me</h2>
@@ -506,7 +510,7 @@ export default function TasksPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible pb-16">
               {tasks.filter(t => t.assigneeId === user?.id || t.assignedDepartments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -586,7 +590,7 @@ export default function TasksPage() {
                             
                             {openMenuId === task.id && (
                               <div 
-                                className="absolute right-0 top-full mt-1 w-28 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-20"
+                                className="absolute right-0 top-full mt-1 w-28 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
                                 onClick={handleMenuClick}
                               >
                                 <a

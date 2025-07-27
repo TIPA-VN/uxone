@@ -27,7 +27,7 @@ async function main() {
         ownerId: admin.id,
         departments: ["logistics", "qa", "pc"],
         approvalState: { logistics: "pending", qa: "pending", pc: "pending" },
-        status: "started",
+        status: "ACTIVE",
       },
     });
     console.log("Project created:", project);
