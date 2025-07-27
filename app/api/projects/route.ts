@@ -10,6 +10,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if this is a fallback authentication session
+    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    
+    // If using fallback auth and database is likely down, return empty array
+    if (isFallbackAuth) {
+      return NextResponse.json([]);
+    }
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const ownerId = searchParams.get("ownerId");
@@ -174,6 +182,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(projectsWithTaskCounts);
   } catch (error) {
     console.error("Error fetching projects:", error);
+    
+    // Check if this is a database connection error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('connect') || errorMessage.includes('timeout') || errorMessage.includes('network')) {
+      console.log('Database connection error detected, returning empty array');
+      return NextResponse.json([]);
+    }
+    
     return NextResponse.json(
       { error: "Failed to fetch projects" },
       { status: 500 }
@@ -187,6 +203,17 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if this is a fallback authentication session
+    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    
+    // If using fallback auth, return an error indicating database is unavailable
+    if (isFallbackAuth) {
+      return NextResponse.json(
+        { error: "Database unavailable. Project creation is not available in fallback mode." },
+        { status: 503 }
+      );
     }
 
     const body = await request.json();

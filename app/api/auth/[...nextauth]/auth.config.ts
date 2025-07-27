@@ -1,7 +1,123 @@
 import type { NextAuthConfig } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { hashPassword, verifyPassword } from '@/lib/hashPassword'
 
 export const runtime = 'nodejs'
+
+// Admin fallback credentials (should be set in environment variables)
+const ADMIN_CREDENTIALS = {
+  username: process.env.ADMIN_FALLBACK_USERNAME || 'admin',
+  password: process.env.ADMIN_FALLBACK_PASSWORD || 'admin123',
+  role: process.env.ADMIN_FALLBACK_ROLE || 'GENERAL DIRECTOR',
+  name: process.env.ADMIN_FALLBACK_NAME || 'System Administrator',
+  email: process.env.ADMIN_FALLBACK_EMAIL || 'admin@tipa.co.th',
+  department: process.env.ADMIN_FALLBACK_DEPARTMENT || 'IT',
+  departmentName: process.env.ADMIN_FALLBACK_DEPARTMENT_NAME || 'Information Technology'
+}
+
+// Admin override list - usernames that should always have admin access
+const ADMIN_OVERRIDE_USERS = [
+  'administrator', // Your username
+  'admin',
+  '22023312', // Add your actual username here
+  // Add more admin usernames as needed
+];
+
+// Check if a user should have admin override
+function shouldOverrideToAdmin(username: string): boolean {
+  return ADMIN_OVERRIDE_USERS.includes(username.toLowerCase());
+}
+
+// Map central API positions to our role system
+function mapPositionToRole(position: string): string {
+  const positionMap: { [key: string]: string } = {
+    // Executive Level
+    'GENERAL DIRECTOR': 'GENERAL_DIRECTOR',
+    'GENERAL MANAGER': 'GENERAL_MANAGER',
+    'ASSISTANT GENERAL MANAGER': 'ASSISTANT_GENERAL_MANAGER',
+    'ASSISTANT GENERAL MANAGER 2': 'ASSISTANT_GENERAL_MANAGER_2',
+    
+    // Senior Management
+    'SENIOR MANAGER': 'SENIOR_MANAGER',
+    'SENIOR MANAGER 2': 'SENIOR_MANAGER_2',
+    'ASSISTANT SENIOR MANAGER': 'ASSISTANT_SENIOR_MANAGER',
+    
+    // Management
+    'MANAGER': 'MANAGER',
+    'MANAGER 2': 'MANAGER_2',
+    'ASSISTANT MANAGER': 'ASSISTANT_MANAGER',
+    'ASSISTANT MANAGER 2': 'ASSISTANT_MANAGER_2',
+    
+    // Supervision
+    'SUPERVISOR': 'SUPERVISOR',
+    'SUPERVISOR 2': 'SUPERVISOR_2',
+    'LINE LEADER': 'LINE_LEADER',
+    
+    // Technical Specialists
+    'CHIEF SPECIALIST': 'CHIEF_SPECIALIST',
+    'SENIOR SPECIALIST': 'SENIOR_SPECIALIST',
+    'SENIOR SPECIALIST 2': 'SENIOR_SPECIALIST_2',
+    'TECHNICAL SPECIALIST': 'TECHNICAL_SPECIALIST',
+    'SPECIALIST': 'SPECIALIST',
+    'SPECIALIST 2': 'SPECIALIST_2',
+    'SENIOR ENGINEER': 'SENIOR_ENGINEER',
+    'ENGINEER': 'ENGINEER',
+    
+    // Staff Level
+    'SENIOR STAFF': 'SENIOR_STAFF',
+    'STAFF': 'STAFF',
+    'SENIOR ASSOCIATE': 'SENIOR_ASSOCIATE',
+    'ASSOCIATE': 'ASSOCIATE',
+    
+    // Operations
+    'SENIOR OPERATOR': 'SENIOR_OPERATOR',
+    'OPERATOR': 'OPERATOR',
+    'TECHNICIAN': 'TECHNICIAN',
+    
+    // Entry Level
+    'INTERN': 'INTERN',
+  };
+  
+  // Return mapped role or default to STAFF if position not found
+  return positionMap[position] || 'STAFF';
+}
+
+// Check if central API is available
+async function isCentralApiAvailable(): Promise<boolean> {
+  try {
+    // Just check if the central API endpoint is reachable
+    const response = await fetch("http://10.116.3.138:8888/api/web_check_login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        username: "health_check", 
+        password: "health_check" 
+      }),
+      // Short timeout to fail fast
+      signal: AbortSignal.timeout(3000)
+    })
+    
+    // Consider it available if we get any response (even if auth fails)
+    return true // If we get here, the API is reachable
+  } catch (error) {
+    return false
+  }
+}
+
+// Validate admin credentials
+async function validateAdminCredentials(username: string, password: string): Promise<boolean> {
+  // Check if credentials match admin fallback
+  if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+    return true
+  }
+  
+  // Also check against hashed password if provided
+  if (process.env.ADMIN_FALLBACK_HASHED_PASSWORD) {
+    return await verifyPassword(password, process.env.ADMIN_FALLBACK_HASHED_PASSWORD)
+  }
+  
+  return false
+}
 
 export const authConfig = {
   providers: [
@@ -17,77 +133,180 @@ export const authConfig = {
         }
 
         try {
-      
+          // First, check if central API is available
+          const centralApiAvailable = await isCentralApiAvailable()
           
-          // Call central authentication API
+          // If central API is down, check for admin fallback authentication
+          if (!centralApiAvailable) {
+            const isAdmin = await validateAdminCredentials(
+              credentials.username as string, 
+              credentials.password as string
+            )
+            
+            if (isAdmin) {
+              
+              // Create a virtual admin user without database access
+              const virtualAdminUser = {
+                id: 'admin-fallback-' + Date.now(),
+                username: ADMIN_CREDENTIALS.username,
+                name: ADMIN_CREDENTIALS.name,
+                email: ADMIN_CREDENTIALS.email,
+                department: ADMIN_CREDENTIALS.department,
+                departmentName: ADMIN_CREDENTIALS.departmentName,
+                role: ADMIN_CREDENTIALS.role,
+                hashedPassword: process.env.ADMIN_FALLBACK_HASHED_PASSWORD || '',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+
+              return {
+                id: virtualAdminUser.id,
+                name: virtualAdminUser.name || virtualAdminUser.username,
+                email: virtualAdminUser.email || `${virtualAdminUser.username}@tipa.co.th`,
+                username: virtualAdminUser.username,
+                department: virtualAdminUser.department || 'IT',
+                departmentName: virtualAdminUser.departmentName || 'Information Technology',
+                role: virtualAdminUser.role || 'GENERAL DIRECTOR',
+                position: virtualAdminUser.departmentName || 'Information Technology',
+                isFallbackAuth: true, // Flag to indicate fallback authentication
+              }
+            } else {
+              throw new Error('Central authentication service is unavailable. Only admin accounts can access the system.')
+            }
+          }
+
+          // Central API is available, proceed with normal authentication
           const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-          const response = await fetch(`${baseUrl}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              username: credentials.username,
-              password: credentials.password,
-            }),
-          })
+          
+          try {
+            const response = await fetch(`${baseUrl}/api/auth/login`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                username: credentials.username,
+                password: credentials.password,
+              }),
+            })
 
-          const data = await response.json()
-  
+            const data = await response.json()
 
-          if (!response.ok) {
-            throw new Error(data.error || data.content || data.message || 'Authentication failed')
+            if (!response.ok) {
+              throw new Error(data.error || data.content || data.message || 'Authentication failed')
+            }
+
+            if (data.message !== 'OK') {
+              throw new Error(data.error || data.content || 'Invalid credentials')
+            }
+
+            if (!data.emp_code) {
+              throw new Error('Missing employee code')
+            }
+
+            // Import Prisma only at runtime (Node.js only)
+            const { prisma } = await import('@/lib/prisma');
+
+            // Check if this user should have admin override
+            const isAdminOverride = shouldOverrideToAdmin(data.emp_code);
+            const mappedRole = mapPositionToRole(data.emp_pos);
+            const finalRole = isAdminOverride ? 'ADMIN' : mappedRole;
+
+            // Debug logging for admin override and role mapping
+            if (isAdminOverride) {
+              console.log(`🔐 Admin override applied for user: ${data.emp_code}`);
+              console.log(`   Original position from central API: ${data.emp_pos}`);
+              console.log(`   Mapped role: ${mappedRole}`);
+              console.log(`   Final role: ${finalRole}`);
+            } else {
+              console.log(`🔄 Role mapping for user: ${data.emp_code}`);
+              console.log(`   Original position from central API: ${data.emp_pos}`);
+              console.log(`   Mapped to role: ${finalRole}`);
+            }
+
+            // Upsert the user in the local DB with the latest info from the central API
+            await prisma.user.upsert({
+              where: { username: data.emp_code },
+              update: {
+                name: data.emp_name || data.emp_code,
+                email: data.email || `${data.emp_code}@tipa.co.th`,
+                department: data.emp_dept || 'UNKNOWN',
+                departmentName: data.emp_dept_name || 'Unknown Department',
+                role: finalRole, // Use admin override if applicable
+              },
+              create: {
+                username: data.emp_code,
+                name: data.emp_name || data.emp_code,
+                email: data.email || `${data.emp_code}@tipa.co.th`,
+                department: data.emp_dept || 'UNKNOWN',
+                departmentName: data.emp_dept_name || 'Unknown Department',
+                role: finalRole, // Use admin override if applicable
+                hashedPassword: '',
+                isActive: true, // New users are active by default
+              },
+            });
+
+            // Now fetch the user from the local DB
+            const dbUser = await prisma.user.findUnique({ where: { username: data.emp_code } });
+            if (!dbUser) throw new Error('User not found in local DB');
+
+            // Check if user is active
+            if (!dbUser.isActive) {
+              throw new Error('User account is disabled. Please contact your administrator.');
+            }
+
+            const user = {
+              id: dbUser.id, // Use the local DB user ID!
+              name: dbUser.name || dbUser.username,
+              email: dbUser.email || `${dbUser.username}@tipa.co.th`,
+              username: dbUser.username,
+              department: dbUser.department || 'UNKNOWN',
+              departmentName: dbUser.departmentName || 'Unknown Department',
+              role: dbUser.role || 'USER',
+              position: dbUser.departmentName || 'Unknown Department',
+              isFallbackAuth: false, // Flag to indicate normal authentication
+            }
+      
+            return user
+          } catch (error) {
+            // If normal authentication fails, check if this is an admin user for fallback
+            const isAdmin = await validateAdminCredentials(
+              credentials.username as string, 
+              credentials.password as string
+            )
+            
+            if (isAdmin) {
+              
+              // Create a virtual admin user without database access
+              const virtualAdminUser = {
+                id: 'admin-fallback-' + Date.now(),
+                username: ADMIN_CREDENTIALS.username,
+                name: ADMIN_CREDENTIALS.name,
+                email: ADMIN_CREDENTIALS.email,
+                department: ADMIN_CREDENTIALS.department,
+                departmentName: ADMIN_CREDENTIALS.departmentName,
+                role: ADMIN_CREDENTIALS.role,
+                hashedPassword: process.env.ADMIN_FALLBACK_HASHED_PASSWORD || '',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+
+              return {
+                id: virtualAdminUser.id,
+                name: virtualAdminUser.name || virtualAdminUser.username,
+                email: virtualAdminUser.email || `${virtualAdminUser.username}@tipa.co.th`,
+                username: virtualAdminUser.username,
+                department: virtualAdminUser.department || 'IT',
+                departmentName: virtualAdminUser.departmentName || 'Information Technology',
+                role: virtualAdminUser.role || 'GENERAL DIRECTOR',
+                position: virtualAdminUser.departmentName || 'Information Technology',
+                isFallbackAuth: true, // Flag to indicate fallback authentication
+              }
+            } else {
+              throw new Error('Authentication failed. Central service unavailable and user is not an admin.')
+            }
           }
-
-          if (data.message !== 'OK') {
-            throw new Error(data.error || data.content || 'Invalid credentials')
-          }
-
-          if (!data.emp_code) {
-            throw new Error('Missing employee code')
-          }
-
-          // Import Prisma only at runtime (Node.js only)
-          const { prisma } = await import('@/lib/prisma');
-
-          // Upsert the user in the local DB with the latest info from the central API
-          await prisma.user.upsert({
-            where: { username: data.emp_code },
-            update: {
-              name: data.emp_name || data.emp_code,
-              email: data.email || `${data.emp_code}@tipa.co.th`,
-              department: data.emp_dept || 'UNKNOWN',
-              departmentName: data.emp_dept_name || 'Unknown Department',
-              role: data.emp_pos, // use role only
-            },
-            create: {
-              username: data.emp_code,
-              name: data.emp_name || data.emp_code,
-              email: data.email || `${data.emp_code}@tipa.co.th`,
-              department: data.emp_dept || 'UNKNOWN',
-              departmentName: data.emp_dept_name || 'Unknown Department',
-              role: data.emp_pos, // use role only
-              hashedPassword: '',
-            },
-          });
-
-          // Now fetch the user from the local DB
-          const dbUser = await prisma.user.findUnique({ where: { username: data.emp_code } });
-          if (!dbUser) throw new Error('User not found in local DB');
-
-          const user = {
-            id: dbUser.id, // Use the local DB user ID!
-            name: dbUser.name || dbUser.username,
-            email: dbUser.email || `${dbUser.username}@tipa.co.th`,
-            username: dbUser.username,
-            department: dbUser.department || 'UNKNOWN',
-            departmentName: dbUser.departmentName || 'Unknown Department',
-            role: dbUser.role || 'USER',
-          }
-  
-          return user
         } catch (error) {
-          console.error('Auth error:', error)
           throw error
         }
       },
@@ -109,6 +328,8 @@ export const authConfig = {
         token.role = user.role
         token.department = user.department
         token.departmentName = user.departmentName
+        token.position = user.position
+        token.isFallbackAuth = user.isFallbackAuth
       }
       return token
     },
@@ -121,6 +342,8 @@ export const authConfig = {
           role: token.role as string,
           department: token.department as string,
           departmentName: token.departmentName as string,
+          position: (token.position as string | null) || 'Unknown',
+          isFallbackAuth: token.isFallbackAuth as boolean,
         }
       }
       return session

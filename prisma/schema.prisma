@@ -20,6 +20,7 @@ model User {
   role           String?
   hashedPassword String?        // Optional since we use central auth
   image          String?
+  isActive       Boolean        @default(true) // User account status
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 

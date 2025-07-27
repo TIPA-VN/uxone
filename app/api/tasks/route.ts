@@ -13,6 +13,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if this is a fallback authentication session
+    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    
+    // If using fallback auth and database is likely down, return empty array
+    if (isFallbackAuth) {
+      return NextResponse.json([]);
+    }
+
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
     const status = searchParams.get("status");
@@ -166,6 +174,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(tasks);
   } catch (error) {
     console.error("Error fetching tasks:", error);
+    
+    // Check if this is a database connection error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('connect') || errorMessage.includes('timeout') || errorMessage.includes('network')) {
+      return NextResponse.json([]);
+    }
+    
     return NextResponse.json(
       { error: "Failed to fetch tasks" },
       { status: 500 }
@@ -179,6 +194,17 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if this is a fallback authentication session
+    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    
+    // If using fallback auth, return an error indicating database is unavailable
+    if (isFallbackAuth) {
+      return NextResponse.json(
+        { error: "Database unavailable. Task creation is not available in fallback mode." },
+        { status: 503 }
+      );
     }
 
     const body = await request.json();
@@ -383,6 +409,17 @@ export async function PATCH(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if this is a fallback authentication session
+    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    
+    // If using fallback auth, return an error indicating database is unavailable
+    if (isFallbackAuth) {
+      return NextResponse.json(
+        { error: "Database unavailable. Task updates are not available in fallback mode." },
+        { status: 503 }
+      );
     }
 
     const body = await request.json();
@@ -684,6 +721,17 @@ export async function DELETE(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if this is a fallback authentication session
+    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    
+    // If using fallback auth, return an error indicating database is unavailable
+    if (isFallbackAuth) {
+      return NextResponse.json(
+        { error: "Database unavailable. Task deletion is not available in fallback mode." },
+        { status: 503 }
+      );
     }
 
     const { searchParams } = new URL(request.url);

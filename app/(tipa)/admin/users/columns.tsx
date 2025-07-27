@@ -15,12 +15,14 @@ type User = {
   id: string;
   username: string;
   name: string | null;
-  email: string;
-  role: string;
+  email: string | null;
+  role: string | null;
   department: string | null;
   departmentName: string | null;
-  position: string | null;
+  hashedPassword: string | null;
+  image: string | null;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 export const columns: ColumnDef<User>[] = [
@@ -45,8 +47,8 @@ export const columns: ColumnDef<User>[] = [
     header: "Department",
   },
   {
-    accessorKey: "position",
-    header: "Position",
+    accessorKey: "departmentName",
+    header: "Department Name",
   },
   {
     id: "actions",

@@ -74,15 +74,11 @@ export async function POST(request: NextRequest) {
 
     // Send notifications to all department heads
     try {
-      console.log("Starting notification process for projectId:", projectIdStr);
-      
       // Get the project to find department heads
       const project = await prisma.project.findUnique({
         where: { id: projectIdStr },
         include: { owner: true }
       });
-
-      console.log("Project found:", project?.name, "Departments:", project?.departments);
 
       if (project) {
         // Find all users who are senior managers or admins in the project's departments
@@ -95,30 +91,20 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        console.log("All senior managers and admins:", departmentHeads.map(h => ({ id: h.id, name: h.name, role: h.role, department: h.department })));
-
         // Filter by project departments (case-insensitive)
         const projectDepartmentsLower = project.departments.map(dept => dept.toLowerCase());
         const filteredHeads = departmentHeads.filter(head => {
           const headDeptLower = head.department?.toLowerCase();
           const isInProject = headDeptLower && projectDepartmentsLower.includes(headDeptLower);
-          console.log(`Checking ${head.name} (${head.department}) against project departments:`, projectDepartmentsLower, "Result:", isInProject);
           return isInProject;
         });
-
-        console.log("Filtered department heads:", filteredHeads.length, "Heads:", filteredHeads.map(h => ({ id: h.id, name: h.name, role: h.role, department: h.department })));
-
-        console.log("Department heads found:", filteredHeads.length, "Heads:", filteredHeads.map(h => ({ id: h.id, name: h.name, role: h.role, department: h.department })));
 
         // Create notifications for each department head
         for (const head of filteredHeads) {
           // Don't notify the comment author
           if (head.id === session.user.id) {
-            console.log("Skipping notification for comment author:", head.name);
             continue;
           }
-
-          console.log("Creating notification for:", head.name, "Role:", head.role, "Department:", head.department);
 
           const notification = await prisma.notification.create({
             data: {
@@ -130,30 +116,28 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          console.log("Notification created:", notification.id);
-
           // Send real-time notification
           sendNotification(notification, head.id);
-          console.log("Real-time notification sent to:", head.id);
         }
 
-        // Also send a test notification to the project owner
-        if (project.ownerId !== session.user.id) {
-          console.log("Sending test notification to project owner:", project.ownerId);
-          const ownerNotification = await prisma.notification.create({
+        // Send notification to project owner
+        try {
+          const notification = await prisma.notification.create({
             data: {
               userId: project.ownerId,
-              title: `New ${type === 'comment' ? 'Comment' : 'Update'} on Your Project "${project.name}"`,
-              message: `${session.user.name || session.user.username} added a ${type}: "${text.length > 50 ? text.substring(0, 50) + '...' : text}"`,
-              type: type === 'comment' ? 'info' : 'warning',
+              title: `New Comment on ${project.name}`,
+              message: `A new comment was added to project "${project.name}" by ${session.user.name || session.user.username}`,
+              type: "info",
               link: `/lvm/projects/${projectIdStr}`,
             },
           });
-          sendNotification(ownerNotification, project.ownerId);
-          console.log("Owner notification sent");
+          
+          // Send real-time notification
+          sendNotification(notification, project.ownerId);
+        } catch (error) {
+          console.error("Error creating comment notification:", error);
+          // Don't fail the comment creation if notification fails
         }
-      } else {
-        console.log("Project not found for ID:", projectIdStr);
       }
     } catch (error) {
       console.error("Error sending notifications:", error);

@@ -1,65 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Plus, Calendar, Users, CheckCircle, XCircle, Clock, AlertCircle, Menu } from "lucide-react";
-
-// Add Project type
-type Project = {
-  id: string;
-  name: string;
-  description?: string;
-  departments: string[];
-  status: string;
-  approvalState?: Record<string, any>; // allow array/object for logs
-  createdAt: string;
-  ownerId?: string;
-  // add other fields as needed
-  _count?: {
-    tasks: number;
-    completedTasks: number;
-  };
-};
-
-const DEPARTMENTS = [
-  { value: "logistics", label: "Logistics" },
-  { value: "procurement", label: "Procurement" },
-  { value: "pc", label: "Production Planning" },
-  { value: "qa", label: "Quality Assurance" },
-  { value: "qc", label: "Quality Control" },
-  { value: "pm", label: "Production Maintenance" },
-  { value: "fm", label: "Facility Management" },
-  { value: "hra", label: "Human Resources" },
-  { value: "cs", label: "Customer Service" },
-  { value: "sales", label: "Sales" },
-  { value: "LVM-EXPAT", label: "LVM EXPATS" },
-];
-
-const getStatusIcon = (status: string) => {
-  switch(status?.toUpperCase()) {
-    case "APPROVED":
-      return <CheckCircle className="w-4 h-4 text-green-500" />;
-    case "REJECTED":
-      return <XCircle className="w-4 h-4 text-red-500" />;
-    case "PENDING":
-      return <Clock className="w-4 h-4 text-orange-500" />;
-    default:
-      return <AlertCircle className="w-4 h-4 text-gray-400" />;
-  }
-};
-
-const getStatusColor = (status: string) => {
-  switch(status?.toUpperCase()) {
-    case "APPROVED":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "REJECTED":
-      return "bg-red-100 text-red-800 border-red-200";
-    case "PENDING":
-      return "bg-orange-100 text-orange-800 border-orange-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-};
+import { Plus, Users, AlertCircle, Menu } from "lucide-react";
+import Link from "next/link";
+import { useProjects } from "@/hooks/useProjects";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DataTable } from "@/components/ui/DataTable";
+import { Project } from "@/types";
+import { APP_CONFIG } from "@/config/app";
 
 export default function ProjectsPage() {
   const { data: session } = useSession();
@@ -69,33 +17,29 @@ export default function ProjectsPage() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const fetchProjects = async () => {
-    const res = await fetch("/api/projects");
-    const data = await res.json();
-    setProjects(data);
-  };
-  useEffect(() => { fetchProjects(); }, []);
+  const { 
+    projects, 
+    loading, 
+    error, 
+    createProject 
+  } = useProjects();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setStatus(null);
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description, departments }),
-    });
-    if (res.ok) {
+    
+    const success = await createProject({ name, description, departments });
+    
+    if (success) {
       setStatus("Project created successfully!");
       setName("");
       setDescription("");
       setDepartments([]);
       setShowCreateForm(false);
-      fetchProjects();
     } else {
       setStatus("Failed to create project.");
     }
@@ -111,16 +55,116 @@ export default function ProjectsPage() {
   };
 
   // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setOpenMenuId(null);
-    };
+  const handleClickOutside = () => {
+    setOpenMenuId(null);
+  };
 
-    if (openMenuId) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+  if (openMenuId) {
+    document.addEventListener('click', handleClickOutside);
+    setTimeout(() => document.removeEventListener('click', handleClickOutside), 0);
+  }
+
+  const myProjects = projects.filter(p => p.ownerId === user?.id);
+  const projectsIBelongTo = projects.filter(p => 
+    p.ownerId !== user?.id && 
+    p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())
+  );
+
+  const projectColumns = [
+    {
+      key: "project",
+      header: "Project",
+      render: (project: Project) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0">
+            <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span className="text-xs font-medium text-blue-600">
+                {project.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          </div>
+          <div className="ml-2">
+            <Link 
+              href={`/lvm/projects/${project.id}`}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+            >
+              {project.name}
+            </Link>
+            {project.description && (
+              <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                {project.description}
+              </p>
+            )}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (project: Project) => (
+        <div className="flex items-center">
+          <StatusBadge status={project.status || "UNKNOWN"} size="sm" />
+          {project.ownerId === user?.id && project._count?.tasks && project._count.tasks > 0 && (
+            <div className="ml-2 flex items-center gap-1">
+              <span className="text-xs text-gray-500">Tasks:</span>
+              <span className={`text-xs font-medium px-1 py-0.5 rounded ${
+                project._count.tasks > 0 && project._count.tasks === (project._count.completedTasks || 0)
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-orange-100 text-orange-700'
+              }`}>
+                {project._count.completedTasks || 0}/{project._count.tasks}
+              </span>
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (project: Project) => (
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMenuToggle(project.id);
+            }}
+            className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+          >
+            <Menu className="w-3 h-3 text-gray-500" />
+          </button>
+          
+          {openMenuId === project.id && (
+            <div 
+              className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
+              onClick={handleMenuClick}
+            >
+              <Link
+                href={`/lvm/projects/${project.id}`}
+                className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+              >
+                MAIN
+              </Link>
+              <Link
+                href={`/lvm/projects/${project.id}?tab=kpi`}
+                className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+              >
+                KPI
+              </Link>
+              <Link
+                href={`/lvm/projects/${project.id}?tab=production`}
+                className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+              >
+                PRODUCTION
+              </Link>
+            </div>
+          )}
+        </div>
+      )
     }
-  }, [openMenuId]);
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -187,7 +231,7 @@ export default function ProjectsPage() {
                   Departments for Approval *
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {DEPARTMENTS.map(d => (
+                  {APP_CONFIG.departments.map(d => (
                     <label key={d.value} className="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -241,13 +285,13 @@ export default function ProjectsPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Projects I Own</h2>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Users className="w-4 h-4" />
-                  <span>{projects.filter(p => p.ownerId === user?.id).length} project{projects.filter(p => p.ownerId === user?.id).length !== 1 ? 's' : ''}</span>
+                  <span>{myProjects.length} project{myProjects.length !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             </div>
 
             <div className="overflow-x-auto overflow-y-visible pb-16">
-              {projects.filter(p => p.ownerId === user?.id).length === 0 ? (
+              {myProjects.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <AlertCircle className="w-6 h-6 text-blue-400" />
@@ -263,116 +307,12 @@ export default function ProjectsPage() {
                   </button>
                 </div>
               ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Project
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {projects.filter(p => p.ownerId === user?.id).map((proj, index) => (
-                      <tr 
-                        key={proj.id} 
-                        className={`hover:bg-gray-50 transition-colors ${
-                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                        }`}
-                      >
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                              <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <span className="text-xs font-medium text-blue-600">
-                                  {proj.name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-2">
-                              <Link 
-                                href={`/lvm/projects/${proj.id}`}
-                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                              >
-                                {proj.name}
-                              </Link>
-                              {proj.description && (
-                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                                  {proj.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {getStatusIcon(proj.status)}
-                            <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(proj.status)}`}>
-                              {proj.status || "UNKNOWN"}
-                            </span>
-                            {/* Task completion indicator for project owners */}
-                            {proj.ownerId === user?.id && proj._count?.tasks && proj._count.tasks > 0 && (
-                              <div className="ml-2 flex items-center gap-1">
-                                <span className="text-xs text-gray-500">Tasks:</span>
-                                <span className={`text-xs font-medium px-1 py-0.5 rounded ${
-                                  proj._count.tasks > 0 && proj._count.tasks === (proj._count.completedTasks || 0)
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-orange-100 text-orange-700'
-                                }`}>
-                                  {proj._count.completedTasks || 0}/{proj._count.tasks}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="relative">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMenuToggle(proj.id);
-                              }}
-                              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
-                            >
-                              <Menu className="w-3 h-3 text-gray-500" />
-                            </button>
-                            
-                            {openMenuId === proj.id && (
-                              <div 
-                                className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
-                                onClick={handleMenuClick}
-                              >
-                                <Link
-                                  href={`/lvm/projects/${proj.id}`}
-                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                                >
-                                  MAIN
-                                </Link>
-                                <Link
-                                  href={`/lvm/projects/${proj.id}?tab=kpi`}
-                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                                >
-                                  KPI
-                                </Link>
-                                <Link
-                                  href={`/lvm/projects/${proj.id}?tab=production`}
-                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                                >
-                                  PRODUCTION
-                                </Link>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  data={myProjects}
+                  columns={projectColumns}
+                  loading={loading}
+                  emptyMessage="No owned projects"
+                />
               )}
             </div>
           </div>
@@ -384,13 +324,13 @@ export default function ProjectsPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Projects I Belong To</h2>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Users className="w-4 h-4" />
-                  <span>{projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).length} project{projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).length !== 1 ? 's' : ''}</span>
+                  <span>{projectsIBelongTo.length} project{projectsIBelongTo.length !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             </div>
 
             <div className="overflow-x-auto overflow-y-visible pb-16">
-              {projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).length === 0 ? (
+              {projectsIBelongTo.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <AlertCircle className="w-6 h-6 text-green-400" />
@@ -399,116 +339,12 @@ export default function ProjectsPage() {
                   <p className="text-xs text-gray-600">You'll see projects here when they're assigned to your department</p>
                 </div>
               ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Project
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {projects.filter(p => p.ownerId !== user?.id && p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())).map((proj, index) => (
-                      <tr 
-                        key={proj.id} 
-                        className={`hover:bg-gray-50 transition-colors ${
-                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                        }`}
-                      >
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                              <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
-                                <span className="text-xs font-medium text-green-600">
-                                  {proj.name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-2">
-                              <Link 
-                                href={`/lvm/projects/${proj.id}`}
-                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                              >
-                                {proj.name}
-                              </Link>
-                              {proj.description && (
-                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                                  {proj.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {getStatusIcon(proj.status)}
-                            <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(proj.status)}`}>
-                              {proj.status || "UNKNOWN"}
-                            </span>
-                            {/* Task completion indicator for project owners */}
-                            {proj.ownerId === user?.id && proj._count?.tasks && proj._count.tasks > 0 && (
-                              <div className="ml-2 flex items-center gap-1">
-                                <span className="text-xs text-gray-500">Tasks:</span>
-                                <span className={`text-xs font-medium px-1 py-0.5 rounded ${
-                                  proj._count.tasks > 0 && proj._count.tasks === (proj._count.completedTasks || 0)
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-orange-100 text-orange-700'
-                                }`}>
-                                  {proj._count.completedTasks || 0}/{proj._count.tasks}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="relative">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMenuToggle(proj.id);
-                              }}
-                              className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
-                            >
-                              <Menu className="w-3 h-3 text-gray-500" />
-                            </button>
-                            
-                            {openMenuId === proj.id && (
-                              <div 
-                                className="absolute right-0 top-full mt-1 w-24 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50"
-                                onClick={handleMenuClick}
-                              >
-                                <Link
-                                  href={`/lvm/projects/${proj.id}`}
-                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                                >
-                                  MAIN
-                                </Link>
-                                <Link
-                                  href={`/lvm/projects/${proj.id}?tab=kpi`}
-                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                                >
-                                  KPI
-                                </Link>
-                                <Link
-                                  href={`/lvm/projects/${proj.id}?tab=production`}
-                                  className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-                                >
-                                  PRODUCTION
-                                </Link>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  data={projectsIBelongTo}
+                  columns={projectColumns}
+                  loading={loading}
+                  emptyMessage="No projects to review"
+                />
               )}
             </div>
           </div>

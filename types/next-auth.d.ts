@@ -1,35 +1,41 @@
-import { DefaultSession } from "next-auth"
+import NextAuth from "next-auth"
 
 declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      username: string;
-      role: string;
-      department: string;
-      departmentName: string;
-      position?: string | null;
-    } & DefaultSession["user"];
+  interface User {
+    id: string
+    username: string
+    role: string
+    department: string
+    departmentName: string
+    position?: string | null
+    isFallbackAuth?: boolean
   }
 
-  interface User {
-    id: string;
-    username: string;
-    role: string;
-    department: string;
-    departmentName: string;
-    position?: string | null;
+  interface Session {
+    user: {
+      id: string
+      name?: string | null
+      email?: string | null
+      image?: string | null
+      username: string
+      role: string
+      department: string
+      departmentName: string
+      position?: string | null
+      isFallbackAuth?: boolean
+    }
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string;
-    username: string;
-    role: string;
-    department: string;
-    departmentName: string;
-    position?: string | null;
+    id: string
+    username: string
+    role: string
+    department: string
+    departmentName: string
+    position?: string | null
+    isFallbackAuth?: boolean
   }
 }
 
