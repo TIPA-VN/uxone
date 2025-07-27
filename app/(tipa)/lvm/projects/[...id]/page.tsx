@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { CheckCircle, XCircle, Clock, AlertCircle, Check, Factory, MoreVertical, Eye, Download, Menu, Upload, Trash2, RotateCcw, Calendar } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertCircle, Check, Factory, MoreVertical, Eye, Download, Menu, Upload, Trash2, RotateCcw, Calendar, AlertTriangle } from "lucide-react";
 import { PDFTools } from "@/components/PDFTools";
 import { DocumentViewer } from "@/components/DocumentViewer";
 import { ProjectAnalytics } from "@/components/ProjectAnalytics";
@@ -397,9 +397,48 @@ export default function ProjectDetailsPage() {
         ));
         setActionStatus("Task status updated!");
         setTimeout(() => setActionStatus(null), 3000);
+      } else {
+        const errorData = await res.json();
+        if (errorData.error === "Cannot complete task with incomplete sub-tasks") {
+          alert(`Cannot complete task. Please complete the following sub-tasks first:\n${errorData.incompleteSubtasks.map((st: any) => `- ${st.title}`).join('\n')}`);
+        } else {
+          alert(errorData.error || "Failed to update task status");
+        }
       }
     } catch (error) {
       console.error("Error updating task status:", error);
+      alert("Failed to update task status");
+    }
+  };
+
+  const handleUpdateProjectStatus = async (newStatus: string) => {
+    try {
+      const res = await fetch("/api/projects", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          projectIds: [projectId], 
+          updates: { status: newStatus } 
+        }),
+      });
+
+      if (res.ok) {
+        setProject(prev => prev ? { ...prev, status: newStatus } : prev);
+        setActionStatus("Project status updated!");
+        setTimeout(() => setActionStatus(null), 3000);
+      } else {
+        const errorData = await res.json();
+        if (errorData.error === "Cannot complete project with incomplete tasks") {
+          alert(`Cannot complete project. Please complete all tasks first.`);
+        } else if (errorData.error === "Cannot complete project with incomplete sub-tasks") {
+          alert(`Cannot complete project. Please complete all sub-tasks first.`);
+        } else {
+          alert(errorData.error || "Failed to update project status");
+        }
+      }
+    } catch (error) {
+      console.error("Error updating project status:", error);
+      alert("Failed to update project status");
     }
   };
 
@@ -848,17 +887,74 @@ export default function ProjectDetailsPage() {
                         project.status === "APPROVED" ? "bg-green-100 text-green-800" :
                         project.status === "PENDING" ? "bg-orange-100 text-orange-800" :
                         project.status === "REJECTED" ? "bg-red-100 text-red-800" :
+                        project.status === "COMPLETED" ? "bg-blue-100 text-blue-800" :
+                        project.status === "ACTIVE" ? "bg-green-100 text-green-800" :
+                        project.status === "ON_HOLD" ? "bg-yellow-100 text-yellow-800" :
+                        project.status === "CANCELLED" ? "bg-red-100 text-red-800" :
                         "bg-gray-100 text-gray-800"
                       }`}>
                         {project.status || "UNKNOWN"}
                       </span>
                     </div>
+                    
+                    {/* Project Status Management - Only for project owner */}
+                    {project.ownerId === user?.id && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium text-gray-600 text-xs">Update Status:</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {['ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'].map((status) => {
+                            const hasIncompleteTasks = tasks.some(task => task.status !== 'COMPLETED');
+                            const isCompletedButton = status === 'COMPLETED';
+                            const isDisabled = isCompletedButton && hasIncompleteTasks && tasks.length > 0;
+                            
+                            return (
+                              <button
+                                key={status}
+                                onClick={() => handleUpdateProjectStatus(status)}
+                                disabled={isDisabled || project.status === status}
+                                className={`px-2 py-1 text-xs font-medium rounded border transition-colors ${
+                                  project.status === status
+                                    ? 'bg-blue-100 text-blue-800 border-blue-200 cursor-default'
+                                    : isDisabled
+                                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 cursor-pointer'
+                                }`}
+                                title={isCompletedButton && hasIncompleteTasks && tasks.length > 0 
+                                  ? "Complete all tasks first" 
+                                  : undefined}
+                              >
+                                {status}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {tasks.some(task => task.status !== 'COMPLETED') && tasks.length > 0 && (
+                          <p className="text-xs text-orange-600 mt-1">
+                            ⚠️ Complete all tasks before marking project as completed
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="flex justify-between items-start">
                       <span className="font-medium text-gray-600">Description:</span>
                       <span className="text-gray-800 text-right max-w-xs text-xs">
                         {project.description || <span className="text-gray-400 italic">No description</span>}
                       </span>
                     </div>
+                    {/* Warning for incomplete tasks */}
+                    {tasks.some(task => task.status !== 'COMPLETED') && tasks.length > 0 && (
+                      <div className="mt-2 p-1 bg-orange-50 border border-orange-200 rounded text-xs">
+                        <div className="flex items-center gap-1 text-orange-700">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span className="font-medium">Incomplete Tasks</span>
+                        </div>
+                        <p className="text-orange-600 mt-1">
+                          {tasks.filter(task => task.status !== 'COMPLETED').length} of {tasks.length} tasks incomplete
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {/* Right Card: Edit Due Dates, Request Date, Department Due Dates */}
@@ -1337,27 +1433,27 @@ export default function ProjectDetailsPage() {
                               <Menu className="w-4 h-4 text-gray-600" />
                             </button>
                             {dropdownOpen === task.id && (
-                              <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                              <div className="absolute right-0 mt-1 w-28 bg-white border border-gray-200 rounded-md shadow-lg z-50">
                                 <button
                                   onClick={() => handleUpdateTaskStatus(task.id, "COMPLETED")}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-green-100 flex items-center gap-2"
+                                  className="w-full px-2 py-1 text-left text-xs hover:bg-green-100 flex items-center gap-1"
                                 >
-                                  <CheckCircle className="w-4 h-4 text-green-600" />
-                                  Mark as Completed
+                                  <CheckCircle className="w-3 h-3 text-green-600" />
+                                  Complete
                                 </button>
                                 <button
                                   onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-blue-100 flex items-center gap-2"
+                                  className="w-full px-2 py-1 text-left text-xs hover:bg-blue-100 flex items-center gap-1"
                                 >
-                                  <Clock className="w-4 h-4 text-blue-600" />
-                                  Mark as In Progress
+                                  <Clock className="w-3 h-3 text-blue-600" />
+                                  In Progress
                                 </button>
                                 <button
                                   onClick={() => handleUpdateTaskStatus(task.id, "TODO")}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                                  className="w-full px-2 py-1 text-left text-xs hover:bg-gray-100 flex items-center gap-1"
                                 >
-                                  <XCircle className="w-4 h-4 text-gray-600" />
-                                  Mark as To Do
+                                  <XCircle className="w-3 h-3 text-gray-600" />
+                                  To Do
                                 </button>
                               </div>
                             )}

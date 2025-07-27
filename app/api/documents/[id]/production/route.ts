@@ -4,22 +4,24 @@ import { auth } from "@/lib/auth";
 
 export const runtime = 'nodejs';
 
-export async function PATCH(req: NextRequest, context: any) {
-  const { params } = await context;
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const docId = params.id;
-    if (!docId) {
+    const { id } = await params;
+    if (!id) {
       return NextResponse.json({ error: "Document ID required" }, { status: 400 });
     }
 
     // Fetch document with project info
     const document = await prisma.document.findUnique({
-      where: { id: docId },
+      where: { id },
       include: { project: true }
     });
 
@@ -54,7 +56,7 @@ export async function PATCH(req: NextRequest, context: any) {
     };
 
     const updated = await prisma.document.update({
-      where: { id: docId },
+      where: { id },
       data: {
         workflowState: "production",
         metadata: updatedMetadata

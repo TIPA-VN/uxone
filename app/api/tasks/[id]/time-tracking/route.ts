@@ -2,56 +2,58 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/tasks/[id]/time-tracking - Get time tracking data for a task
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// GET - Fetch time tracking data for a task
+export async function GET({ params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await auth();
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const task = await prisma.task.findUnique({
-      where: { id: params.id },
+    // Check if user has access to the task
+    const task = await prisma.task.findFirst({
+      where: {
+        id,
+        OR: [
+          { ownerId: session.user.id },
+          { assigneeId: session.user.id },
+          { createdBy: session.user.id },
+        ],
+      },
       select: {
         id: true,
         title: true,
         estimatedHours: true,
         actualHours: true,
         status: true,
-        assigneeId: true,
-        ownerId: true,
-        createdBy: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
       },
     });
 
     if (!task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
-
-    // Check if user has access to this task
-    const hasAccess = 
-      task.assigneeId === session.user.id ||
-      task.ownerId === session.user.id ||
-      task.createdBy === session.user.id;
-
-    if (!hasAccess) {
       return NextResponse.json(
-        { error: "Access denied" },
-        { status: 403 }
+        { error: "Task not found or access denied" },
+        { status: 404 }
       );
     }
 
     return NextResponse.json({
       taskId: task.id,
-      taskTitle: task.title,
+      title: task.title,
       estimatedHours: task.estimatedHours || 0,
       actualHours: task.actualHours || 0,
       status: task.status,
+      assignee: task.assignee,
       efficiency: task.estimatedHours && task.actualHours 
-        ? (task.actualHours / task.estimatedHours) * 100 
+        ? Math.round((task.estimatedHours / task.actualHours) * 100)
         : null,
     });
   } catch (error) {
@@ -63,34 +65,32 @@ export async function GET(
   }
 }
 
-// POST /api/tasks/[id]/time-tracking - Log time for a task
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// POST - Start time tracking session
+export async function POST({ params, request }: { params: Promise<{ id: string }>, request: NextRequest }) {
   try {
+    const { id } = await params;
     const session = await auth();
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { hours, description, date } = body;
+    const { action, hours } = await request.json();
 
-    if (!hours || hours <= 0) {
+    if (!action) {
       return NextResponse.json(
-        { error: "Valid hours are required" },
+        { error: "Action is required" },
         { status: 400 }
       );
     }
 
-    // Verify task exists and user has access
+    // Check if user has access to the task
     const task = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         OR: [
-          { assigneeId: session.user.id },
           { ownerId: session.user.id },
+          { assigneeId: session.user.id },
           { createdBy: session.user.id },
         ],
       },
@@ -103,14 +103,26 @@ export async function POST(
       );
     }
 
-    // Update task's actual hours
+    let updateData: any = {};
+
+    if (action === "update_estimate" && typeof hours === "number") {
+      updateData.estimatedHours = hours;
+    } else if (action === "update_actual" && typeof hours === "number") {
+      updateData.actualHours = hours;
+    } else if (action === "add_time" && typeof hours === "number") {
+      // Add time to actual hours
+      const currentActual = task.actualHours || 0;
+      updateData.actualHours = currentActual + hours;
+    } else {
+      return NextResponse.json(
+        { error: "Invalid action or hours value" },
+        { status: 400 }
+      );
+    }
+
     const updatedTask = await prisma.task.update({
-      where: { id: params.id },
-      data: {
-        actualHours: {
-          increment: hours,
-        },
-      },
+      where: { id },
+      data: updateData,
       select: {
         id: true,
         title: true,
@@ -120,68 +132,39 @@ export async function POST(
       },
     });
 
-    // Create a comment to log the time entry
-    const timeComment = await prisma.comment.create({
-      data: {
-        content: `⏱️ Time logged: ${hours} hours${description ? ` - ${description}` : ""}`,
-        authorId: session.user.id,
-        taskId: params.id,
-        mentions: [],
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            department: true,
-            departmentName: true,
-          },
-        },
-      },
-    });
-
     return NextResponse.json({
-      message: "Time logged successfully",
+      success: true,
       task: updatedTask,
-      timeEntry: timeComment,
-    }, { status: 201 });
+      message: `Time tracking updated successfully`,
+    });
   } catch (error) {
-    console.error("Error logging time:", error);
+    console.error("Error updating time tracking:", error);
     return NextResponse.json(
-      { error: "Failed to log time" },
+      { error: "Failed to update time tracking" },
       { status: 500 }
     );
   }
 }
 
-// PATCH /api/tasks/[id]/time-tracking - Update estimated hours
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// PATCH - Update time tracking data
+export async function PATCH({ params, request }: { params: Promise<{ id: string }>, request: NextRequest }) {
   try {
+    const { id } = await params;
     const session = await auth();
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { estimatedHours } = body;
+    const { estimatedHours, actualHours } = await request.json();
 
-    if (estimatedHours === undefined || estimatedHours < 0) {
-      return NextResponse.json(
-        { error: "Valid estimated hours are required" },
-        { status: 400 }
-      );
-    }
-
-    // Verify task exists and user has access
+    // Check if user has access to the task
     const task = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         OR: [
           { ownerId: session.user.id },
+          { assigneeId: session.user.id },
           { createdBy: session.user.id },
         ],
       },
@@ -194,12 +177,24 @@ export async function PATCH(
       );
     }
 
-    // Update estimated hours
+    const updateData: any = {};
+    if (typeof estimatedHours === "number") {
+      updateData.estimatedHours = estimatedHours;
+    }
+    if (typeof actualHours === "number") {
+      updateData.actualHours = actualHours;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No valid time data provided" },
+        { status: 400 }
+      );
+    }
+
     const updatedTask = await prisma.task.update({
-      where: { id: params.id },
-      data: {
-        estimatedHours,
-      },
+      where: { id },
+      data: updateData,
       select: {
         id: true,
         title: true,
@@ -210,13 +205,14 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      message: "Estimated hours updated successfully",
+      success: true,
       task: updatedTask,
+      message: "Time tracking updated successfully",
     });
   } catch (error) {
-    console.error("Error updating estimated hours:", error);
+    console.error("Error updating time tracking:", error);
     return NextResponse.json(
-      { error: "Failed to update estimated hours" },
+      { error: "Failed to update time tracking" },
       { status: 500 }
     );
   }

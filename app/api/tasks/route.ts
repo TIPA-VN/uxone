@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendNotification } from "@/app/api/notifications/stream/route";
+
+export const runtime = 'nodejs';
 
 // GET /api/tasks - Get all tasks with enhanced filtering and relationships
 export async function GET(request: NextRequest) {
@@ -215,8 +218,10 @@ export async function POST(request: NextRequest) {
 
     // Validate project exists if provided
     if (projectId) {
+      // Ensure projectId is a string, not an array
+      const projectIdString = Array.isArray(projectId) ? projectId[0] : projectId;
       const project = await prisma.project.findUnique({
-        where: { id: projectId },
+        where: { id: projectIdString },
       });
       if (!project) {
         return NextResponse.json(
@@ -271,7 +276,7 @@ export async function POST(request: NextRequest) {
         description,
         status,
         priority,
-        projectId,
+        projectId: Array.isArray(projectId) ? projectId[0] : projectId,
         parentTaskId,
         assigneeId,
         ownerId: ownerId || currentUser.id,
@@ -332,6 +337,27 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Create notification for assignee if task is assigned to someone else
+    if (assigneeId && assigneeId !== currentUser.id) {
+      try {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: assigneeId,
+            title: `New Task Assigned`,
+            message: `You have been assigned a new task: "${title}" by ${currentUser.name || currentUser.username}`,
+            type: "info",
+            link: `/lvm/tasks/${task.id}`,
+          },
+        });
+        
+        // Send real-time notification
+        sendNotification(notification, assigneeId);
+      } catch (error) {
+        console.error("Error creating task assignment notification:", error);
+        // Don't fail the task creation if notification fails
+      }
+    }
+
     return NextResponse.json(task, { status: 201 });
   } catch (error) {
     console.error("Error creating task:", error);
@@ -351,7 +377,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH /api/tasks - Update multiple tasks (for bulk operations)
+// PATCH /api/tasks - Update tasks (supports both individual and bulk updates)
 export async function PATCH(request: NextRequest) {
   try {
     const session = await auth();
@@ -360,47 +386,291 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { taskIds, updates } = body;
+    
+    // Check if this is a bulk update (has taskIds array)
+    if (body.taskIds && Array.isArray(body.taskIds)) {
+      // Bulk update format
+      const { taskIds, updates } = body;
 
-    if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
-      return NextResponse.json(
-        { error: "Task IDs array is required" },
-        { status: 400 }
-      );
+      if (taskIds.length === 0) {
+        return NextResponse.json(
+          { error: "Task IDs array cannot be empty" },
+          { status: 400 }
+        );
+      }
+
+      if (!updates || typeof updates !== "object") {
+        return NextResponse.json(
+          { error: "Updates object is required" },
+          { status: 400 }
+        );
+      }
+
+      // Handle date fields
+      const processedUpdates = { ...updates };
+      if (processedUpdates.dueDate) {
+        processedUpdates.dueDate = new Date(processedUpdates.dueDate);
+      }
+
+      // Update multiple tasks
+      const updatedTasks = await prisma.task.updateMany({
+        where: {
+          id: { in: taskIds },
+          OR: [
+            { ownerId: session.user.id },
+            { assigneeId: session.user.id },
+            { createdBy: session.user.id },
+          ],
+        },
+        data: processedUpdates,
+      });
+
+      return NextResponse.json({
+        message: `Updated ${updatedTasks.count} tasks`,
+        count: updatedTasks.count,
+      });
+    } else {
+      // Individual task update format
+      const { id, ...updates } = body;
+
+      if (!id) {
+        return NextResponse.json(
+          { error: "Task ID is required" },
+          { status: 400 }
+        );
+      }
+
+      // Handle date fields
+      const processedUpdates = { ...updates };
+      if (processedUpdates.dueDate) {
+        processedUpdates.dueDate = new Date(processedUpdates.dueDate);
+      }
+
+      // Check if user has access to the task
+      const task = await prisma.task.findFirst({
+        where: {
+          id,
+          OR: [
+            { ownerId: session.user.id },
+            { assigneeId: session.user.id },
+            { createdBy: session.user.id },
+          ],
+        },
+      });
+
+      if (!task) {
+        return NextResponse.json(
+          { error: "Task not found or access denied" },
+          { status: 404 }
+        );
+      }
+
+      // Check if trying to complete a task with incomplete sub-tasks
+      if (processedUpdates.status === 'COMPLETED') {
+        const taskWithSubtasks = await prisma.task.findUnique({
+          where: { id },
+          include: {
+            subtasks: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+              },
+            },
+          },
+        });
+
+        if (taskWithSubtasks && taskWithSubtasks.subtasks.length > 0) {
+          const incompleteSubtasks = taskWithSubtasks.subtasks.filter(
+            subtask => subtask.status !== 'COMPLETED'
+          );
+
+          if (incompleteSubtasks.length > 0) {
+            return NextResponse.json(
+              { 
+                error: "Cannot complete task with incomplete sub-tasks",
+                incompleteSubtasks: incompleteSubtasks.map(st => ({ id: st.id, title: st.title }))
+              },
+              { status: 400 }
+            );
+          }
+        }
+      }
+
+      // Update single task
+      const updatedTask = await prisma.task.update({
+        where: { id },
+        data: processedUpdates,
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+            },
+          },
+          assignee: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              department: true,
+              departmentName: true,
+            },
+          },
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              department: true,
+              departmentName: true,
+            },
+          },
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              department: true,
+              departmentName: true,
+            },
+          },
+          parentTask: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+          subtasks: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          },
+          _count: {
+            select: {
+              subtasks: true,
+              comments: true,
+              attachments: true,
+            },
+          },
+        },
+      });
+
+      // Check if this task completion affects parent task status
+      if (processedUpdates.status === 'COMPLETED' && updatedTask.parentTask) {
+        // Check if all sibling tasks are completed
+        const parentTask = await prisma.task.findUnique({
+          where: { id: updatedTask.parentTask.id },
+          include: {
+            subtasks: {
+              select: {
+                id: true,
+                status: true,
+              },
+            },
+          },
+        });
+
+        if (parentTask && parentTask.subtasks.every(subtask => subtask.status === 'COMPLETED')) {
+          // All sub-tasks are completed, update parent task status
+          await prisma.task.update({
+            where: { id: parentTask.id },
+            data: { status: 'COMPLETED' },
+          });
+        }
+      }
+
+      // Check if this task completion affects project status
+      if (processedUpdates.status === 'COMPLETED' && updatedTask.project) {
+        // Check if all tasks in the project are completed
+        const projectTasks = await prisma.task.findMany({
+          where: { 
+            projectId: updatedTask.project.id,
+            parentTaskId: null, // Only main tasks, not sub-tasks
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        });
+
+        if (projectTasks.every(task => task.status === 'COMPLETED')) {
+          // All tasks are completed, update project status
+          await prisma.project.update({
+            where: { id: updatedTask.project.id },
+            data: { status: 'COMPLETED' },
+          });
+        }
+      }
+
+      // Create notification for new assignee if assignee has changed
+      if (processedUpdates.assigneeId && processedUpdates.assigneeId !== task.assigneeId && processedUpdates.assigneeId !== session.user.id) {
+        try {
+          const notification = await prisma.notification.create({
+            data: {
+              userId: processedUpdates.assigneeId,
+              title: `Task Reassigned`,
+              message: `You have been assigned the task: "${updatedTask.title}" by ${session.user.name || session.user.username}`,
+              type: "info",
+              link: `/lvm/tasks/${updatedTask.id}`,
+            },
+          });
+          
+          // Send real-time notification
+          sendNotification(notification, processedUpdates.assigneeId);
+        } catch (error) {
+          console.error("Error creating task reassignment notification:", error);
+          // Don't fail the task update if notification fails
+        }
+      }
+
+      // Create notification for task owner when task is completed by assignee
+      if (processedUpdates.status === 'COMPLETED' && task.status !== 'COMPLETED' && 
+          session.user.id === task.assigneeId && 
+          task.ownerId !== session.user.id) {
+        try {
+          const notification = await prisma.notification.create({
+            data: {
+              userId: task.ownerId,
+              title: `Task Completed`,
+              message: `Your task "${updatedTask.title}" has been completed by ${session.user.name || session.user.username}`,
+              type: "success",
+              link: `/lvm/tasks/${updatedTask.id}`,
+            },
+          });
+          
+          // Send real-time notification
+          sendNotification(notification, task.ownerId);
+        } catch (error) {
+          console.error("Error creating task completion notification:", error);
+          // Don't fail the task update if notification fails
+        }
+      }
+
+      return NextResponse.json(updatedTask);
     }
-
-    if (!updates || typeof updates !== "object") {
-      return NextResponse.json(
-        { error: "Updates object is required" },
-        { status: 400 }
-      );
-    }
-
-    // Handle date fields
-    const processedUpdates = { ...updates };
-    if (processedUpdates.dueDate) {
-      processedUpdates.dueDate = new Date(processedUpdates.dueDate);
-    }
-
-    // Update multiple tasks
-    const updatedTasks = await prisma.task.updateMany({
-      where: {
-        id: { in: taskIds },
-        OR: [
-          { ownerId: session.user.id },
-          { assigneeId: session.user.id },
-          { createdBy: session.user.id },
-        ],
-      },
-      data: processedUpdates,
-    });
-
-    return NextResponse.json({
-      message: `Updated ${updatedTasks.count} tasks`,
-      count: updatedTasks.count,
-    });
   } catch (error) {
     console.error("Error updating tasks:", error);
+    
+    // Handle specific Prisma errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'P2025') {
+        return NextResponse.json(
+          { error: "Task not found or access denied" },
+          { status: 404 }
+        );
+      }
+      if (error.code === 'P2003') {
+        return NextResponse.json(
+          { error: "Invalid reference. Please check project, assignee, or owner." },
+          { status: 400 }
+        );
+      }
+    }
+    
     return NextResponse.json(
       { error: "Failed to update tasks" },
       { status: 500 }

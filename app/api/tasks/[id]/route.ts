@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendNotification } from "@/app/api/notifications/stream/route";
+
+export const runtime = 'nodejs';
 
 // GET /api/tasks/[id] - Get a specific task with all relationships
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -13,8 +16,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const task = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         project: {
           select: {
@@ -169,7 +174,7 @@ export async function GET(
 // PATCH /api/tasks/[id] - Update a specific task
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -177,6 +182,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const {
       title,
@@ -197,7 +203,7 @@ export async function PATCH(
     // Verify task access (owner, assignee, or creator)
     const existingTask = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         OR: [
           { ownerId: session.user.id },
           { assigneeId: session.user.id },
@@ -225,7 +231,7 @@ export async function PATCH(
         );
       }
       // Prevent circular references
-      if (parentTaskId === params.id) {
+      if (parentTaskId === id) {
         return NextResponse.json(
           { error: "Task cannot be its own parent" },
           { status: 400 }
@@ -263,7 +269,7 @@ export async function PATCH(
     if (tags !== undefined) updateData.tags = tags;
 
     const updatedTask = await prisma.task.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         project: {
@@ -337,6 +343,50 @@ export async function PATCH(
       },
     });
 
+    // Create notification for new assignee if assignee has changed
+    if (assigneeId !== undefined && assigneeId !== existingTask.assigneeId && assigneeId !== session.user.id) {
+      try {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: assigneeId,
+            title: `Task Reassigned`,
+            message: `You have been assigned the task: "${updatedTask.title}" by ${session.user.name || session.user.username}`,
+            type: "info",
+            link: `/lvm/tasks/${updatedTask.id}`,
+          },
+        });
+        
+        // Send real-time notification
+        sendNotification(notification, assigneeId);
+      } catch (error) {
+        console.error("Error creating task reassignment notification:", error);
+        // Don't fail the task update if notification fails
+      }
+    }
+
+    // Create notification for task owner when task is completed by assignee
+    if (status === 'COMPLETED' && existingTask.status !== 'COMPLETED' && 
+        session.user.id === existingTask.assigneeId && 
+        existingTask.ownerId !== session.user.id) {
+      try {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: existingTask.ownerId,
+            title: `Task Completed`,
+            message: `Your task "${updatedTask.title}" has been completed by ${session.user.name || session.user.username}`,
+            type: "success",
+            link: `/lvm/tasks/${updatedTask.id}`,
+          },
+        });
+        
+        // Send real-time notification
+        sendNotification(notification, existingTask.ownerId);
+      } catch (error) {
+        console.error("Error creating task completion notification:", error);
+        // Don't fail the task update if notification fails
+      }
+    }
+
     return NextResponse.json(updatedTask);
   } catch (error) {
     console.error("Error updating task:", error);
@@ -350,7 +400,7 @@ export async function PATCH(
 // DELETE /api/tasks/[id] - Delete a specific task
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -358,10 +408,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Verify task ownership or creation
     const existingTask = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         OR: [
           { ownerId: session.user.id },
           { createdBy: session.user.id },
@@ -378,7 +430,7 @@ export async function DELETE(
 
     // Delete task (cascade will handle subtasks, dependencies, comments, attachments)
     await prisma.task.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Task deleted successfully" });

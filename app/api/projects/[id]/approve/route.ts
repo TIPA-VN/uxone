@@ -12,14 +12,17 @@ interface ApprovalRequest {
   action: ApprovalAction;
 }
 
-export async function PATCH(req: NextRequest, context: any) {
-  const { params } = await context;
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const { department, action } = await req.json() as ApprovalRequest;
     let actionUpper = action?.toUpperCase?.() || '';
     // Accept both 'approved'/'disapproved' and 'APPROVED'/'REJECTED'
@@ -33,7 +36,7 @@ export async function PATCH(req: NextRequest, context: any) {
 
     // Fetch project with owner
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { owner: true }
     });
     if (!project) {
@@ -83,7 +86,6 @@ export async function PATCH(req: NextRequest, context: any) {
       where: { id: project.id },
       data: {
         approvalState,
-        status,
         ...(status === "APPROVED" ? { released: true, releasedAt: new Date() } : {})
       },
     });

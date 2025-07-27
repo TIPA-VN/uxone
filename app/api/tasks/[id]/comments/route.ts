@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -14,8 +14,10 @@ export async function GET(
       return NextResponse.json([], { status: 401 });
     }
 
+    const { id } = await params;
+
     const comments = await prisma.taskComment.findMany({
-      where: { taskId: params.id },
+      where: { taskId: id },
       orderBy: { timestamp: 'asc' }
     });
 
@@ -28,7 +30,7 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -36,6 +38,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     const { text } = body;
 
@@ -46,7 +49,7 @@ export async function POST(
     // Verify task access
     const task = await prisma.$queryRawUnsafe(`
       SELECT * FROM tasks 
-      WHERE id = '${params.id}' AND (
+      WHERE id = '${id}' AND (
         "ownerId" = '${session.user.id}' OR 
         "assigneeId" = '${session.user.id}' OR 
         '${session.user.department}' = ANY("assignedDepartments")
@@ -59,7 +62,7 @@ export async function POST(
 
     const comment = await prisma.taskComment.create({
       data: {
-        taskId: params.id,
+        taskId: id,
         text,
         authorId: session.user.id,
         author: session.user.name || session.user.username,

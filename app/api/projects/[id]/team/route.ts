@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 // GET /api/projects/[id]/team - Get project team members
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -13,10 +13,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Verify project exists and user has access
     const project = await prisma.project.findFirst({
       where: {
-        id: params.id,
+        id,
         OR: [
           { ownerId: session.user.id },
           { members: { some: { userId: session.user.id } } },
@@ -33,7 +35,7 @@ export async function GET(
     }
 
     const teamMembers = await prisma.projectMember.findMany({
-      where: { projectId: params.id },
+      where: { projectId: id },
       include: {
         user: {
           select: {
@@ -66,7 +68,7 @@ export async function GET(
 // POST /api/projects/[id]/team - Add team member to project
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -74,6 +76,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { userId, role = "member" } = body;
 
@@ -87,7 +90,7 @@ export async function POST(
     // Verify project exists and user is owner
     const project = await prisma.project.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: session.user.id,
       },
     });
@@ -115,7 +118,7 @@ export async function POST(
     const existingMember = await prisma.projectMember.findUnique({
       where: {
         projectId_userId: {
-          projectId: params.id,
+          projectId: id,
           userId,
         },
       },
@@ -130,7 +133,7 @@ export async function POST(
 
     const teamMember = await prisma.projectMember.create({
       data: {
-        projectId: params.id,
+        projectId: id,
         userId,
         role,
       },
@@ -162,7 +165,7 @@ export async function POST(
 // PATCH /api/projects/[id]/team - Update team member role
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -170,6 +173,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { userId, role } = body;
 
@@ -183,7 +187,7 @@ export async function PATCH(
     // Verify project exists and user is owner
     const project = await prisma.project.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: session.user.id,
       },
     });
@@ -199,7 +203,7 @@ export async function PATCH(
     const updatedMember = await prisma.projectMember.update({
       where: {
         projectId_userId: {
-          projectId: params.id,
+          projectId: id,
           userId,
         },
       },
@@ -232,7 +236,7 @@ export async function PATCH(
 // DELETE /api/projects/[id]/team - Remove team member from project
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -240,6 +244,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
@@ -253,7 +258,7 @@ export async function DELETE(
     // Verify project exists and user is owner
     const project = await prisma.project.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: session.user.id,
       },
     });
@@ -277,7 +282,7 @@ export async function DELETE(
     const deletedMember = await prisma.projectMember.delete({
       where: {
         projectId_userId: {
-          projectId: params.id,
+          projectId: id,
           userId,
         },
       },

@@ -6,18 +6,18 @@ export const runtime = 'nodejs';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const documentId = params.id;
+  const { id } = await params;
   
   try {
     const document = await prisma.document.findUnique({
-      where: { id: documentId },
+      where: { id },
       select: { annotations: true }
     });
 
@@ -36,14 +36,14 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const documentId = params.id;
+  const { id } = await params;
   const { canvasData } = await req.json();
 
   if (!canvasData) {
@@ -52,7 +52,7 @@ export async function POST(
 
   try {
     const updatedDocument = await prisma.document.update({
-      where: { id: documentId },
+      where: { id },
       data: { annotations: canvasData },
       select: { id: true, annotations: true }
     });

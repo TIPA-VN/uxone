@@ -108,17 +108,37 @@ export async function GET(request: NextRequest) {
     const projects = await prisma.project.findMany({
       where,
       include,
-              orderBy: [
-          { status: "asc" },
-          { startDate: "desc" },
-          { createdAt: "desc" },
-        ],
+      orderBy: [
+        { status: "asc" },
+        { startDate: "desc" },
+        { createdAt: "desc" },
+      ],
     });
+
+    // Add completed task counts to each project
+    const projectsWithTaskCounts = await Promise.all(
+      projects.map(async (project) => {
+        const completedTasksCount = await prisma.task.count({
+          where: {
+            projectId: project.id,
+            status: "COMPLETED",
+          },
+        });
+
+        return {
+          ...project,
+          _count: {
+            ...(project as any)._count,
+            completedTasks: completedTasksCount,
+          },
+        };
+      })
+    );
 
     // Calculate KPI data if requested
     if (includeKPI) {
       const projectsWithKPI = await Promise.all(
-        projects.map(async (project) => {
+        projectsWithTaskCounts.map(async (project) => {
           const taskStats = await prisma.task.groupBy({
             by: ["status"],
             where: { projectId: project.id },
@@ -151,7 +171,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(projectsWithKPI);
     }
 
-    return NextResponse.json(projects);
+    return NextResponse.json(projectsWithTaskCounts);
   } catch (error) {
     console.error("Error fetching projects:", error);
     return NextResponse.json(
@@ -308,6 +328,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Ensure projectIds is a flat array
+    const flatProjectIds = projectIds.flat();
+
     if (!updates || typeof updates !== "object") {
       return NextResponse.json(
         { error: "Updates object is required" },
@@ -327,10 +350,58 @@ export async function PATCH(request: NextRequest) {
       processedUpdates.budget = parseFloat(processedUpdates.budget);
     }
 
+    // Check if trying to complete projects with incomplete tasks
+    if (processedUpdates.status === 'COMPLETED') {
+      for (const projectId of flatProjectIds) {
+        // Get all tasks for this project (including sub-tasks)
+        const projectTasks = await prisma.task.findMany({
+          where: { 
+            projectId: projectId,
+          },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            parentTaskId: true,
+          },
+        });
+
+        // Separate main tasks and sub-tasks
+        const mainTasks = projectTasks.filter(task => !task.parentTaskId);
+        const subTasks = projectTasks.filter(task => task.parentTaskId);
+
+        // Check if any main tasks are incomplete
+        const incompleteMainTasks = mainTasks.filter(task => task.status !== 'COMPLETED');
+        if (incompleteMainTasks.length > 0) {
+          return NextResponse.json(
+            { 
+              error: "Cannot complete project with incomplete tasks",
+              projectId: projectId,
+              incompleteTasks: incompleteMainTasks.map(t => ({ id: t.id, title: t.title }))
+            },
+            { status: 400 }
+          );
+        }
+
+        // Check if any sub-tasks are incomplete
+        const incompleteSubTasks = subTasks.filter(task => task.status !== 'COMPLETED');
+        if (incompleteSubTasks.length > 0) {
+          return NextResponse.json(
+            { 
+              error: "Cannot complete project with incomplete sub-tasks",
+              projectId: projectId,
+              incompleteSubTasks: incompleteSubTasks.map(t => ({ id: t.id, title: t.title }))
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Update multiple projects
     const updatedProjects = await prisma.project.updateMany({
       where: {
-        id: { in: projectIds },
+        id: { in: flatProjectIds },
         OR: [
           { ownerId: session.user.id },
           { members: { some: { userId: session.user.id } } },

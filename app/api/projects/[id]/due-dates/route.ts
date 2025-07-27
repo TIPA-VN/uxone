@@ -2,19 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-export async function PATCH(request: NextRequest, context: any) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { params } = await context;
-    const projectId = params.id;
+    const { id } = await params;
 
     // Get the project to check ownership
     const project = await prisma.project.findUnique({
-      where: { id: projectId },
+      where: { id },
     });
 
     if (!project) {
@@ -44,7 +46,7 @@ export async function PATCH(request: NextRequest, context: any) {
 
     // Update the project
     const updatedProject = await prisma.project.update({
-      where: { id: projectId },
+      where: { id },
       data: {
         requestDate: requestDate ? new Date(requestDate) : null,
         departmentDueDates: departmentDueDates || {},

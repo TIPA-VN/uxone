@@ -2,91 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/tasks/[id]/dependencies - Get task dependencies
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// GET - Fetch task dependencies
+export async function GET({ params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await auth();
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const task = await prisma.task.findUnique({
-      where: { id: params.id },
-      include: {
-        dependencies: {
-          include: {
-            blockingTask: {
-              select: {
-                id: true,
-                title: true,
-                status: true,
-                priority: true,
-                dueDate: true,
-              },
-            },
-          },
-        },
-        blockingTasks: {
-          include: {
-            dependentTask: {
-              select: {
-                id: true,
-                title: true,
-                status: true,
-                priority: true,
-                dueDate: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      dependencies: task.dependencies,
-      blockingTasks: task.blockingTasks,
-    });
-  } catch (error) {
-    console.error("Error fetching task dependencies:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch task dependencies" },
-      { status: 500 }
-    );
-  }
-}
-
-// POST /api/tasks/[id]/dependencies - Add a dependency
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { blockingTaskId } = body;
-
-    if (!blockingTaskId) {
-      return NextResponse.json(
-        { error: "Blocking task ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Verify task access
+    // Check if user has access to the task
     const task = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         OR: [
           { ownerId: session.user.id },
           { assigneeId: session.user.id },
@@ -102,7 +31,114 @@ export async function POST(
       );
     }
 
-    // Verify blocking task exists
+    // Fetch dependencies (tasks that this task depends on)
+    const dependencies = await prisma.taskDependency.findMany({
+      where: { dependentTaskId: id },
+      include: {
+        blockingTask: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            priority: true,
+            assignee: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Fetch blocking tasks (tasks that depend on this task)
+    const blockingTasks = await prisma.taskDependency.findMany({
+      where: { blockingTaskId: id },
+      include: {
+        dependentTask: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            priority: true,
+            assignee: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({
+      dependencies: dependencies.map(d => ({
+        id: d.id,
+        blockingTask: d.blockingTask,
+        createdAt: d.createdAt,
+      })),
+      blockingTasks: blockingTasks.map(d => ({
+        id: d.id,
+        dependentTask: d.dependentTask,
+        createdAt: d.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching task dependencies:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch task dependencies" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Create a new dependency
+export async function POST({ params, request }: { params: Promise<{ id: string }>, request: NextRequest }) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { blockingTaskId } = await request.json();
+
+    if (!blockingTaskId) {
+      return NextResponse.json(
+        { error: "Blocking task ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if user has access to the dependent task
+    const dependentTask = await prisma.task.findFirst({
+      where: {
+        id,
+        OR: [
+          { ownerId: session.user.id },
+          { assigneeId: session.user.id },
+          { createdBy: session.user.id },
+        ],
+      },
+    });
+
+    if (!dependentTask) {
+      return NextResponse.json(
+        { error: "Dependent task not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    // Check if blocking task exists
     const blockingTask = await prisma.task.findUnique({
       where: { id: blockingTaskId },
     });
@@ -114,30 +150,19 @@ export async function POST(
       );
     }
 
-    // Prevent self-dependency
-    if (params.id === blockingTaskId) {
-      return NextResponse.json(
-        { error: "Task cannot depend on itself" },
-        { status: 400 }
-      );
-    }
-
     // Check for circular dependencies
-    const wouldCreateCycle = await checkForCircularDependency(
-      params.id,
-      blockingTaskId
-    );
-
-    if (wouldCreateCycle) {
+    const hasCycle = await checkForCircularDependency(id, blockingTaskId);
+    if (hasCycle) {
       return NextResponse.json(
-        { error: "Adding this dependency would create a circular reference" },
+        { error: "Circular dependency detected" },
         { status: 400 }
       );
     }
 
+    // Create the dependency
     const dependency = await prisma.taskDependency.create({
       data: {
-        dependentTaskId: params.id,
+        dependentTaskId: id,
         blockingTaskId,
       },
       include: {
@@ -147,7 +172,14 @@ export async function POST(
             title: true,
             status: true,
             priority: true,
-            dueDate: true,
+            assignee: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true,
+              },
+            },
           },
         },
       },
@@ -163,13 +195,12 @@ export async function POST(
   }
 }
 
-// DELETE /api/tasks/[id]/dependencies - Remove a dependency
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// DELETE - Remove a dependency
+export async function DELETE({ params, request }: { params: Promise<{ id: string }>, request: NextRequest }) {
   try {
+    const { id } = await params;
     const session = await auth();
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -184,10 +215,10 @@ export async function DELETE(
       );
     }
 
-    // Verify task access
+    // Check if user has access to the task
     const task = await prisma.task.findFirst({
       where: {
-        id: params.id,
+        id,
         OR: [
           { ownerId: session.user.id },
           { assigneeId: session.user.id },
@@ -203,43 +234,35 @@ export async function DELETE(
       );
     }
 
-    const deletedDependency = await prisma.taskDependency.deleteMany({
+    // Delete the dependency
+    await prisma.taskDependency.delete({
       where: {
-        dependentTaskId: params.id,
-        blockingTaskId,
+        dependentTaskId_blockingTaskId: {
+          dependentTaskId: id,
+          blockingTaskId,
+        },
       },
     });
 
-    if (deletedDependency.count === 0) {
-      return NextResponse.json(
-        { error: "Dependency not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ message: "Dependency removed successfully" });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error removing task dependency:", error);
+    console.error("Error deleting task dependency:", error);
     return NextResponse.json(
-      { error: "Failed to remove task dependency" },
+      { error: "Failed to delete task dependency" },
       { status: 500 }
     );
   }
 }
 
 // Helper function to check for circular dependencies
-async function checkForCircularDependency(
-  dependentTaskId: string,
-  blockingTaskId: string
-): Promise<boolean> {
+async function checkForCircularDependency(dependentTaskId: string, blockingTaskId: string): Promise<boolean> {
   const visited = new Set<string>();
   const stack = new Set<string>();
 
-  async function hasCycle(taskId: string): Promise<boolean> {
+  async function dfs(taskId: string): Promise<boolean> {
     if (stack.has(taskId)) {
-      return true;
+      return true; // Circular dependency found
     }
-
     if (visited.has(taskId)) {
       return false;
     }
@@ -254,14 +277,14 @@ async function checkForCircularDependency(
     });
 
     for (const dep of dependencies) {
-      if (await hasCycle(dep.blockingTaskId)) {
+      if (await dfs(dep.blockingTaskId)) {
         return true;
       }
     }
-    
+
     stack.delete(taskId);
     return false;
   }
 
-  return hasCycle(blockingTaskId);
+  return dfs(blockingTaskId);
 } 

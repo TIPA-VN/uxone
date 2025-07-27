@@ -15,6 +15,10 @@ type Project = {
   createdAt: string;
   ownerId?: string;
   // add other fields as needed
+  _count?: {
+    tasks: number;
+    completedTasks: number;
+  };
 };
 
 const DEPARTMENTS = [
@@ -311,6 +315,19 @@ export default function ProjectsPage() {
                             <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(proj.status)}`}>
                               {proj.status || "UNKNOWN"}
                             </span>
+                            {/* Task completion indicator for project owners */}
+                            {proj.ownerId === user?.id && proj._count?.tasks && proj._count.tasks > 0 && (
+                              <div className="ml-2 flex items-center gap-1">
+                                <span className="text-xs text-gray-500">Tasks:</span>
+                                <span className={`text-xs font-medium px-1 py-0.5 rounded ${
+                                  proj._count.tasks > 0 && proj._count.tasks === (proj._count.completedTasks || 0)
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {proj._count.completedTasks || 0}/{proj._count.tasks}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
@@ -434,6 +451,19 @@ export default function ProjectsPage() {
                             <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(proj.status)}`}>
                               {proj.status || "UNKNOWN"}
                             </span>
+                            {/* Task completion indicator for project owners */}
+                            {proj.ownerId === user?.id && proj._count?.tasks && proj._count.tasks > 0 && (
+                              <div className="ml-2 flex items-center gap-1">
+                                <span className="text-xs text-gray-500">Tasks:</span>
+                                <span className={`text-xs font-medium px-1 py-0.5 rounded ${
+                                  proj._count.tasks > 0 && proj._count.tasks === (proj._count.completedTasks || 0)
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {proj._count.completedTasks || 0}/{proj._count.tasks}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">

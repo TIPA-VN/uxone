@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -14,8 +14,10 @@ export async function GET(
       return NextResponse.json([], { status: 401 });
     }
 
+    const { id } = await params;
+
     const attachments = await prisma.taskAttachment.findMany({
-      where: { taskId: params.id },
+      where: { taskId: id },
       orderBy: { uploadedAt: 'desc' }
     });
 
@@ -28,7 +30,7 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -36,6 +38,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     const { fileName, filePath, fileType, size } = body;
 
@@ -46,7 +49,7 @@ export async function POST(
     // Verify task access
     const task = await prisma.$queryRawUnsafe(`
       SELECT * FROM tasks 
-      WHERE id = '${params.id}' AND (
+      WHERE id = '${id}' AND (
         "ownerId" = '${session.user.id}' OR 
         "assigneeId" = '${session.user.id}' OR 
         '${session.user.department}' = ANY("assignedDepartments")
@@ -59,7 +62,7 @@ export async function POST(
 
     const attachment = await prisma.taskAttachment.create({
       data: {
-        taskId: params.id,
+        taskId: id,
         fileName,
         filePath,
         fileType,
@@ -77,7 +80,7 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -85,6 +88,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const { searchParams } = new URL(req.url);
     const attachmentId = searchParams.get('attachmentId');
 
@@ -96,7 +100,7 @@ export async function DELETE(
     const attachment = await prisma.taskAttachment.findFirst({
       where: { 
         id: attachmentId,
-        taskId: params.id
+        taskId: id
       },
       include: {
         task: true
