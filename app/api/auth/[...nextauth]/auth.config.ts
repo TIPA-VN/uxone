@@ -19,7 +19,7 @@ const ADMIN_CREDENTIALS = {
 const ADMIN_OVERRIDE_USERS = [
   'administrator', // Your username
   'admin',
-  '22023312', // Add your actual username here
+  // '22023312', // Add your actual username here
   // Add more admin usernames as needed
 ];
 

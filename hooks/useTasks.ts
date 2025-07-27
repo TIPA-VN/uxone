@@ -29,7 +29,6 @@ export const useTasks = () => {
     title: string;
     description?: string;
     assigneeId?: string;
-    assignedDepartments: string[];
     priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
     dueDate?: string;
     projectId?: string;

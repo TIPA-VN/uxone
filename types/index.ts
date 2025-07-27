@@ -11,6 +11,8 @@ export type Project = {
   ownerId?: string;
   requestDate?: string;
   departmentDueDates?: Record<string, string>;
+  documentTemplate?: string;
+  documentNumber?: string;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -19,44 +21,36 @@ export type Project = {
   };
 };
 
-export type Task = {
+export interface Task {
   id: string;
   title: string;
   description?: string;
-  ownerId: string;
-  owner?: {
-    id: string;
-    name: string;
-    username: string;
-    department: string;
-    departmentName: string;
-  };
-  assigneeId?: string;
-  assignee?: {
-    id: string;
-    name: string;
-    username: string;
-    department: string;
-    departmentName: string;
-  };
-  assignedDepartments: string[];
   status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  requestDate: string;
-  dueDate?: string;
   projectId?: string;
-  project?: {
-    id: string;
-    name: string;
-    status: string;
-    description?: string;
-  };
-  estimatedHours?: number;
-  actualHours?: number;
-  tags: string[];
+  assigneeId?: string;
+  ownerId?: string;
+  creatorId?: string;
+  sourceTicketId?: string;
+  ticketIntegration?: any;
+  dueDate?: string;
+  startDate?: string;
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
-};
+  parentTaskId?: string;
+  project?: Project;
+  assignee?: User;
+  owner?: User;
+  creator?: User;
+  dependencies?: TaskDependency[];
+  dependents?: TaskDependency[];
+  attachments?: TaskAttachment[];
+  comments?: TaskComment[];
+  legacyComments?: Comment[];
+  subtasks?: Task[];
+  parentTask?: Task;
+}
 
 export type User = {
   id: string;
@@ -93,10 +87,11 @@ export type Document = {
 export type TaskComment = {
   id: string;
   taskId: string;
-  text: string;
+  content: string;
   authorId: string;
   author: string;
-  timestamp: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TaskAttachment = {
@@ -105,9 +100,28 @@ export type TaskAttachment = {
   fileName: string;
   filePath: string;
   fileType: string;
-  size: number;
-  uploadedBy: string;
-  uploadedAt: string;
+  fileSize: number;
+  uploadedById: string;
+  uploadedBy: User;
+  createdAt: string;
+};
+
+export type TaskDependency = {
+  id: string;
+  dependentTaskId: string;
+  dependencyTaskId: string;
+  dependentTask: Task;
+  dependencyTask: Task;
+  createdAt: string;
+};
+
+export type Comment = {
+  id: string;
+  content: string;
+  authorId: string;
+  author: User;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TaskSubtask = {

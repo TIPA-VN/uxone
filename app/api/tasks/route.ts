@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by owner
     if (ownerId) {
-      where.ownerId = ownerId;
+      where.creatorId = session.user.id;
     }
 
     // Filter by parent task (for subtasks)
@@ -217,7 +217,6 @@ export async function POST(request: NextRequest) {
       parentTaskId,
       assigneeId,
       ownerId,
-      assignedDepartments = [],
       dueDate,
       estimatedHours,
       tags = [],
@@ -306,11 +305,8 @@ export async function POST(request: NextRequest) {
         parentTaskId,
         assigneeId,
         ownerId: ownerId || currentUser.id,
-        createdBy: currentUser.id,
-        assignedDepartments,
+        creatorId: currentUser.id,
         dueDate: dueDate ? new Date(dueDate) : null,
-        estimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
-        tags,
       },
       include: {
         project: {
@@ -456,7 +452,7 @@ export async function PATCH(request: NextRequest) {
           OR: [
             { ownerId: session.user.id },
             { assigneeId: session.user.id },
-            { createdBy: session.user.id },
+            { creatorId: session.user.id },
           ],
         },
         data: processedUpdates,
@@ -490,7 +486,7 @@ export async function PATCH(request: NextRequest) {
           OR: [
             { ownerId: session.user.id },
             { assigneeId: session.user.id },
-            { createdBy: session.user.id },
+            { creatorId: session.user.id },
           ],
         },
       });
@@ -667,7 +663,7 @@ export async function PATCH(request: NextRequest) {
       // Create notification for task owner when task is completed by assignee
       if (processedUpdates.status === 'COMPLETED' && task.status !== 'COMPLETED' && 
           session.user.id === task.assigneeId && 
-          task.ownerId !== session.user.id) {
+          task.ownerId !== session.user.id && task.ownerId) {
         try {
           const notification = await prisma.notification.create({
             data: {
@@ -752,7 +748,7 @@ export async function DELETE(request: NextRequest) {
         id: { in: ids },
         OR: [
           { ownerId: session.user.id },
-          { createdBy: session.user.id },
+          { creatorId: session.user.id },
         ],
       },
     });

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         projectId: projectId,
       },
       orderBy: {
-        timestamp: "desc",
+        createdAt: "desc",
       },
     });
 
@@ -59,16 +59,9 @@ export async function POST(request: NextRequest) {
 
     const comment = await prisma.projectComment.create({
       data: {
-        text,
-        type,
+        content: text,
         authorId: session.user.id,
-        author,
-        project: {
-          connect: {
-            id: projectIdStr
-          }
-        },
-        timestamp: new Date(),
+        projectId: projectIdStr,
       },
     });
 

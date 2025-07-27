@@ -49,6 +49,11 @@ const menuItems = [
     icon: <RiCustomerService2Fill size={22} />,
   },
   {
+    route: "/lvm/helpdesk",
+    label: "Helpdesk",
+    icon: <RiCustomerService2Fill size={22} />,
+  },
+  {
     imgURL: "/assets/heart.svg",
     route: "/lvm/logistics",
     label: "Logistics",

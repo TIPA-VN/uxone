@@ -28,11 +28,15 @@ export function ProjectHeader({ project, user, onApproval, actionStatus, activeT
   const isSeniorManagerOfDept =
     user &&
     user.role?.toUpperCase() === "SENIOR MANAGER" &&
-    user.department?.toUpperCase() === activeTab;
+    (user.department?.toUpperCase() === activeTab?.toUpperCase() || 
+     user.department?.toLowerCase() === activeTab?.toLowerCase());
+  // Allow ADMIN to approve any department, or SENIOR MANAGER to approve their own department
   const canApprove =
     user &&
     project &&
-    isSeniorManagerOfDept &&
+    (user.role?.toUpperCase() === "ADMIN" || 
+     isSeniorManagerOfDept || 
+     project.ownerId === user.id) &&
     approvalState[activeTab] !== "APPROVED" &&
     approvalState[activeTab] !== "REJECTED";
 
@@ -66,7 +70,12 @@ export function ProjectHeader({ project, user, onApproval, actionStatus, activeT
                 Department Approval Required
               </h3>
               <p className="text-sm text-yellow-700 mt-1">
-                As a Senior Manager of {activeTab}, you can approve or reject this project.
+                {user?.role?.toUpperCase() === "ADMIN" 
+                  ? `As an Admin, you can approve or reject this project for the ${activeTab} department.`
+                  : project.ownerId === user?.id
+                  ? `As the project owner, you can approve or reject this project for the ${activeTab} department.`
+                  : `As a Senior Manager of ${activeTab}, you can approve or reject this project.`
+                }
               </p>
             </div>
             <div className="flex space-x-3">

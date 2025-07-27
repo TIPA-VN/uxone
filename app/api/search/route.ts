@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
     const assigneeId = searchParams.get("assigneeId");
     const ownerId = searchParams.get("ownerId");
     const projectId = searchParams.get("projectId");
-    const tags = searchParams.get("tags");
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = parseInt(searchParams.get("offset") || "0");
 
@@ -36,15 +35,13 @@ export async function GET(request: NextRequest) {
             OR: [
               { title: { contains: query, mode: "insensitive" } },
               { description: { contains: query, mode: "insensitive" } },
-              { tags: { hasSome: query ? [query] : [] } },
             ],
           },
           {
             OR: [
               { ownerId: session.user.id },
               { assigneeId: session.user.id },
-              { createdBy: session.user.id },
-              { assignedDepartments: { has: session.user.department } },
+              { creatorId: session.user.id },
             ],
           },
         ],
@@ -55,10 +52,6 @@ export async function GET(request: NextRequest) {
       if (assigneeId) taskWhere.assigneeId = assigneeId;
       if (ownerId) taskWhere.ownerId = ownerId;
       if (projectId) taskWhere.projectId = projectId;
-      if (tags) {
-        const tagArray = tags.split(",").map((tag: string) => tag.trim());
-        taskWhere.tags = { hasSome: tagArray };
-      }
 
       const tasks = await prisma.task.findMany({
         where: taskWhere,
@@ -116,7 +109,6 @@ export async function GET(request: NextRequest) {
             OR: [
               { name: { contains: query, mode: "insensitive" } },
               { description: { contains: query, mode: "insensitive" } },
-              { tags: { hasSome: query ? [query] : [] } },
             ],
           },
           {
@@ -173,15 +165,13 @@ export async function GET(request: NextRequest) {
             OR: [
               { title: { contains: query, mode: "insensitive" } },
               { description: { contains: query, mode: "insensitive" } },
-              { tags: { hasSome: query ? [query] : [] } },
             ],
           },
           {
             OR: [
               { ownerId: session.user.id },
               { assigneeId: session.user.id },
-              { createdBy: session.user.id },
-              { assignedDepartments: { has: session.user.department } },
+              { creatorId: session.user.id },
             ],
           },
         ],
@@ -195,7 +185,6 @@ export async function GET(request: NextRequest) {
             OR: [
               { name: { contains: query, mode: "insensitive" } },
               { description: { contains: query, mode: "insensitive" } },
-              { tags: { hasSome: query ? [query] : [] } },
             ],
           },
           {

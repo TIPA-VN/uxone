@@ -16,8 +16,7 @@ type Task = {
   assignee_name?: string;
   assignee_username?: string;
   assignee_department?: string;
-  assignedDepartments: string[];
-  status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
+  status: 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'COMPLETED' | 'CANCELLED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   requestDate: string;
   dueDate?: string;
@@ -67,7 +66,6 @@ export default function EditTaskPage() {
     title: "",
     description: "",
     assigneeId: "",
-    assignedDepartments: [] as string[],
     status: "TODO" as Task['status'],
     priority: "MEDIUM" as Task['priority'],
     dueDate: "",
@@ -90,7 +88,6 @@ export default function EditTaskPage() {
           title: taskData.title || "",
           description: taskData.description || "",
           assigneeId: taskData.assigneeId || "",
-          assignedDepartments: taskData.assignedDepartments || [],
           status: taskData.status || "TODO",
           priority: taskData.priority || "MEDIUM",
           dueDate: taskData.dueDate ? new Date(taskData.dueDate).toISOString().split('T')[0] : "",
@@ -107,13 +104,14 @@ export default function EditTaskPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("/api/users");
+      const res = await fetch("/api/users?limit=100");
       if (res.ok) {
-        const usersData = await res.json();
-        setUsers(usersData);
+        const data = await res.json();
+        setUsers(data.users || []);
       }
     } catch (error) {
       console.error("Failed to fetch users:", error);
+      setUsers([]);
     }
   };
 
@@ -130,7 +128,6 @@ export default function EditTaskPage() {
           title: formData.title,
           description: formData.description,
           assigneeId: formData.assigneeId || null,
-          assignedDepartments: formData.assignedDepartments,
           status: formData.status,
           priority: formData.priority,
           dueDate: formData.dueDate || null,
@@ -148,15 +145,6 @@ export default function EditTaskPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleDepartmentChange = (department: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      assignedDepartments: checked
-        ? [...prev.assignedDepartments, department]
-        : prev.assignedDepartments.filter(d => d !== department)
-    }));
   };
 
   if (loading) {
@@ -178,7 +166,7 @@ export default function EditTaskPage() {
     );
   }
 
-  const canEdit = user?.id === task.ownerId || user?.id === task.assigneeId || task.assignedDepartments.includes(user?.department || '');
+  const canEdit = user?.id === task.ownerId || user?.id === task.assigneeId;
 
   if (!canEdit) {
     return (
@@ -285,8 +273,9 @@ export default function EditTaskPage() {
                 >
                   <option value="TODO">To Do</option>
                   <option value="IN_PROGRESS">In Progress</option>
+                  <option value="REVIEW">Review</option>
                   <option value="COMPLETED">Completed</option>
-                  <option value="BLOCKED">Blocked</option>
+                  <option value="CANCELLED">Cancelled</option>
                 </select>
               </div>
 
@@ -326,32 +315,12 @@ export default function EditTaskPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
                 <option value="">No assignee</option>
-                {users.map((user) => (
+                {Array.isArray(users) && users.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.name} ({user.departmentName})
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Assigned Departments
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {DEPARTMENTS.map(d => (
-                  <label key={d.value} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      value={d.value}
-                      checked={formData.assignedDepartments.includes(d.value)}
-                      onChange={(e) => handleDepartmentChange(d.value, e.target.checked)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                    />
-                    <span className="text-sm text-gray-700">{d.label}</span>
-                  </label>
-                ))}
-              </div>
             </div>
 
             <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">

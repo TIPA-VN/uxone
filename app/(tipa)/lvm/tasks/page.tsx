@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Plus, Calendar, Users, AlertCircle, Menu } from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
@@ -16,7 +16,6 @@ export default function TasksPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
-  const [assignedDepartments, setAssignedDepartments] = useState<string[]>([]);
   const [priority, setPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('MEDIUM');
   const [dueDate, setDueDate] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -26,6 +25,8 @@ export default function TasksPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   const { 
     tasks, 
@@ -35,16 +36,48 @@ export default function TasksPage() {
   } = useTasks();
 
   const fetchUsers = async () => {
-    const res = await fetch("/api/users");
-    const data = await res.json();
-    setUsers(data);
+    setLoadingUsers(true);
+    try {
+      const res = await fetch("/api/users");
+      const data = await res.json();
+      console.log("Users API response:", data);
+      const usersData = data.users || data;
+      setUsers(usersData);
+      console.log("Set users:", usersData);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setLoadingUsers(false);
+    }
   };
 
   const fetchProjects = async () => {
-    const res = await fetch("/api/projects");
-    const data = await res.json();
-    setProjects(data);
+    setLoadingProjects(true);
+    try {
+      const res = await fetch("/api/projects");
+      const data = await res.json();
+      console.log("Projects API response:", data);
+      const projectsData = Array.isArray(data) ? data : data.projects || [];
+      setProjects(projectsData);
+      console.log("Set projects:", projectsData);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    } finally {
+      setLoadingProjects(false);
+    }
   };
+
+  // Fetch users and projects when component mounts
+  useEffect(() => {
+    fetchUsers();
+    fetchProjects();
+  }, []);
+
+  // Debug: Log current state
+  useEffect(() => {
+    console.log("Current users state:", users);
+    console.log("Current projects state:", projects);
+  }, [users, projects]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +88,6 @@ export default function TasksPage() {
       title,
       description,
       assigneeId: assigneeId || undefined,
-      assignedDepartments,
       priority,
       dueDate: dueDate || undefined,
       projectId: projectId || undefined,
@@ -66,7 +98,6 @@ export default function TasksPage() {
       setTitle("");
       setDescription("");
       setAssigneeId("");
-      setAssignedDepartments([]);
       setPriority('MEDIUM');
       setDueDate("");
       setProjectId("");
@@ -283,8 +314,11 @@ export default function TasksPage() {
                     value={assigneeId}
                     onChange={e => setAssigneeId(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    disabled={loadingUsers}
                   >
-                    <option value="">Select assignee</option>
+                    <option value="">
+                      {loadingUsers ? "Loading users..." : "Select assignee"}
+                    </option>
                     {users.map(user => (
                       <option key={user.id} value={user.id}>
                         {user.name} ({user.username})
@@ -332,8 +366,11 @@ export default function TasksPage() {
                     value={projectId}
                     onChange={e => setProjectId(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    disabled={loadingProjects}
                   >
-                    <option value="">Select project</option>
+                    <option value="">
+                      {loadingProjects ? "Loading projects..." : "Select project"}
+                    </option>
                     {projects.map(project => (
                       <option key={project.id} value={project.id}>
                         {project.name}
@@ -352,8 +389,8 @@ export default function TasksPage() {
                         <input
                           type="checkbox"
                           value={d.value}
-                          checked={assignedDepartments.includes(d.value)}
-                          onChange={e => setAssignedDepartments(prev => e.target.checked ? [...prev, d.value] : prev.filter(x => x !== d.value))}
+                          checked={false} // This state is no longer managed
+                          onChange={e => {}} // This function is no longer needed
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                         />
                         <span className="text-sm text-gray-700">{d.label}</span>

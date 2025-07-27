@@ -26,7 +26,6 @@ async function main() {
         description: "A sample project for workflow demo.",
         ownerId: admin.id,
         departments: ["logistics", "qa", "pc"],
-        approvalState: { logistics: "pending", qa: "pending", pc: "pending" },
         status: "ACTIVE",
       },
     });

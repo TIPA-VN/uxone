@@ -35,7 +35,126 @@ model User {
   comments       Comment[]      @relation("CommentAuthor")
   projectMembers ProjectMember[]
 
+  // Helpdesk relations
+  assignedTickets Ticket[]      @relation("TicketAssignee")
+  createdTickets  Ticket[]      @relation("TicketCreator")
+  ticketComments  TicketComment[] @relation("TicketCommentAuthor")
+  ticketAttachments TicketAttachment[] @relation("TicketAttachmentUploader")
+  taskAttachments TaskAttachment[] @relation("TaskAttachmentUploader")
+  taskComments   TaskComment[]  @relation("TaskCommentAuthor")
+  projectComments ProjectComment[] @relation("ProjectCommentAuthor")
+
   @@map("users")
+}
+
+// Helpdesk Ticket System
+model Ticket {
+  id              String           @id @default(cuid())
+  ticketNumber    String           @unique // auto-generated (e.g., "HD-2024-001")
+  title           String
+  description     String
+  
+  // Helpdesk specific fields
+  status          TicketStatus     @default(OPEN)
+  priority        TicketPriority   @default(MEDIUM)
+  category        TicketCategory   @default(SUPPORT)
+  
+  // Customer info
+  customerId      String?
+  customerEmail   String
+  customerName    String
+  
+  // Assignment
+  assignedToId    String?
+  assignedTo      User?            @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  assignedTeam    String?
+  
+  // Integration fields
+  relatedTasks    String[]         // Task IDs created from this ticket
+  relatedProjectId String?
+  
+  // Tracking
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  firstResponseAt DateTime?
+  
+  // SLA tracking
+  slaBreached     Boolean          @default(false)
+  responseTime    Int?             // minutes
+  resolutionTime  Int?             // minutes
+  
+  // Communication
+  comments        TicketComment[]
+  attachments     TicketAttachment[]
+  tags            String[]
+  
+  // Creator
+  createdById     String
+  createdBy       User             @relation("TicketCreator", fields: [createdById], references: [id])
+
+  @@map("tickets")
+}
+
+model TicketComment {
+  id          String   @id @default(cuid())
+  content     String
+  authorId    String
+  author      User     @relation("TicketCommentAuthor", fields: [authorId], references: [id])
+  authorType  CommentAuthorType @default(AGENT)
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  isInternal  Boolean  @default(false) // internal notes vs customer-visible
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ticket_comments")
+}
+
+model TicketAttachment {
+  id          String   @id @default(cuid())
+  fileName    String
+  filePath    String
+  fileType    String
+  fileSize    Int
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy  User     @relation("TicketAttachmentUploader", fields: [uploadedById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("ticket_attachments")
+}
+
+// Enums for Ticket System
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  BUG
+  FEATURE_REQUEST
+  SUPPORT
+  TECHNICAL_ISSUE
+  GENERAL
+}
+
+enum CommentAuthorType {
+  AGENT
+  CUSTOMER
+  SYSTEM
 }
 
 // Keep existing models unchanged
@@ -100,23 +219,26 @@ model Project {
   budget        Float?
   ownerId       String
   owner         User     @relation(fields: [ownerId], references: [id])
-  departments   String[] // departments requiring approval
-  approvalState Json     // { department: status, ... }
-  released      Boolean  @default(false)
-  releasedAt    DateTime?
-  requestDate   DateTime? // Overall project due date
-  departmentDueDates Json? // { department: dueDate, ... }
-  tags          String[] // Project tags for categorization
+  departments   String[]
+  
+  // Document template fields
+  documentTemplate String? // LLNV, ECO, INSP, etc.
+  documentNumber   String? // Auto-generated (e.g., TIPA-LLNV-250727-001)
+  
+  // Due dates and approval
+  requestDate       DateTime? // Request date for the project
+  departmentDueDates Json?    // JSON object for department-specific due dates
+  approvalState     Json?     // JSON object for department approval states
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  
+
   // Relations
-  documents     Document[]
-  notes         Note[]
-  comments      Comment[]      @relation("ProjectComments")
-  legacyComments ProjectComment[]
   tasks         Task[]
+  documents     Document[]
   members       ProjectMember[]
+  comments      ProjectComment[]
+  notes         Note[] // Notes related to this project
 
   @@map("projects")
 }
@@ -124,10 +246,10 @@ model Project {
 model ProjectMember {
   id        String   @id @default(cuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id])
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   // 'owner', 'member', 'viewer'
+  user      User     @relation(fields: [userId], references: [id])
+  role      String   @default("member") // owner, member, viewer
   joinedAt  DateTime @default(now())
 
   @@unique([projectId, userId])
@@ -135,35 +257,28 @@ model ProjectMember {
 }
 
 model Note {
-  id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id])
-  department  String
-  content     String
-  authorId    String
-  author      User     @relation(fields: [authorId], references: [id])
-  authorName  String
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("notes")
 }
 
-// Unified Comment System
 model Comment {
-  id              String    @id @default(cuid())
-  content         String
-  authorId        String
-  author          User      @relation("CommentAuthor", fields: [authorId], references: [id])
-  taskId          String?   // Optional: link to task
-  task            Task?     @relation("TaskComments", fields: [taskId], references: [id], onDelete: Cascade)
-  projectId       String?   // Optional: link to project
-  project         Project?  @relation("ProjectComments", fields: [projectId], references: [id], onDelete: Cascade)
-  parentCommentId String?   // For threaded comments
-  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
-  replies         Comment[] @relation("CommentReplies")
-  mentions        String[]  // Array of user IDs mentioned
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  author    User     @relation("CommentAuthor", fields: [authorId], references: [id])
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("comments")
 }
@@ -171,8 +286,9 @@ model Comment {
 enum TaskStatus {
   TODO
   IN_PROGRESS
+  REVIEW
   COMPLETED
-  BLOCKED
+  CANCELLED
 }
 
 enum TaskPriority {
@@ -188,82 +304,90 @@ model Task {
   description     String?
   status          TaskStatus   @default(TODO)
   priority        TaskPriority @default(MEDIUM)
-  projectId       String?      // Optional: link to project
+  
+  // Project and assignment
+  projectId       String?
   project         Project?     @relation(fields: [projectId], references: [id])
-  parentTaskId    String?      // For subtasks
-  parentTask      Task?        @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
-  subtasks        Task[]       @relation("TaskHierarchy")
-  assigneeId      String?      // Individual assignee
+  assigneeId      String?
   assignee        User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  createdBy       String       // Task creator
-  creator         User         @relation("TaskCreator", fields: [createdBy], references: [id])
-  ownerId         String       // Task owner (can be different from creator)
-  owner           User         @relation("TaskOwner", fields: [ownerId], references: [id])
-  assignedDepartments String[] // Departments assigned to this task
+  ownerId         String?
+  owner           User?        @relation("TaskOwner", fields: [ownerId], references: [id])
+  creatorId       String?
+  creator         User?        @relation("TaskCreator", fields: [creatorId], references: [id])
+  
+  // Ticket integration
+  sourceTicketId  String?      // tracks origin ticket
+  ticketIntegration Json?       // stores TaskFromTicket data
+  
+  // Dates
   dueDate         DateTime?
-  estimatedHours  Float?
-  actualHours     Float?
-  tags            String[]     // Task tags for categorization
-  dependencies    TaskDependency[] @relation("DependentTask")
-  blockingTasks   TaskDependency[] @relation("BlockingTask")
-  attachments     TaskAttachment[]
-  comments        Comment[]    @relation("TaskComments")
-  legacyComments  TaskComment[]
+  startDate       DateTime?
+  completedAt     DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  dependencies    TaskDependency[] @relation("DependentTask")
+  dependents      TaskDependency[] @relation("DependencyTask")
+  attachments     TaskAttachment[]
+  comments        TaskComment[]
+  legacyComments  Comment[] // Legacy comments relation
+  subtasks        Task[]        @relation("SubtaskParent")
+  parentTaskId    String?
+  parentTask      Task?         @relation("SubtaskParent", fields: [parentTaskId], references: [id])
 
   @@map("tasks")
 }
 
-// Task Dependencies for blocking relationships
 model TaskDependency {
-  id              String   @id @default(cuid())
-  dependentTaskId String   // Task that depends on another
-  dependentTask   Task     @relation("DependentTask", fields: [dependentTaskId], references: [id], onDelete: Cascade)
-  blockingTaskId  String   // Task that blocks the dependent task
-  blockingTask    Task     @relation("BlockingTask", fields: [blockingTaskId], references: [id], onDelete: Cascade)
+  id              String @id @default(cuid())
+  dependentTaskId String
+  dependentTask   Task   @relation("DependentTask", fields: [dependentTaskId], references: [id])
+  dependencyTaskId String
+  dependencyTask  Task   @relation("DependencyTask", fields: [dependencyTaskId], references: [id])
   createdAt       DateTime @default(now())
 
-  @@unique([dependentTaskId, blockingTaskId])
+  @@unique([dependentTaskId, dependencyTaskId])
   @@map("task_dependencies")
 }
 
 model TaskAttachment {
   id          String   @id @default(cuid())
-  taskId      String
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   fileName    String
   filePath    String
   fileType    String
-  size        Int
-  uploadedBy  String
-  uploadedAt  DateTime @default(now())
+  fileSize    Int
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy  User     @relation("TaskAttachmentUploader", fields: [uploadedById], references: [id])
+  createdAt   DateTime @default(now())
 
   @@map("task_attachments")
 }
 
-// Legacy models for backward compatibility
-model ProjectComment {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
-  text      String
-  type      String   // 'comment' or 'update'
-  authorId  String
-  author    String   // Store author name for display
-  timestamp DateTime @default(now())
-
-  @@map("project_comments")
-}
-
 model TaskComment {
   id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  author    User     @relation("TaskCommentAuthor", fields: [authorId], references: [id])
   taskId    String
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  text      String
-  authorId  String
-  author    String   // Store author name for display
-  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("task_comments")
+}
+
+model ProjectComment {
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  author    User     @relation("ProjectCommentAuthor", fields: [authorId], references: [id])
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_comments")
 }

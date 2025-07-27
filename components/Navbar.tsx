@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { Dialog } from "@/components/ui/card";
+import { canAccessFeature } from "@/config/app";
 
 import { AnnouncementDialog } from "./Navbar/AnnouncementDialog";
 import { NotificationModal } from "./Navbar/NotificationModal";
@@ -40,7 +41,7 @@ const Navbar = () => {
   } = useNotifications();
 
 
-  const canAnnounce = ["ADMIN", "HR", "SENIOR MANAGER"].includes(user?.role?.toUpperCase() || "");
+  const canAnnounce = canAccessFeature(user?.role as any, "announcements");
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

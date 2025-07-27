@@ -151,16 +151,10 @@ export async function GET(request: NextRequest) {
             by: ["status"],
             where: { projectId: project.id },
             _count: { id: true },
-            _sum: {
-              estimatedHours: true,
-              actualHours: true,
-            },
           });
 
           const totalTasks = taskStats.reduce((sum, stat) => sum + stat._count.id, 0);
           const completedTasks = taskStats.find(stat => stat.status === "COMPLETED")?._count.id || 0;
-          const totalEstimatedHours = taskStats.reduce((sum, stat) => sum + (stat._sum.estimatedHours || 0), 0);
-          const totalActualHours = taskStats.reduce((sum, stat) => sum + (stat._sum.actualHours || 0), 0);
 
           return {
             ...project,
@@ -168,9 +162,6 @@ export async function GET(request: NextRequest) {
               totalTasks,
               completedTasks,
               completionPercentage: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
-              totalEstimatedHours,
-              totalActualHours,
-              efficiency: totalEstimatedHours > 0 ? (totalActualHours / totalEstimatedHours) * 100 : 0,
             },
           };
         })
@@ -227,6 +218,7 @@ export async function POST(request: NextRequest) {
       departments = [],
       tags = [],
       teamMembers = [],
+      documentTemplate,
     } = body;
 
     if (!name) {
@@ -234,6 +226,35 @@ export async function POST(request: NextRequest) {
         { error: "Project name is required" },
         { status: 400 }
       );
+    }
+
+    // Generate document number if template is provided
+    let documentNumber = null;
+    if (documentTemplate) {
+      const now = new Date();
+      const year = String(now.getFullYear()).slice(-2);
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const dateString = `${year}${month}${day}`;
+      
+      const lastProject = await prisma.project.findFirst({
+        where: {
+          documentTemplate: documentTemplate,
+          documentNumber: {
+            startsWith: `TIPA-${documentTemplate}-${dateString}-`
+          }
+        },
+        orderBy: {
+          documentNumber: 'desc'
+        }
+      });
+
+      if (lastProject) {
+        const lastNumber = parseInt(lastProject.documentNumber!.split('-')[3]);
+        documentNumber = `TIPA-${documentTemplate}-${dateString}-${String(lastNumber + 1).padStart(3, '0')}`;
+      } else {
+        documentNumber = `TIPA-${documentTemplate}-${dateString}-001`;
+      }
     }
 
     // Verify the current user exists in the database
@@ -275,8 +296,8 @@ export async function POST(request: NextRequest) {
         budget: budget ? parseFloat(budget) : null,
         ownerId: currentUser.id, // Use the verified user ID
         departments,
-        tags,
-        approvalState: {},
+        documentTemplate,
+        documentNumber,
         members: {
           create: teamMembers.map((memberId: string) => ({
             userId: memberId,

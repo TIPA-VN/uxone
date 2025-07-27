@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { canAccessFeature } from "@/config/app";
 import {
   Users, UserCheck, Calendar, CheckCircle, Clock, AlertTriangle,
   TrendingUp, BarChart3, Target, Activity, Filter, Search,
@@ -129,7 +130,7 @@ export default function TeamManagementPage() {
   });
 
   // Check if user is a manager
-  const isManager = user && ["ADMIN", "SENIOR MANAGER", "MANAGER"].includes(user.role?.toUpperCase() || "");
+  const isManager = user && canAccessFeature(user.role as any, "teamManagement");
 
   useEffect(() => {
     if (user && isManager) {

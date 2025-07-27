@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessFeature } from "@/config/app";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,10 +10,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is a manager (ADMIN, SENIOR MANAGER, or MANAGER)
-    const isManager = ["ADMIN", "SENIOR MANAGER", "MANAGER"].includes(session.user.role?.toUpperCase() || "");
-    if (!isManager) {
-      return NextResponse.json({ error: "Access denied. Manager role required." }, { status: 403 });
+    // Check if user has team management access using centralized RBAC
+    const hasTeamAccess = canAccessFeature(session.user.role as any, "teamManagement");
+    if (!hasTeamAccess) {
+      return NextResponse.json({ error: "Access denied. Team management access required." }, { status: 403 });
     }
 
     // Get all users with their task and project statistics

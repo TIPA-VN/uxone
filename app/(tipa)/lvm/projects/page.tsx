@@ -7,7 +7,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Project } from "@/types";
-import { APP_CONFIG } from "@/config/app";
+import { APP_CONFIG, getDocumentTemplates } from "@/config/app";
 
 export default function ProjectsPage() {
   const { data: session } = useSession();
@@ -15,6 +15,7 @@ export default function ProjectsPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
+  const [documentTemplate, setDocumentTemplate] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -27,18 +28,26 @@ export default function ProjectsPage() {
     createProject 
   } = useProjects();
 
+  const documentTemplates = getDocumentTemplates();
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setStatus(null);
     
-    const success = await createProject({ name, description, departments });
+    const success = await createProject({ 
+      name, 
+      description, 
+      departments,
+      documentTemplate: documentTemplate || undefined
+    });
     
     if (success) {
       setStatus("Project created successfully!");
       setName("");
       setDescription("");
       setDepartments([]);
+      setDocumentTemplate("");
       setShowCreateForm(false);
     } else {
       setStatus("Failed to create project.");
@@ -90,6 +99,11 @@ export default function ProjectsPage() {
             >
               {project.name}
             </Link>
+            {project.documentNumber && (
+              <p className="text-xs text-gray-600 mt-0.5 font-mono">
+                {project.documentNumber}
+              </p>
+            )}
             {project.description && (
               <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                 {project.description}
@@ -244,6 +258,24 @@ export default function ProjectsPage() {
                     </label>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Document Template
+                </label>
+                <select
+                  value={documentTemplate}
+                  onChange={e => setDocumentTemplate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="">Select a document template</option>
+                  {documentTemplates.map(template => (
+                    <option key={template.value} value={template.value}>
+                      {template.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">

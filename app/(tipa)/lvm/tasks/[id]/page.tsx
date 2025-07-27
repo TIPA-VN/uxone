@@ -40,7 +40,6 @@ type Task = {
     department: string;
     departmentName: string;
   };
-  assignedDepartments: string[];
   status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   requestDate: string;
@@ -408,7 +407,7 @@ export default function TaskDetailPage() {
     );
   }
 
-  const canEdit = user?.id === task.ownerId || user?.id === task.assigneeId || task.assignedDepartments.includes(user?.department || '');
+  const canEdit = user?.id === task.ownerId || user?.id === task.assigneeId;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -525,11 +524,11 @@ export default function TaskDetailPage() {
                     <h3 className="text-xs font-medium text-gray-700 mb-2">Update Status</h3>
                     <div className="flex flex-wrap gap-1.5">
                       {['TODO', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED'].map((status) => {
-                        const hasIncompleteSubtasks = subtasks.some(st => st.status !== 'COMPLETED');
+                        const hasIncompleteSubtasks = subtasks?.some(st => st.status !== 'COMPLETED') || false;
                         const isCompletedButton = status === 'COMPLETED';
                         const isDisabled = updatingStatus || 
                           task.status === status || 
-                          (isCompletedButton && hasIncompleteSubtasks && subtasks.length > 0);
+                          (isCompletedButton && hasIncompleteSubtasks && subtasks?.length > 0);
                         
                         return (
                           <button
@@ -543,7 +542,7 @@ export default function TaskDetailPage() {
                                 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 cursor-pointer'
                             }`}
-                            title={isCompletedButton && hasIncompleteSubtasks && subtasks.length > 0 
+                            title={isCompletedButton && hasIncompleteSubtasks && subtasks?.length > 0 
                               ? "Complete all sub-tasks first" 
                               : undefined}
                           >
@@ -552,7 +551,7 @@ export default function TaskDetailPage() {
                         );
                       })}
                     </div>
-                    {subtasks.some(st => st.status !== 'COMPLETED') && subtasks.length > 0 && (
+                    {subtasks?.some(st => st.status !== 'COMPLETED') && subtasks?.length > 0 && (
                       <p className="text-xs text-orange-600 mt-2">
                         ⚠️ Complete all sub-tasks before marking this task as completed
                       </p>
@@ -840,22 +839,6 @@ export default function TaskDetailPage() {
                         <p className="text-xs font-medium text-gray-900">{task.assignee.name || task.assignee.username}</p>
                         <p className="text-xs text-gray-500">{task.assignee.department}</p>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {task.assignedDepartments.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-medium text-gray-700 mb-1">Assigned Departments</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {task.assignedDepartments.map((dept) => (
-                        <span
-                          key={dept}
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                        >
-                          {dept}
-                        </span>
-                      ))}
                     </div>
                   </div>
                 )}

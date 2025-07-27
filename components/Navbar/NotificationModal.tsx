@@ -263,26 +263,26 @@ export function NotificationModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-t-xl">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 rounded-t-xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              <h2 className="text-lg font-bold">All Notifications</h2>
+              <h2 className="text-base font-bold">All Notifications</h2>
               {unreadCount > 0 && (
-                <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
+                <span className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full">
                   {unreadCount} unread
                 </span>
               )}
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="text-white hover:text-gray-200 p-1 rounded-full hover:bg-white/10 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -290,8 +290,8 @@ export function NotificationModal({
         </div>
 
         {/* Filters */}
-        <div className="p-3 border-b border-gray-200 bg-gray-50">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="p-2 border-b border-gray-200 bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {/* Search */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
@@ -300,7 +300,7 @@ export function NotificationModal({
                 placeholder="Search notifications..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
               />
             </div>
             
@@ -310,7 +310,7 @@ export function NotificationModal({
               <select 
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
               >
                 <option value="">All Types</option>
                 <option value="announcement">Announcements</option>
@@ -322,7 +322,7 @@ export function NotificationModal({
           </div>
           
           {/* Action Buttons */}
-          <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-2">
               <button 
                 onClick={async () => {
@@ -344,7 +344,7 @@ export function NotificationModal({
                   }
                 }}
                 disabled={notifications.filter(n => !n.read).length === 0}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
               >
                 Mark All as Read
               </button>
@@ -366,7 +366,7 @@ export function NotificationModal({
                   }
                 }}
                 disabled={notifications.length === 0}
-                className="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
               >
                 Clear All
               </button>
@@ -378,20 +378,20 @@ export function NotificationModal({
         </div>
 
         {/* Notifications List */}
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex-1 overflow-y-auto p-2">
           {notifLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <span className="ml-2 text-sm text-gray-500">Loading notifications...</span>
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              <span className="ml-2 text-xs text-gray-500">Loading notifications...</span>
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
-              <span className="text-base font-medium">
+              <span className="text-sm font-medium">
                 {notifications.length === 0 ? "No notifications found" : "No notifications match your filters"}
               </span>
               <span className="text-xs">
@@ -399,23 +399,25 @@ export function NotificationModal({
               </span>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {filteredNotifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`border rounded p-3 transition-all duration-200 ${
+                  className={`border rounded p-2 transition-all duration-200 ${
                     n.read 
                       ? "bg-white border-gray-200 hover:border-gray-300" 
                       : "bg-blue-50 border-blue-200 hover:border-blue-300"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2">
                     {/* Notification Icon */}
                     {(() => {
                       const statusIcon = getStatusIcon(n);
                       return (
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${statusIcon.bgColor} ${statusIcon.color}`}>
-                          {statusIcon.icon}
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${statusIcon.bgColor} ${statusIcon.color}`}>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {statusIcon.icon.props.children}
+                          </svg>
                         </div>
                       );
                     })()}
@@ -428,7 +430,7 @@ export function NotificationModal({
                             const parsed = parseNotification(n);
                             return (
                               <>
-                                <h3 className={`text-sm font-semibold ${
+                                <h3 className={`text-xs font-semibold ${
                                   parsed.title.toLowerCase().includes('rejected') || parsed.title.toLowerCase().includes('disapproved')
                                     ? 'text-red-600'
                                     : parsed.title.toLowerCase().includes('approved')
@@ -437,11 +439,11 @@ export function NotificationModal({
                                 }`}>
                                   {parsed.title}
                                 </h3>
-                                <div className="flex flex-col gap-1 mt-1">
+                                <div className="flex flex-col gap-0.5 mt-0.5">
                                   {parsed.hasProject && (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                       <span className="text-xs text-gray-500 font-medium">Project:</span>
-                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
                                         n.read 
                                           ? 'bg-purple-100 text-purple-700' 
                                           : 'bg-purple-100 text-purple-700'
@@ -451,9 +453,9 @@ export function NotificationModal({
                                     </div>
                                   )}
                                   {parsed.hasDepartment && (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                       <span className="text-xs text-gray-500 font-medium">Department:</span>
-                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
                                         n.read 
                                           ? 'bg-gray-100 text-gray-600' 
                                           : 'bg-blue-100 text-blue-700'
@@ -474,18 +476,18 @@ export function NotificationModal({
                             );
                           })()}
                         </div>
-                        <div className="flex items-center gap-2 ml-3">
+                        <div className="flex items-center gap-1 ml-2">
                           <span className="text-[10px] text-gray-400">
                             {new Date(n.createdAt).toLocaleString()}
                           </span>
                           {!n.read && (
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
                           )}
                         </div>
                       </div>
                       
                       {/* Actions */}
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-1 mt-1">
                         {!n.read && (
                           <button
                             onClick={async () => {
@@ -516,10 +518,10 @@ export function NotificationModal({
                               onClick={() => {
                                 window.location.href = n.link!;
                               }}
-                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                              className="p-0.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
                               title="View Details"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
@@ -535,10 +537,10 @@ export function NotificationModal({
                               });
                               setNotifications((prev: Notification[]) => prev.filter((notif: Notification) => notif.id !== n.id));
                             }}
-                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                            className="p-0.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
                             title="Delete"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>

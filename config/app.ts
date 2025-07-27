@@ -495,6 +495,15 @@ export const APP_CONFIG = {
           "ADMIN", "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2"
         ] as RoleName[],
         description: "System configuration and settings"
+      },
+      announcements: {
+        roles: [
+          "ADMIN", "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+          "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+          "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
+          "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER"
+        ] as RoleName[],
+        description: "Create and send announcements to all users"
       }
     },
 
@@ -779,7 +788,139 @@ export const APP_CONFIG = {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ],
     uploadPath: "/uploads"
-  }
+  },
+
+  // Helpdesk Configuration
+  helpdesk: {
+    categories: [
+      {
+        value: "SUPPORT",
+        label: "Support",
+        icon: "User", // Corresponds to LucideReact icon name
+        description: "General support requests",
+        color: "bg-blue-100 text-blue-800 border-blue-200"
+      },
+      {
+        value: "BUG",
+        label: "Bug Report",
+        icon: "AlertCircle",
+        description: "Software bugs and issues",
+        color: "bg-red-100 text-red-800 border-red-200"
+      },
+      {
+        value: "FEATURE_REQUEST",
+        label: "Feature Request",
+        icon: "Plus",
+        description: "New feature requests",
+        color: "bg-green-100 text-green-800 border-green-200"
+      },
+      {
+        value: "TECHNICAL_ISSUE",
+        label: "Technical Issue",
+        icon: "Wrench",
+        description: "Technical problems and issues",
+        color: "bg-orange-100 text-orange-800 border-orange-200"
+      },
+      {
+        value: "GENERAL",
+        label: "General",
+        icon: "FileText",
+        description: "General inquiries and requests",
+        color: "bg-gray-100 text-gray-800 border-gray-200"
+      }
+    ],
+    priorities: [
+      {
+        value: "LOW",
+        label: "Low",
+        color: "bg-green-100 text-green-800 border-green-200",
+        description: "Non-urgent issues"
+      },
+      {
+        value: "MEDIUM",
+        label: "Medium",
+        color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+        description: "Standard priority issues"
+      },
+      {
+        value: "HIGH",
+        label: "High",
+        color: "bg-orange-100 text-orange-800 border-orange-200",
+        description: "Important issues requiring attention"
+      },
+      {
+        value: "URGENT",
+        label: "Urgent",
+        color: "bg-red-100 text-red-800 border-red-200",
+        description: "Critical issues requiring immediate attention"
+      }
+    ],
+    statuses: [
+      {
+        value: "OPEN",
+        label: "Open",
+        icon: "AlertCircle",
+        color: "text-orange-500",
+        description: "New ticket awaiting assignment"
+      },
+      {
+        value: "IN_PROGRESS",
+        label: "In Progress",
+        icon: "Clock",
+        color: "text-blue-500",
+        description: "Ticket is being worked on"
+      },
+      {
+        value: "PENDING",
+        label: "Pending",
+        icon: "Clock",
+        color: "text-yellow-500",
+        description: "Waiting for customer response or external action"
+      },
+      {
+        value: "RESOLVED",
+        label: "Resolved",
+        icon: "CheckCircle",
+        color: "text-green-500",
+        description: "Issue resolved, awaiting customer confirmation"
+      },
+      {
+        value: "CLOSED",
+        label: "Closed",
+        icon: "XCircle",
+        color: "text-gray-500",
+        description: "Ticket closed and completed"
+      }
+    ]
+  },
+
+  // Document Templates Configuration
+  documentTemplates: [
+    {
+      value: "LLNV",
+      label: "Liên Lạc Nghiệp Vụ",
+      description: "Business Communication Document",
+      prefix: "LLNV",
+      color: "bg-blue-100 text-blue-800 border-blue-200",
+      icon: "MessageSquare" as const
+    },
+    {
+      value: "ECO",
+      label: "Engineer Change Request",
+      description: "Engineering Change Order Document",
+      prefix: "ECO",
+      color: "bg-green-100 text-green-800 border-green-200",
+      icon: "Wrench" as const
+    },
+    {
+      value: "INSP",
+      label: "Inspection Request",
+      description: "Quality Inspection Request Document",
+      prefix: "INSP",
+      color: "bg-orange-100 text-orange-800 border-orange-200",
+      icon: "Search" as const
+    }
+  ],
 } as const;
 
 // Type definitions for the config
@@ -789,6 +930,11 @@ export type TaskPriority = typeof APP_CONFIG.tasks.priorities[number]["value"];
 export type TaskStatus = typeof APP_CONFIG.tasks.statuses[number]["value"];
 export type ProjectStatus = typeof APP_CONFIG.projects.statuses[number]["value"];
 export type ApprovalState = typeof APP_CONFIG.projects.approvalStates[number]["value"];
+export type TicketCategory = typeof APP_CONFIG.helpdesk.categories[number]["value"];
+export type TicketPriority = typeof APP_CONFIG.helpdesk.priorities[number]["value"];
+export type TicketStatus = typeof APP_CONFIG.helpdesk.statuses[number]["value"];
+
+export type DocumentTemplate = typeof APP_CONFIG.documentTemplates[number]["value"];
 
 // Helper functions
 export const getDepartmentByValue = (value: string) => {
@@ -888,4 +1034,11 @@ export const getRoles = () => APP_CONFIG.roles;
 export const getTaskPriorities = () => APP_CONFIG.tasks.priorities;
 export const getTaskStatuses = () => APP_CONFIG.tasks.statuses;
 export const getProjectStatuses = () => APP_CONFIG.projects.statuses;
-export const getApprovalStates = () => APP_CONFIG.projects.approvalStates; 
+export const getApprovalStates = () => APP_CONFIG.projects.approvalStates;
+export const getTicketCategories = () => APP_CONFIG.helpdesk.categories;
+export const getTicketPriorities = () => APP_CONFIG.helpdesk.priorities;
+export const getTicketStatuses = () => APP_CONFIG.helpdesk.statuses; 
+
+export const getDocumentTemplates = () => APP_CONFIG.documentTemplates;
+export const getDocumentTemplateByValue = (value: string) => 
+  APP_CONFIG.documentTemplates.find(template => template.value === value); 

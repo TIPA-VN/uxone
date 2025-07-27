@@ -18,7 +18,7 @@ export async function GET(
 
     const comments = await prisma.taskComment.findMany({
       where: { taskId: id },
-      orderBy: { timestamp: 'asc' }
+      orderBy: { createdAt: 'asc' }
     });
 
     return NextResponse.json(comments);
@@ -47,25 +47,26 @@ export async function POST(
     }
 
     // Verify task access
-    const task = await prisma.$queryRawUnsafe(`
-      SELECT * FROM tasks 
-      WHERE id = '${id}' AND (
-        "ownerId" = '${session.user.id}' OR 
-        "assigneeId" = '${session.user.id}' OR 
-        '${session.user.department}' = ANY("assignedDepartments")
-      )
-    `);
+    const task = await prisma.task.findFirst({
+      where: {
+        id,
+        OR: [
+          { ownerId: session.user.id },
+          { assigneeId: session.user.id },
+          { creatorId: session.user.id },
+        ],
+      },
+    });
 
-    if (!task || (Array.isArray(task) && task.length === 0)) {
+    if (!task) {
       return NextResponse.json({ error: "Task not found or access denied" }, { status: 404 });
     }
 
     const comment = await prisma.taskComment.create({
       data: {
         taskId: id,
-        text,
+        content: text,
         authorId: session.user.id,
-        author: session.user.name || session.user.username,
       }
     });
 

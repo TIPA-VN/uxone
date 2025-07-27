@@ -18,7 +18,7 @@ export async function GET(
 
     const attachments = await prisma.taskAttachment.findMany({
       where: { taskId: id },
-      orderBy: { uploadedAt: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     return NextResponse.json(attachments);
@@ -47,16 +47,18 @@ export async function POST(
     }
 
     // Verify task access
-    const task = await prisma.$queryRawUnsafe(`
-      SELECT * FROM tasks 
-      WHERE id = '${id}' AND (
-        "ownerId" = '${session.user.id}' OR 
-        "assigneeId" = '${session.user.id}' OR 
-        '${session.user.department}' = ANY("assignedDepartments")
-      )
-    `);
+    const task = await prisma.task.findFirst({
+      where: {
+        id,
+        OR: [
+          { ownerId: session.user.id },
+          { assigneeId: session.user.id },
+          { creatorId: session.user.id },
+        ],
+      },
+    });
 
-    if (!task || (Array.isArray(task) && task.length === 0)) {
+    if (!task) {
       return NextResponse.json({ error: "Task not found or access denied" }, { status: 404 });
     }
 
@@ -66,8 +68,8 @@ export async function POST(
         fileName,
         filePath,
         fileType,
-        size: parseInt(size),
-        uploadedBy: session.user.name || session.user.username,
+        fileSize: parseInt(size),
+        uploadedById: session.user.id,
       }
     });
 
@@ -111,11 +113,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Attachment not found" }, { status: 404 });
     }
 
-    // Check if user can delete (owner, assignee, or department member)
+    // Check if user can delete (owner, assignee, or creator)
     const canDelete = 
       attachment.task.ownerId === session.user.id ||
       attachment.task.assigneeId === session.user.id ||
-      attachment.task.assignedDepartments.includes(session.user.department || '');
+      attachment.task.creatorId === session.user.id;
 
     if (!canDelete) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });

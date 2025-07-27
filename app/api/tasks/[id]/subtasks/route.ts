@@ -22,7 +22,7 @@ export async function GET(
         OR: [
           { ownerId: session.user.id },
           { assigneeId: session.user.id },
-          { createdBy: session.user.id },
+          { creatorId: session.user.id },
         ],
       },
     });

@@ -90,7 +90,7 @@ export async function GET(
         },
         dependencies: {
           include: {
-            blockingTask: {
+            dependencyTask: {
               select: {
                 id: true,
                 title: true,
@@ -101,7 +101,7 @@ export async function GET(
             },
           },
         },
-        blockingTasks: {
+        dependents: {
           include: {
             dependentTask: {
               select: {
@@ -115,7 +115,7 @@ export async function GET(
           },
         },
         attachments: {
-          orderBy: { uploadedAt: "desc" },
+          orderBy: { createdAt: "desc" },
         },
         comments: {
           include: {
@@ -128,20 +128,6 @@ export async function GET(
                 departmentName: true,
               },
             },
-            replies: {
-              include: {
-                author: {
-                  select: {
-                    id: true,
-                    name: true,
-                    username: true,
-                    department: true,
-                    departmentName: true,
-                  },
-                },
-              },
-              orderBy: { createdAt: "asc" },
-            },
           },
           orderBy: { createdAt: "desc" },
         },
@@ -151,7 +137,7 @@ export async function GET(
             comments: true,
             attachments: true,
             dependencies: true,
-            blockingTasks: true,
+            dependents: true,
           },
         },
       },
@@ -193,7 +179,6 @@ export async function PATCH(
       parentTaskId,
       assigneeId,
       ownerId,
-      assignedDepartments,
       dueDate,
       estimatedHours,
       actualHours,
@@ -207,7 +192,7 @@ export async function PATCH(
         OR: [
           { ownerId: session.user.id },
           { assigneeId: session.user.id },
-          { createdBy: session.user.id },
+          { creatorId: session.user.id },
         ],
       },
     });
@@ -262,7 +247,6 @@ export async function PATCH(
     if (parentTaskId !== undefined) updateData.parentTaskId = parentTaskId;
     if (assigneeId !== undefined) updateData.assigneeId = assigneeId;
     if (ownerId !== undefined) updateData.ownerId = ownerId;
-    if (assignedDepartments !== undefined) updateData.assignedDepartments = assignedDepartments;
     if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
     if (estimatedHours !== undefined) updateData.estimatedHours = estimatedHours;
     if (actualHours !== undefined) updateData.actualHours = actualHours;
@@ -367,7 +351,7 @@ export async function PATCH(
     // Create notification for task owner when task is completed by assignee
     if (status === 'COMPLETED' && existingTask.status !== 'COMPLETED' && 
         session.user.id === existingTask.assigneeId && 
-        existingTask.ownerId !== session.user.id) {
+        existingTask.ownerId !== session.user.id && existingTask.ownerId) {
       try {
         const notification = await prisma.notification.create({
           data: {
@@ -416,7 +400,7 @@ export async function DELETE(
         id,
         OR: [
           { ownerId: session.user.id },
-          { createdBy: session.user.id },
+          { creatorId: session.user.id },
         ],
       },
     });

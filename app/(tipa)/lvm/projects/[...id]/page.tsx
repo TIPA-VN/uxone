@@ -458,11 +458,16 @@ export default function ProjectDetailsPage() {
   const isSeniorManagerOfDept =
     user &&
     user.role?.toUpperCase() === "SENIOR MANAGER" &&
-    user.department?.toUpperCase() === activeTab;
+    (user.department?.toUpperCase() === activeTab?.toUpperCase() || 
+     user.department?.toLowerCase() === activeTab?.toLowerCase());
+  
+  // Allow ADMIN to approve any department, or SENIOR MANAGER to approve their own department
   const canApprove =
     user &&
     project &&
-    isSeniorManagerOfDept &&
+    (user.role?.toUpperCase() === "ADMIN" || 
+     isSeniorManagerOfDept || 
+     project.ownerId === user.id) &&
     approvalState[activeTab] !== "APPROVED" &&
     approvalState[activeTab] !== "REJECTED";
 
@@ -699,9 +704,6 @@ export default function ProjectDetailsPage() {
   // Defensive fallback rendering for missing departments or approvalState
   if (project && (!Array.isArray(project.departments) || project.departments.length === 0)) {
     return <div className="p-8 text-red-600">No departments found for this project.</div>;
-  }
-  if (project && !project.approvalState) {
-    return <div className="p-8 text-red-600">No approval state found for this project.</div>;
   }
 
   if (loading) return <div className="p-8">Loading...</div>;
@@ -1672,8 +1674,8 @@ export default function ProjectDetailsPage() {
                               .map((doc, index) => {
                                 const isApproved = (doc.metadata as any)?.approved === true;
                                 const isProduction = doc.workflowState === "production";
-                                const canApproveDoc = isSeniorManagerOfDept && !isApproved && !isProduction;
-                                const canSendToProduction = isSeniorManagerOfDept && isApproved && !isProduction;
+                                const canApproveDoc = (user?.role?.toUpperCase() === "ADMIN" || isSeniorManagerOfDept || project?.ownerId === user?.id) && !isApproved && !isProduction;
+                                const canSendToProduction = (user?.role?.toUpperCase() === "ADMIN" || isSeniorManagerOfDept || project?.ownerId === user?.id) && isApproved && !isProduction;
                                 const isProjectOwner = project?.ownerId === user?.id;
                                 const canDeleteDoc = isProjectOwner && !isProduction;
                                 
