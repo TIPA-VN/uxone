@@ -54,7 +54,7 @@ export const DataTable = <T extends Record<string, any>>({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${column.className || ''}`}
+                  className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${column.className || ''}`}
                 >
                   {column.header}
                 </th>
@@ -73,7 +73,7 @@ export const DataTable = <T extends Record<string, any>>({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={`px-6 py-4 whitespace-nowrap ${column.className || ''}`}
+                    className={`px-4 py-3 ${column.className || ''}`}
                   >
                     {column.render(item)}
                   </td>

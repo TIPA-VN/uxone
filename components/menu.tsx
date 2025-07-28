@@ -41,73 +41,11 @@ const menuItems = [
     label: "Team Management",
     icon: <HiOutlineUserGroup size={22} />,
   },
-  // Customer Service
-  {
-    imgURL: "/assets/community.svg",
-    route: "/lvm/cs",
-    label: "Customer Service",
-    icon: <RiCustomerService2Fill size={22} />,
-  },
   {
     route: "/lvm/helpdesk",
     label: "Helpdesk",
     icon: <RiCustomerService2Fill size={22} />,
-  },
-  {
-    imgURL: "/assets/heart.svg",
-    route: "/lvm/logistics",
-    label: "Logistics",
-    icon: <GiCargoShip size={22} />,
-  },
-  {
-    imgURL: "/assets/heart.svg",
-    route: "/lvm/purchasing",
-    label: "Procurement",
-    icon: <BsCart4 size={22} />,
-  },
-  {
-    imgURL: "/assets/search.svg",
-    route: "/lvm/pc",
-    label: "Prod. Planning",
-    icon: <ImCalendar size={20} />,
-  },
-  // Sales
-  {
-    imgURL: "/assets/heart.svg",
-    route: "/lvm/sales",
-    label: "Sales",
-    icon: <FaRegChartBar size={22} />,
-  },
-  {
-    imgURL: "/assets/heart.svg",
-    route: "/lvm/qa",
-    label: "Quality Assurance",
-    icon: <LiaPencilRulerSolid size={23} />,
-  },
-  {
-    imgURL: "/assets/create.svg",
-    route: "/lvm/qc",
-    label: "Quality Control",
-    icon: <HiOutlineShieldCheck size={23} />,
-  },
-  {
-    imgURL: "/assets/search.svg",
-    route: "/lvm/pm",
-    label: "Production Maintenance",
-    icon: <MdEngineering size={24} />,
-  },
-  {
-    imgURL: "/assets/search.svg",
-    route: "/lvm/fm",
-    label: "Facility Management",
-    icon: <LiaToolsSolid size={22} />,
-  },
-  {
-    imgURL: "/assets/community.svg",
-    route: "/lvm/hra",
-    label: "Human Resources",
-    icon: <HiOutlineUserGroup size={22} />,
-  },
+  }
 ];
 
 export default function Menu() {

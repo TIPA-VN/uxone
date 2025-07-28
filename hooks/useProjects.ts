@@ -29,7 +29,7 @@ export const useProjects = () => {
     name: string;
     description?: string;
     departments: string[];
-    documentTemplate?: string;
+    documentTemplateId?: string;
   }) => {
     try {
       const res = await fetch('/api/projects', {

@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         { username: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { department: { contains: search, mode: 'insensitive' } },
+        { centralDepartment: { contains: search, mode: 'insensitive' } },
         { departmentName: { contains: search, mode: 'insensitive' } },
         { role: { contains: search, mode: 'insensitive' } },
       ];
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         department: true,
+        centralDepartment: true,
         departmentName: true,
         role: true,
         isActive: true,

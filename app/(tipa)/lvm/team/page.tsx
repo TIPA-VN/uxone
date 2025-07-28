@@ -129,14 +129,21 @@ export default function TeamManagementPage() {
     efficiency: 0,
   });
 
-  // Check if user is a manager
-  const isManager = user && canAccessFeature(user.role as any, "teamManagement");
+  // Check if user has team management access
+  const hasTeamAccess = user && canAccessFeature(user.role as any, "teamManagement");
+  
+  // Check if user is a manager or above (has edit permissions)
+  const isManagerOrAbove = user && [
+    "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+    "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+    "MANAGER", "MANAGER_2"
+  ].includes(user.role);
 
   useEffect(() => {
-    if (user && isManager) {
+    if (user && hasTeamAccess) {
       fetchTeamData();
     }
-  }, [user, isManager]);
+  }, [user, hasTeamAccess]);
 
   const fetchTeamData = async () => {
     setLoading(true);
@@ -304,7 +311,7 @@ export default function TeamManagementPage() {
   }
 
   // Show access denied for non-managers
-  if (!isManager) {
+  if (!hasTeamAccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -329,9 +336,15 @@ export default function TeamManagementPage() {
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <Users className="w-8 h-8 text-blue-600" />
                 Team Management
+                {!isManagerOrAbove && (
+                  <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                    Read Only
+                  </span>
+                )}
               </h1>
               <p className="mt-2 text-gray-600">
                 Monitor team performance, tasks, and project KPIs
+                {!isManagerOrAbove && " (View only - Manager access required for editing)"}
               </p>
             </div>
             <div className="flex items-center gap-2">

@@ -15,7 +15,8 @@ model User {
   name           String?
   email          String?        @unique
   username       String         @unique
-  department     String?
+  department     String?        // Local department (defaults to "Operations")
+  centralDepartment String?     // Department from central API (emp_dept)
   departmentName String?
   role           String?
   hashedPassword String?        // Optional since we use central auth
@@ -43,6 +44,10 @@ model User {
   taskAttachments TaskAttachment[] @relation("TaskAttachmentUploader")
   taskComments   TaskComment[]  @relation("TaskCommentAuthor")
   projectComments ProjectComment[] @relation("ProjectCommentAuthor")
+  
+  // Document template relations
+  createdTemplates DocumentTemplate[] @relation("DocumentTemplateCreator")
+  createdDocumentNumbers DocumentNumber[] @relation("DocumentNumberCreator")
 
   @@map("users")
 }
@@ -239,6 +244,7 @@ model Project {
   members       ProjectMember[]
   comments      ProjectComment[]
   notes         Note[] // Notes related to this project
+  documentNumbers DocumentNumber[] @relation("ProjectDocuments")
 
   @@map("projects")
 }
@@ -390,4 +396,56 @@ model ProjectComment {
   updatedAt DateTime @updatedAt
 
   @@map("project_comments")
+}
+
+// Document Template Management System
+model DocumentTemplate {
+  id              String   @id @default(cuid())
+  templateName    String   // e.g., "Liên Lạc Nghiệp Vụ"
+  templateCode    String   @unique // e.g., "LLNV"
+  description     String?
+  isActive        Boolean  @default(true)
+  effectiveDate   DateTime @default(now())
+  revisionNumber  Int      @default(1)
+  currentSequence Int      @default(0) // For auto-generating document numbers
+  prefix          String   // e.g., "TIPA-LLNV"
+  year            Int      @default(2025)
+  
+  // Metadata
+  createdById     String
+  createdBy       User     @relation("DocumentTemplateCreator", fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  generatedDocuments DocumentNumber[] @relation("TemplateDocuments")
+
+  @@map("document_templates")
+}
+
+model DocumentNumber {
+  id                String   @id @default(cuid())
+  documentNumber    String   @unique // e.g., "TIPA-LLNV-2025-001"
+  templateId        String
+  template          DocumentTemplate @relation("TemplateDocuments", fields: [templateId], references: [id])
+  projectId         String?  // Optional - if linked to a project
+  project           Project? @relation("ProjectDocuments", fields: [projectId], references: [id])
+  sequenceNumber    Int      // e.g., 1, 2, 3...
+  year              Int      // e.g., 2025
+  status            DocumentNumberStatus @default(ACTIVE)
+  
+  // Metadata
+  createdById       String
+  createdBy         User     @relation("DocumentNumberCreator", fields: [createdById], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("document_numbers")
+}
+
+enum DocumentNumberStatus {
+  ACTIVE
+  USED
+  CANCELLED
+  EXPIRED
 }

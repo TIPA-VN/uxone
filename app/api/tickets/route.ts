@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { withRBAC } from "@/lib/rbac";
+import { getTicketsForUser, canUserCreateTicket } from "@/lib/rbac";
 
 export const runtime = 'nodejs';
 
 // GET /api/tickets - Get all tickets with filtering and pagination
-export async function GET(request: NextRequest) {
+export const GET = withRBAC(async (request: NextRequest) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+
 
     // Check if this is a fallback authentication session
     const isFallbackAuth = (session.user as any).isFallbackAuth;
@@ -27,76 +31,49 @@ export async function GET(request: NextRequest) {
     const assignedTo = searchParams.get("assignedTo");
     const search = searchParams.get("search");
 
-    // Build where clause
-    const where: any = {};
+    // Get role-based tickets for the user
+    const userTickets = await getTicketsForUser(
+      prisma, 
+      session.user.id, 
+      session.user.role, 
+      session.user.department || 'UNKNOWN'
+    );
+
+    // Apply additional filters to the role-based results
+    let filteredTickets = userTickets;
     
-    if (status) where.status = status;
-    if (priority) where.priority = priority;
-    if (category) where.category = category;
-    if (assignedTo) where.assignedToId = assignedTo;
-    
+    if (status) {
+      filteredTickets = filteredTickets.filter((ticket: any) => ticket.status === status);
+    }
+    if (priority) {
+      filteredTickets = filteredTickets.filter((ticket: any) => ticket.priority === priority);
+    }
+    if (category) {
+      filteredTickets = filteredTickets.filter((ticket: any) => ticket.category === category);
+    }
+    if (assignedTo) {
+      filteredTickets = filteredTickets.filter((ticket: any) => ticket.assignedToId === assignedTo);
+    }
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { customerName: { contains: search, mode: 'insensitive' } },
-        { customerEmail: { contains: search, mode: 'insensitive' } },
-        { ticketNumber: { contains: search, mode: 'insensitive' } },
-      ];
+      const searchLower = search.toLowerCase();
+      filteredTickets = filteredTickets.filter((ticket: any) => 
+        ticket.title.toLowerCase().includes(searchLower) ||
+        ticket.description.toLowerCase().includes(searchLower) ||
+        ticket.customerName.toLowerCase().includes(searchLower) ||
+        ticket.customerEmail.toLowerCase().includes(searchLower) ||
+        ticket.ticketNumber.toLowerCase().includes(searchLower)
+      );
     }
 
-    // Get tickets with pagination
-    const [tickets, total] = await Promise.all([
-      prisma.ticket.findMany({
-        where,
-        include: {
-          assignedTo: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              department: true,
-            }
-          },
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-            }
-          },
-          comments: {
-            select: {
-              id: true,
-              content: true,
-              authorType: true,
-              createdAt: true,
-            },
-            orderBy: {
-              createdAt: 'desc'
-            },
-            take: 1
-          },
-          _count: {
-            select: {
-              comments: true,
-              attachments: true,
-            }
-          }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.ticket.count({ where })
-    ]);
-
+    // Apply pagination
+    const total = filteredTickets.length;
     const totalPages = Math.ceil(total / limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
 
     return NextResponse.json({
-      tickets,
+      tickets: paginatedTickets,
       pagination: {
         total,
         page,
@@ -113,10 +90,10 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, "helpdesk:read");
 
 // POST /api/tickets - Create a new ticket
-export async function POST(request: NextRequest) {
+export const POST = withRBAC(async (request: NextRequest) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -127,6 +104,11 @@ export async function POST(request: NextRequest) {
     const isFallbackAuth = (session.user as any).isFallbackAuth;
     if (isFallbackAuth) {
       return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+    }
+
+    // Check if user can create tickets
+    if (!canUserCreateTicket(session.user.role)) {
+      return NextResponse.json({ error: "Insufficient permissions to create tickets" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -189,7 +171,7 @@ export async function POST(request: NextRequest) {
         customerName,
         customerId,
         assignedToId,
-        assignedTeam,
+        assignedTeam: assignedTeam || session.user.department || 'UNKNOWN',
         tags,
         createdById: session.user.id,
       },
@@ -220,4 +202,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}, "helpdesk:create"); 

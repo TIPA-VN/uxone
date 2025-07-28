@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { 
   ArrowLeft, Edit, MessageSquare, Paperclip, Clock, 
   AlertCircle, CheckCircle, XCircle, User, Mail, 
-  Calendar, Tag, MoreVertical, Send, Plus, Users, Search
+  Calendar, Tag, MoreVertical, Send, Plus, Users, Search, Activity
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -109,6 +109,17 @@ export default function TicketDetailPage() {
   const [filteredAgents, setFilteredAgents] = useState<Agent[]>([]);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
 
+  // Convert to task state
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedTaskAssigneeId, setSelectedTaskAssigneeId] = useState<string>("");
+  const [taskPriority, setTaskPriority] = useState<string>("");
+  const [estimatedHours, setEstimatedHours] = useState<number>(2);
+  const [createSubtasks, setCreateSubtasks] = useState(false);
+  const [conversionReason, setConversionReason] = useState("Converted from helpdesk ticket");
+
   // Get configuration data
   const priorityOptions = getTicketPriorities();
   const categoryOptions = getTicketCategories();
@@ -117,6 +128,7 @@ export default function TicketDetailPage() {
   useEffect(() => {
     fetchTicket();
     fetchAgents();
+    fetchProjects();
   }, [ticketId]);
 
   useEffect(() => {
@@ -161,6 +173,18 @@ export default function TicketDetailPage() {
       }
     } catch (err) {
       console.error('Failed to fetch agents:', err);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch('/api/projects?limit=100');
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data.projects || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch projects:', err);
     }
   };
 
@@ -260,6 +284,46 @@ export default function TicketDetailPage() {
       console.error('Failed to submit comment:', err);
     } finally {
       setSubmittingComment(false);
+    }
+  };
+
+  const handleConvertToTask = async () => {
+    if (!ticket) return;
+
+    setConverting(true);
+    try {
+      const response = await fetch(`/api/tickets/${ticketId}/convert-to-task`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: selectedProjectId || null,
+          assigneeId: selectedTaskAssigneeId || ticket.assignedTo?.id,
+          priority: taskPriority || ticket.priority,
+          estimatedHours,
+          createSubtasks,
+          conversionReason,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setShowConvertModal(false);
+        fetchTicket(); // Refresh to get updated ticket
+        
+        // Navigate to the created task
+        if (result.task) {
+          router.push(`/lvm/tasks/${result.task.id}`);
+        }
+      } else {
+        const error = await response.json();
+        console.error('Failed to convert ticket:', error);
+      }
+    } catch (err) {
+      console.error('Failed to convert ticket to task:', err);
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -529,13 +593,13 @@ export default function TicketDetailPage() {
                     </div>
                   )}
 
-                  <div className="pt-2 border-t border-gray-100">
+                  <div className="pt-2 border-t border-gray-100 space-y-2">
                     <Button 
-                      onClick={() => setShowAssignmentModal(true)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1"
+                      onClick={() => setShowConvertModal(true)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-xs px-3 py-1"
                     >
-                      <Users className="w-3 h-3 mr-1" />
-                      Assign Agent
+                      <Activity className="w-3 h-3 mr-1" />
+                      Convert to Task
                     </Button>
                   </div>
                 </CardContent>
@@ -713,6 +777,146 @@ export default function TicketDetailPage() {
                         </>
                       ) : (
                         'Assign Ticket'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Convert to Task Modal */}
+        {showConvertModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900">Convert to Task</h3>
+                  <button
+                    onClick={() => setShowConvertModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Project Selection */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Project (Optional)
+                    </label>
+                    <select
+                      value={selectedProjectId}
+                      onChange={(e) => setSelectedProjectId(e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+                    >
+                      <option value="">No project assigned</option>
+                      {projects.map(project => (
+                        <option key={project.id} value={project.id}>{project.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Task Assignee */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Assignee
+                    </label>
+                    <select
+                      value={selectedTaskAssigneeId}
+                      onChange={(e) => setSelectedTaskAssigneeId(e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+                    >
+                      <option value="">Unassigned</option>
+                      {agents.map(agent => (
+                        <option key={agent.id} value={agent.id}>{agent.name} (@{agent.username})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Priority */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Priority
+                    </label>
+                    <select
+                      value={taskPriority}
+                      onChange={(e) => setTaskPriority(e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+                    >
+                      <option value="">Use ticket priority ({ticket?.priority})</option>
+                      <option value="URGENT">Urgent</option>
+                      <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
+                    </select>
+                  </div>
+
+                  {/* Estimated Hours */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Estimated Hours
+                    </label>
+                    <input
+                      type="number"
+                      value={estimatedHours}
+                      onChange={(e) => setEstimatedHours(parseInt(e.target.value) || 2)}
+                      min="1"
+                      max="100"
+                      className="w-full px-2 py-1 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+                    />
+                  </div>
+
+                  {/* Create Subtasks */}
+                  <div>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={createSubtasks}
+                        onChange={(e) => setCreateSubtasks(e.target.checked)}
+                        className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-gray-700">Create subtasks (Investigate, Develop, Test, Deploy)</span>
+                    </label>
+                  </div>
+
+                  {/* Conversion Reason */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Conversion Reason
+                    </label>
+                    <textarea
+                      value={conversionReason}
+                      onChange={(e) => setConversionReason(e.target.value)}
+                      rows={2}
+                      className="w-full px-2 py-1 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs resize-none"
+                      placeholder="Reason for converting this ticket to a task..."
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex space-x-2 pt-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowConvertModal(false)}
+                      className="flex-1 text-xs px-3 py-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleConvertToTask}
+                      disabled={converting}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-xs px-3 py-1"
+                    >
+                      {converting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-white mr-1"></div>
+                          Converting...
+                        </>
+                      ) : (
+                        'Convert to Task'
                       )}
                     </Button>
                   </div>

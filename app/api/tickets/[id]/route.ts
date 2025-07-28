@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { withRBAC } from "@/lib/rbac";
+import { canUserAccessTicket, canUserUpdateTicket, canUserDeleteTicket, canTransitionTicketStatus } from "@/lib/rbac";
 
 export const runtime = 'nodejs';
 
 // GET /api/tickets/[id] - Get a specific ticket
-export async function GET(
+export const GET = withRBAC(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -82,6 +84,11 @@ export async function GET(
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
+    // Check if user can access this ticket
+    if (!canUserAccessTicket(session.user.role, session.user.department || 'UNKNOWN', ticket, session.user.id)) {
+      return NextResponse.json({ error: "Access denied to this ticket" }, { status: 403 });
+    }
+
     return NextResponse.json(ticket);
   } catch (error) {
     console.error('Error fetching ticket:', error);
@@ -90,13 +97,13 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+}, "helpdesk:read");
 
 // PATCH /api/tickets/[id] - Update a ticket
-export async function PATCH(
+export const PATCH = withRBAC(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -138,6 +145,18 @@ export async function PATCH(
 
     if (!existingTicket) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+    }
+
+    // Check if user can update this ticket
+    if (!canUserUpdateTicket(session.user.role, existingTicket, session.user.id)) {
+      return NextResponse.json({ error: "Insufficient permissions to update this ticket" }, { status: 403 });
+    }
+
+    // Validate status transition if status is being updated
+    if (status && status !== existingTicket.status) {
+      if (!canTransitionTicketStatus(session.user.role, existingTicket.status, status)) {
+        return NextResponse.json({ error: "Invalid status transition" }, { status: 400 });
+      }
     }
 
     // Update ticket
@@ -189,13 +208,13 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+}, "helpdesk:update");
 
 // DELETE /api/tickets/[id] - Delete a ticket
-export async function DELETE(
+export const DELETE = withRBAC(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -219,6 +238,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
+    // Check if user can delete this ticket
+    if (!canUserDeleteTicket(session.user.role)) {
+      return NextResponse.json({ error: "Insufficient permissions to delete tickets" }, { status: 403 });
+    }
+
     // Delete ticket (cascade will handle comments and attachments)
     await prisma.ticket.delete({
       where: { id }
@@ -232,4 +256,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}, "helpdesk:delete"); 

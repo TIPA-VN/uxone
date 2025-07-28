@@ -31,6 +31,13 @@ export async function GET(request: NextRequest) {
     const includeSubtasks = searchParams.get("includeSubtasks") === "true";
     const includeDependencies = searchParams.get("includeDependencies") === "true";
 
+    // Determine user's permission level
+    const isManagerOrAbove = [
+      "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+      "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+      "MANAGER", "MANAGER_2"
+    ].includes(session.user.role);
+
     const where: any = {};
 
     // Filter by project
@@ -64,6 +71,17 @@ export async function GET(request: NextRequest) {
     } else if (!includeSubtasks) {
       // Only show top-level tasks unless explicitly requesting subtasks
       where.parentTaskId = null;
+    }
+
+    // Department-based filtering - users can only see tasks from their department
+    // Managers and above can see all tasks, others see only their department
+    if (!isManagerOrAbove) {
+      where.OR = [
+        { assignee: { department: session.user.department } },
+        { owner: { department: session.user.department } },
+        { creator: { department: session.user.department } },
+        { project: { departments: { has: session.user.department } } }
+      ];
     }
 
     const include: any = {
@@ -171,7 +189,28 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    return NextResponse.json(tasks);
+    // Add permission information to each task
+    const tasksWithPermissions = tasks.map((task: any) => {
+      const isAssignee = task.assigneeId === session.user.id;
+      const isOwner = task.ownerId === session.user.id;
+      const isCreator = task.creatorId === session.user.id;
+      const isTeamAssigned = task.project?.departments?.includes(session.user.department);
+
+      return {
+        ...task,
+        permissions: {
+          canEdit: isManagerOrAbove || isAssignee || isOwner || isCreator,
+          canDelete: isManagerOrAbove || isOwner || isCreator,
+          canView: true,
+          isAssignee,
+          isOwner,
+          isCreator,
+          isTeamAssigned,
+        },
+      };
+    });
+
+    return NextResponse.json(tasksWithPermissions);
   } catch (error) {
     console.error("Error fetching tasks:", error);
     
@@ -515,14 +554,14 @@ export async function PATCH(request: NextRequest) {
 
         if (taskWithSubtasks && taskWithSubtasks.subtasks.length > 0) {
           const incompleteSubtasks = taskWithSubtasks.subtasks.filter(
-            subtask => subtask.status !== 'COMPLETED'
+            (subtask: any) => subtask.status !== 'COMPLETED'
           );
 
           if (incompleteSubtasks.length > 0) {
             return NextResponse.json(
               { 
                 error: "Cannot complete task with incomplete sub-tasks",
-                incompleteSubtasks: incompleteSubtasks.map(st => ({ id: st.id, title: st.title }))
+                incompleteSubtasks: incompleteSubtasks.map((st: any) => ({ id: st.id, title: st.title }))
               },
               { status: 400 }
             );
@@ -607,7 +646,7 @@ export async function PATCH(request: NextRequest) {
           },
         });
 
-        if (parentTask && parentTask.subtasks.every(subtask => subtask.status === 'COMPLETED')) {
+        if (parentTask && parentTask.subtasks.every((subtask: any) => subtask.status === 'COMPLETED')) {
           // All sub-tasks are completed, update parent task status
           await prisma.task.update({
             where: { id: parentTask.id },
@@ -630,7 +669,7 @@ export async function PATCH(request: NextRequest) {
           },
         });
 
-        if (projectTasks.every(task => task.status === 'COMPLETED')) {
+        if (projectTasks.every((task: any) => task.status === 'COMPLETED')) {
           // All tasks are completed, update project status
           await prisma.project.update({
             where: { id: updatedTask.project.id },

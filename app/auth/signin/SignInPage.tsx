@@ -36,7 +36,17 @@ export default function SignInPage() {
       });
 
       if (!result?.error) {
-        router.push("/");
+        // Get the user's department home page from the session
+        const response = await fetch('/api/auth/session');
+        const sessionData = await response.json();
+        
+        if (sessionData?.user?.department) {
+          const { getUserHomePage } = await import('@/config/app');
+          const userHomePage = getUserHomePage(sessionData.user.department);
+          router.push(userHomePage);
+        } else {
+          router.push("/lvm"); // Fallback
+        }
         router.refresh();
       } else {
         setError(

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Plus, Users, AlertCircle, Menu } from "lucide-react";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Project } from "@/types";
-import { APP_CONFIG, getDocumentTemplates } from "@/config/app";
+import { APP_CONFIG } from "@/config/app";
 
 export default function ProjectsPage() {
   const { data: session } = useSession();
@@ -28,7 +28,23 @@ export default function ProjectsPage() {
     createProject 
   } = useProjects();
 
-  const documentTemplates = getDocumentTemplates();
+  const [documentTemplates, setDocumentTemplates] = useState<any[]>([]);
+
+  // Fetch document templates from database
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch('/api/document-templates');
+        if (response.ok) {
+          const data = await response.json();
+          setDocumentTemplates(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch document templates:', error);
+      }
+    };
+    fetchTemplates();
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +55,7 @@ export default function ProjectsPage() {
       name, 
       description, 
       departments,
-      documentTemplate: documentTemplate || undefined
+      documentTemplateId: documentTemplate || undefined
     });
     
     if (success) {
@@ -270,9 +286,9 @@ export default function ProjectsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
                   <option value="">Select a document template</option>
-                  {documentTemplates.map(template => (
-                    <option key={template.value} value={template.value}>
-                      {template.label}
+                  {documentTemplates.map((template: any) => (
+                    <option key={template.id} value={template.id}>
+                      {template.templateName}
                     </option>
                   ))}
                 </select>

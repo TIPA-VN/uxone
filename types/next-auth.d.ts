@@ -6,6 +6,7 @@ declare module "next-auth" {
     username: string
     role: string
     department: string
+    centralDepartment: string
     departmentName: string
     position?: string | null
     isFallbackAuth?: boolean
@@ -20,6 +21,7 @@ declare module "next-auth" {
       username: string
       role: string
       department: string
+      centralDepartment: string
       departmentName: string
       position?: string | null
       isFallbackAuth?: boolean
@@ -33,6 +35,7 @@ declare module "next-auth/jwt" {
     username: string
     role: string
     department: string
+    centralDepartment: string
     departmentName: string
     position?: string | null
     isFallbackAuth?: boolean

@@ -42,71 +42,130 @@ export const APP_CONFIG = {
   version: "1.0.0",
   description: "Unified Project Management System",
 
-  // Departments Configuration
+  // Department Codes Configuration
+  departmentCodes: {
+    IS: "Information Systems",
+    QC: "Quality Control", 
+    QA: "Quality Assurance",
+    HR: "Human Resources",
+    FIN: "Finance",
+    LOG: "Logistics",
+    PROC: "Procurement",
+    PC: "Production Planning",
+    PM: "Production Maintenance",
+    FM: "Facility Management",
+    CS: "Customer Service",
+    RD: "Research & Development",
+    MKT: "Marketing",
+    SALES: "Sales",
+    OPS: "Operations",
+    ADMIN: "Administration"
+  },
+
+  // Department Home Pages Configuration
+  departmentHomePages: {
+    IS: "/lvm/helpdesk",           // Information Systems - Helpdesk management
+    QC: "/lvm/quality-control",    // Quality Control - Quality management
+    QA: "/lvm/quality-assurance",  // Quality Assurance - Testing & QA
+    HR: "/lvm/human-resources",    // Human Resources - HR management
+    FIN: "/lvm/finance",           // Finance - Financial management
+    LOG: "/lvm/logistics",         // Logistics - Supply chain
+    PROC: "/lvm/procurement",      // Procurement - Purchasing
+    PC: "/lvm/production-planning", // Production Planning - Planning
+    PM: "/lvm/production-maintenance", // Production Maintenance - Equipment
+    FM: "/lvm/facility-management", // Facility Management - Infrastructure
+    CS: "/lvm/customer-service",   // Customer Service - Support
+    RD: "/lvm/research-development", // Research & Development - R&D
+    MKT: "/lvm/marketing",         // Marketing - Marketing activities
+    SALES: "/lvm/sales",           // Sales - Sales management
+    OPS: "/lvm/operations",        // Operations - Operations management
+    ADMIN: "/lvm/admin",           // Administration - Admin panel
+    DEFAULT: "/lvm"                // Default fallback
+  },
+
+  // Departments Configuration (using department codes)
   departments: [
     {
-      value: "logistics",
+      value: "LOG",
       label: "Logistics",
+      code: "LOG",
       color: "bg-blue-500",
       description: "Supply chain and logistics management"
     },
     {
-      value: "procurement",
+      value: "PROC",
       label: "Procurement",
+      code: "PROC", 
       color: "bg-green-500",
       description: "Purchasing and procurement operations"
     },
     {
-      value: "pc",
+      value: "PC",
       label: "Production Planning",
+      code: "PC",
       color: "bg-purple-500",
       description: "Production planning and scheduling"
     },
     {
-      value: "qa",
+      value: "QA",
       label: "Quality Assurance",
+      code: "QA",
       color: "bg-yellow-500",
       description: "Quality assurance and testing"
     },
     {
-      value: "qc",
+      value: "QC",
       label: "Quality Control",
+      code: "QC",
       color: "bg-orange-500",
       description: "Quality control and inspection"
     },
     {
-      value: "pm",
+      value: "PM",
       label: "Production Maintenance",
+      code: "PM",
       color: "bg-red-500",
       description: "Production equipment maintenance"
     },
     {
-      value: "fm",
+      value: "FM",
       label: "Facility Management",
+      code: "FM",
       color: "bg-indigo-500",
       description: "Facility and infrastructure management"
     },
     {
-      value: "hra",
+      value: "HR",
       label: "Human Resources",
+      code: "HR",
       color: "bg-pink-500",
       description: "Human resources and personnel management"
     },
     {
-      value: "cs",
+      value: "CS",
       label: "Customer Service",
+      code: "CS",
       color: "bg-teal-500",
       description: "Customer service and support"
     },
     {
-      value: "sales",
+      value: "IS",
+      label: "Information Systems",
+      code: "IS",
+      color: "bg-cyan-500",
+      description: "IT and information systems management"
+    },
+    {
+      value: "SALES",
       label: "Sales",
+      code: "SALES",
       color: "bg-cyan-500",
       description: "Sales and business development"
     },
     {
       value: "LVM-EXPAT",
       label: "LVM EXPATS",
+      code: "LVM-EXPAT",
       color: "bg-gray-500",
       description: "LVM Expatriate team"
     }
@@ -114,6 +173,14 @@ export const APP_CONFIG = {
 
   // User Roles Configuration - Updated with comprehensive hierarchy
   roles: {
+    // System Administrator (Level 11) - Full system access
+    ADMIN: {
+      value: "ADMIN",
+      label: "System Administrator",
+      description: "Full system administrator with complete access",
+      level: 11,
+      permissions: ["*"] as Permission[]
+    },
     // Executive Level (Level 10-9)
     GENERAL_DIRECTOR: {
       value: "GENERAL DIRECTOR",
@@ -138,7 +205,8 @@ export const APP_CONFIG = {
         "projects:read", "projects:write", "projects:delete",
         "tasks:read", "tasks:write", "tasks:delete",
         "team:read", "team:write", "reports:read", "analytics:read",
-        "userManagement", "systemSettings"
+        "userManagement", "systemSettings",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:delete", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports", "helpdesk:admin"
       ] as Permission[]
     },
     ASSISTANT_GENERAL_MANAGER_2: {
@@ -150,7 +218,8 @@ export const APP_CONFIG = {
         "projects:read", "projects:write", "projects:delete",
         "tasks:read", "tasks:write", "tasks:delete",
         "team:read", "team:write", "reports:read", "analytics:read",
-        "userManagement", "systemSettings"
+        "userManagement", "systemSettings",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:delete", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports", "helpdesk:admin"
       ] as Permission[]
     },
 
@@ -164,7 +233,8 @@ export const APP_CONFIG = {
         "projects:read", "projects:write", "projects:delete",
         "tasks:read", "tasks:write", "tasks:delete",
         "team:read", "team:write", "reports:read", "analytics:read",
-        "userManagement"
+        "userManagement",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:delete", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports", "helpdesk:admin"
       ] as Permission[]
     },
     SENIOR_MANAGER_2: {
@@ -176,7 +246,8 @@ export const APP_CONFIG = {
         "projects:read", "projects:write", "projects:delete",
         "tasks:read", "tasks:write", "tasks:delete",
         "team:read", "team:write", "reports:read", "analytics:read",
-        "userManagement"
+        "userManagement",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:delete", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports", "helpdesk:admin"
       ] as Permission[]
     },
     ASSISTANT_SENIOR_MANAGER: {
@@ -187,7 +258,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read", "projects:write",
         "tasks:read", "tasks:write", "tasks:delete",
-        "team:read", "reports:read", "analytics:read"
+        "team:read", "reports:read", "analytics:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports"
       ] as Permission[]
     },
 
@@ -200,7 +272,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read", "projects:write",
         "tasks:read", "tasks:write",
-        "team:read", "reports:read"
+        "team:read", "reports:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports"
       ] as Permission[]
     },
     MANAGER_2: {
@@ -211,7 +284,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read", "projects:write",
         "tasks:read", "tasks:write",
-        "team:read", "reports:read"
+        "team:read", "reports:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports"
       ] as Permission[]
     },
     ASSISTANT_MANAGER: {
@@ -222,7 +296,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read", "projects:write",
         "tasks:read", "tasks:write",
-        "team:read"
+        "team:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     ASSISTANT_MANAGER_2: {
@@ -233,7 +308,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read", "projects:write",
         "tasks:read", "tasks:write",
-        "team:read"
+        "team:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
 
@@ -246,7 +322,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read",
         "tasks:read", "tasks:write",
-        "team:read"
+        "team:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     SUPERVISOR_2: {
@@ -257,7 +334,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read",
         "tasks:read", "tasks:write",
-        "team:read"
+        "team:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     LINE_LEADER: {
@@ -267,7 +345,8 @@ export const APP_CONFIG = {
       level: 3,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:resolve"
       ] as Permission[]
     },
 
@@ -280,7 +359,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read",
         "tasks:read", "tasks:write",
-        "analytics:read"
+        "analytics:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     TECHNICAL_SPECIALIST: {
@@ -290,7 +370,8 @@ export const APP_CONFIG = {
       level: 2,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     SENIOR_SPECIALIST: {
@@ -300,7 +381,8 @@ export const APP_CONFIG = {
       level: 2,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     SENIOR_SPECIALIST_2: {
@@ -310,7 +392,8 @@ export const APP_CONFIG = {
       level: 2,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     SPECIALIST: {
@@ -320,7 +403,8 @@ export const APP_CONFIG = {
       level: 2,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     SPECIALIST_2: {
@@ -330,7 +414,8 @@ export const APP_CONFIG = {
       level: 2,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
 
@@ -343,7 +428,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read",
         "tasks:read", "tasks:write",
-        "analytics:read"
+        "analytics:read",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     ENGINEER: {
@@ -353,7 +439,8 @@ export const APP_CONFIG = {
       level: 2,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
       ] as Permission[]
     },
     TECHNICIAN: {
@@ -363,7 +450,8 @@ export const APP_CONFIG = {
       level: 2,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:resolve"
       ] as Permission[]
     },
 
@@ -375,7 +463,8 @@ export const APP_CONFIG = {
       level: 1,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update"
       ] as Permission[]
     },
     ASSOCIATE: {
@@ -385,7 +474,8 @@ export const APP_CONFIG = {
       level: 1,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update"
       ] as Permission[]
     },
     SENIOR_STAFF: {
@@ -395,7 +485,8 @@ export const APP_CONFIG = {
       level: 1,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update"
       ] as Permission[]
     },
     STAFF: {
@@ -405,7 +496,8 @@ export const APP_CONFIG = {
       level: 1,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update"
       ] as Permission[]
     },
 
@@ -417,7 +509,8 @@ export const APP_CONFIG = {
       level: 0,
       permissions: [
         "projects:read",
-        "tasks:read", "tasks:write"
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create"
       ] as Permission[]
     },
     OPERATOR: {
@@ -427,7 +520,8 @@ export const APP_CONFIG = {
       level: 0,
       permissions: [
         "projects:read",
-        "tasks:read"
+        "tasks:read",
+        "helpdesk:read"
       ] as Permission[]
     },
     INTERN: {
@@ -437,7 +531,8 @@ export const APP_CONFIG = {
       level: 0,
       permissions: [
         "projects:read",
-        "tasks:read"
+        "tasks:read",
+        "helpdesk:read"
       ] as Permission[]
     }
   } as const,
@@ -467,13 +562,39 @@ export const APP_CONFIG = {
         ] as RoleName[],
         description: "Task creation and management"
       },
-      teamManagement: {
+      helpdeskManagement: {
         roles: [
           "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
           "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
           "MANAGER", "MANAGER_2"
         ] as RoleName[],
-        description: "Team member management and KPIs"
+        description: "Full helpdesk management access"
+      },
+      helpdeskAgent: {
+        roles: [
+          "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
+          "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
+          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN"
+        ] as RoleName[],
+        description: "Helpdesk agent access"
+      },
+      helpdeskViewer: {
+        roles: [
+          "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF", "SENIOR_OPERATOR", "OPERATOR", "INTERN"
+        ] as RoleName[],
+        description: "View-only helpdesk access"
+      },
+      teamManagement: {
+        roles: [
+          "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+          "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+          "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
+          "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
+          "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
+          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN",
+          "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF"
+        ] as RoleName[],
+        description: "Team member management and KPIs (read-only for team members, full access for managers+)"
       },
       analytics: {
         roles: [
@@ -545,13 +666,29 @@ export const APP_CONFIG = {
         ] as RoleName[],
         description: "Tasks page"
       },
+      helpdesk: {
+        roles: [
+          "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+          "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+          "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
+          "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
+          "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
+          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN",
+          "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF", "SENIOR_OPERATOR", "OPERATOR", "INTERN"
+        ] as RoleName[],
+        description: "Helpdesk main page"
+      },
       team: {
         roles: [
           "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
           "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
-          "MANAGER", "MANAGER_2"
+          "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
+          "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
+          "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
+          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN",
+          "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF"
         ] as RoleName[],
-        description: "Team management page"
+        description: "Team management page (read-only for team members, full access for managers+)"
       },
       admin: {
         roles: [
@@ -617,6 +754,38 @@ export const APP_CONFIG = {
           "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
           "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN",
           "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF", "SENIOR_OPERATOR"
+        ] as RoleName[],
+        DELETE: [
+          "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+          "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+          "MANAGER", "MANAGER_2"
+        ] as RoleName[]
+      },
+      tickets: {
+        GET: [
+          "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+          "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+          "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
+          "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
+          "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
+          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN",
+          "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF", "SENIOR_OPERATOR", "OPERATOR", "INTERN"
+        ] as RoleName[],
+        POST: [
+          "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+          "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+          "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
+          "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
+          "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
+          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN"
+        ] as RoleName[],
+        PUT: [
+          "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+          "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+          "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
+          "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
+          "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
+          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN"
         ] as RoleName[],
         DELETE: [
           "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
@@ -792,6 +961,169 @@ export const APP_CONFIG = {
 
   // Helpdesk Configuration
   helpdesk: {
+    // Permission Matrix for Helpdesk Operations
+    permissionMatrix: {
+      // System Administrator Level (Level 11) - Complete Access
+      ADMIN: {
+        roles: ["ADMIN"],
+        permissions: {
+          read: true,
+          create: true,
+          update: true,
+          delete: true,
+          assign: true,
+          resolve: true,
+          escalate: true,
+          reports: true,
+          admin: true,
+          departmentScope: "all"
+        }
+      },
+      // Executive Level (Level 10-9) - Full Access
+      EXECUTIVE: {
+        roles: ["GENERAL_DIRECTOR", "GENERAL_MANAGER"],
+        permissions: {
+          read: true,
+          create: true,
+          update: true,
+          delete: true,
+          assign: true,
+          resolve: true,
+          escalate: true,
+          reports: true,
+          admin: true,
+          departmentScope: "all"
+        }
+      },
+      // Senior Management Level (Level 8-7) - Full Management Access
+      SENIOR_MANAGEMENT: {
+        roles: ["ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2", "SENIOR_MANAGER", "SENIOR_MANAGER_2"],
+        permissions: {
+          read: true,
+          create: true,
+          update: true,
+          delete: true,
+          assign: true,
+          resolve: true,
+          escalate: true,
+          reports: true,
+          admin: true,
+          departmentScope: "all"
+        }
+      },
+      // Management Level (Level 6-5) - Department Management
+      MANAGEMENT: {
+        roles: ["ASSISTANT_SENIOR_MANAGER", "MANAGER", "MANAGER_2"],
+        permissions: {
+          read: true,
+          create: true,
+          update: true,
+          delete: false,
+          assign: true,
+          resolve: true,
+          escalate: true,
+          reports: true,
+          admin: false,
+          departmentScope: "own"
+        }
+      },
+      // Assistant Management Level (Level 4) - Limited Management
+      ASSISTANT_MANAGEMENT: {
+        roles: ["ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2"],
+        permissions: {
+          read: true,
+          create: true,
+          update: true,
+          delete: false,
+          assign: true,
+          resolve: true,
+          escalate: false,
+          reports: false,
+          admin: false,
+          departmentScope: "own"
+        }
+      },
+      // Supervision Level (Level 3) - Team Supervision
+      SUPERVISION: {
+        roles: ["SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER"],
+        permissions: {
+          read: true,
+          create: true,
+          update: true,
+          delete: false,
+          assign: true,
+          resolve: true,
+          escalate: false,
+          reports: false,
+          admin: false,
+          departmentScope: "own"
+        }
+      },
+      // Specialist Level (Level 2) - Technical Expertise
+      SPECIALIST: {
+        roles: ["CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2", "SPECIALIST", "SPECIALIST_2"],
+        permissions: {
+          read: true,
+          create: true,
+          update: false,
+          delete: false,
+          assign: true,
+          resolve: false,
+          escalate: false,
+          reports: false,
+          admin: false,
+          departmentScope: "all"
+        }
+      },
+      // Engineering Level (Level 2) - Technical Support
+      ENGINEERING: {
+        roles: ["SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN"],
+        permissions: {
+          read: true,
+          create: true,
+          update: false,
+          delete: false,
+          assign: true,
+          resolve: false,
+          escalate: false,
+          reports: false,
+          admin: false,
+          departmentScope: "all"
+        }
+      },
+      // Staff Level (Level 1) - Basic Operations
+      STAFF: {
+        roles: ["SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF"],
+        permissions: {
+          read: true,
+          create: true,
+          update: true,
+          delete: false,
+          assign: false,
+          resolve: false,
+          escalate: false,
+          reports: false,
+          admin: false,
+          departmentScope: "own"
+        }
+      },
+      // Operations Level (Level 0) - Limited Access
+      OPERATIONS: {
+        roles: ["SENIOR_OPERATOR", "OPERATOR", "INTERN"],
+        permissions: {
+          read: true,
+          create: false,
+          update: false,
+          delete: false,
+          assign: false,
+          resolve: false,
+          escalate: false,
+          reports: false,
+          admin: false,
+          departmentScope: "own"
+        }
+      }
+    },
     categories: [
       {
         value: "SUPPORT",
@@ -894,33 +1226,7 @@ export const APP_CONFIG = {
     ]
   },
 
-  // Document Templates Configuration
-  documentTemplates: [
-    {
-      value: "LLNV",
-      label: "Liên Lạc Nghiệp Vụ",
-      description: "Business Communication Document",
-      prefix: "LLNV",
-      color: "bg-blue-100 text-blue-800 border-blue-200",
-      icon: "MessageSquare" as const
-    },
-    {
-      value: "ECO",
-      label: "Engineer Change Request",
-      description: "Engineering Change Order Document",
-      prefix: "ECO",
-      color: "bg-green-100 text-green-800 border-green-200",
-      icon: "Wrench" as const
-    },
-    {
-      value: "INSP",
-      label: "Inspection Request",
-      description: "Quality Inspection Request Document",
-      prefix: "INSP",
-      color: "bg-orange-100 text-orange-800 border-orange-200",
-      icon: "Search" as const
-    }
-  ],
+
 } as const;
 
 // Type definitions for the config
@@ -934,7 +1240,7 @@ export type TicketCategory = typeof APP_CONFIG.helpdesk.categories[number]["valu
 export type TicketPriority = typeof APP_CONFIG.helpdesk.priorities[number]["value"];
 export type TicketStatus = typeof APP_CONFIG.helpdesk.statuses[number]["value"];
 
-export type DocumentTemplate = typeof APP_CONFIG.documentTemplates[number]["value"];
+
 
 // Helper functions
 export const getDepartmentByValue = (value: string) => {
@@ -1030,6 +1336,58 @@ export const getRolesByLevel = (minLevel: number) => {
 };
 
 export const getDepartments = () => APP_CONFIG.departments;
+
+// Department Code Mapping Functions
+export const getDepartmentCodes = () => APP_CONFIG.departmentCodes;
+
+export const getDepartmentNameByCode = (code: string): string | undefined => {
+  return APP_CONFIG.departmentCodes[code as keyof typeof APP_CONFIG.departmentCodes];
+};
+
+export const getDepartmentCodeByName = (name: string): string | undefined => {
+  const codes = Object.keys(APP_CONFIG.departmentCodes);
+  return codes.find(code => 
+    APP_CONFIG.departmentCodes[code as keyof typeof APP_CONFIG.departmentCodes] === name
+  );
+};
+
+export const getDepartmentByCode = (code: string) => {
+  return APP_CONFIG.departments.find(dept => dept.code === code);
+};
+
+export const mapUserDepartmentToCode = (userDepartment: string): string => {
+  // First try exact match
+  if (APP_CONFIG.departmentCodes[userDepartment as keyof typeof APP_CONFIG.departmentCodes]) {
+    return userDepartment;
+  }
+  
+  // Try case-insensitive match
+  const upperDepartment = userDepartment.toUpperCase();
+  if (APP_CONFIG.departmentCodes[upperDepartment as keyof typeof APP_CONFIG.departmentCodes]) {
+    return upperDepartment;
+  }
+  
+  // Try partial match by name
+  const codes = Object.keys(APP_CONFIG.departmentCodes);
+  const matchedCode = codes.find(code => {
+    const deptName = APP_CONFIG.departmentCodes[code as keyof typeof APP_CONFIG.departmentCodes];
+    return deptName.toLowerCase().includes(userDepartment.toLowerCase()) ||
+           userDepartment.toLowerCase().includes(deptName.toLowerCase());
+  });
+  
+  return matchedCode || userDepartment; // Return original if no match found
+};
+
+// Department Home Page Functions
+export const getDepartmentHomePage = (departmentCode: string): string => {
+  const normalizedCode = departmentCode?.toUpperCase().trim();
+  return APP_CONFIG.departmentHomePages[normalizedCode as keyof typeof APP_CONFIG.departmentHomePages] || APP_CONFIG.departmentHomePages.DEFAULT;
+};
+
+export const getUserHomePage = (userDepartment: string): string => {
+  const mappedDepartment = mapUserDepartmentToCode(userDepartment);
+  return getDepartmentHomePage(mappedDepartment);
+};
 export const getRoles = () => APP_CONFIG.roles;
 export const getTaskPriorities = () => APP_CONFIG.tasks.priorities;
 export const getTaskStatuses = () => APP_CONFIG.tasks.statuses;
@@ -1039,6 +1397,42 @@ export const getTicketCategories = () => APP_CONFIG.helpdesk.categories;
 export const getTicketPriorities = () => APP_CONFIG.helpdesk.priorities;
 export const getTicketStatuses = () => APP_CONFIG.helpdesk.statuses; 
 
-export const getDocumentTemplates = () => APP_CONFIG.documentTemplates;
-export const getDocumentTemplateByValue = (value: string) => 
-  APP_CONFIG.documentTemplates.find(template => template.value === value); 
+
+
+// Helpdesk Permission Matrix Helper Functions
+export const getHelpdeskPermissionMatrix = () => APP_CONFIG.helpdesk.permissionMatrix;
+
+export const getHelpdeskPermissionsForRole = (userRole: string) => {
+  const matrix = APP_CONFIG.helpdesk.permissionMatrix;
+  
+  for (const [level, config] of Object.entries(matrix)) {
+    if ((config.roles as readonly string[]).includes(userRole)) {
+      return config.permissions;
+    }
+  }
+  
+  // Default to OPERATIONS level if role not found
+  return matrix.OPERATIONS.permissions;
+};
+
+export const canUserPerformHelpdeskAction = (userRole: string, action: keyof typeof APP_CONFIG.helpdesk.permissionMatrix.EXECUTIVE.permissions) => {
+  const permissions = getHelpdeskPermissionsForRole(userRole);
+  return permissions[action] || false;
+};
+
+export const getHelpdeskDepartmentScope = (userRole: string) => {
+  const permissions = getHelpdeskPermissionsForRole(userRole);
+  return permissions.departmentScope;
+};
+
+export const getHelpdeskPermissionLevel = (userRole: string) => {
+  const matrix = APP_CONFIG.helpdesk.permissionMatrix;
+  
+  for (const [level, config] of Object.entries(matrix)) {
+    if ((config.roles as readonly string[]).includes(userRole)) {
+      return level;
+    }
+  }
+  
+  return 'OPERATIONS';
+}; 

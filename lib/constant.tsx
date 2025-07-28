@@ -31,6 +31,11 @@ export const SidebarLinks = [
         icon: <RiCustomerService2Fill />,
       },
       {
+        route: "/lvm/helpdesk",
+        label: "Helpdesk",
+        icon: <RiCustomerService2Fill />,
+      },
+      {
         route: "/lvm/logistics",
         label: "Logistics",
         icon: <GiCargoShip />,

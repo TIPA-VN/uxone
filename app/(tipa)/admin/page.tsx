@@ -18,7 +18,7 @@ import { useActivities } from "@/hooks/useActivities";
 
 // Define the permission structure
 type Permission = 'C' | 'R' | 'U' | 'D';
-type Function = 'Users' | 'Projects' | 'Tasks' | 'Team' | 'Reports' | 'Settings' | 'Security' | 'Database';
+type Function = 'Users' | 'Projects' | 'Tasks' | 'Team' | 'Reports' | 'Settings' | 'Security' | 'Database' | 'Helpdesk';
 type Role = keyof typeof APP_CONFIG.roles;
 
 interface RolePermissions {
@@ -85,6 +85,7 @@ export default function AdminDashboard() {
       Settings: { C: false, R: false, U: false, D: false },
       Security: { C: false, R: false, U: false, D: false },
       Database: { C: false, R: false, U: false, D: false },
+      Helpdesk: { C: false, R: false, U: false, D: false },
     };
   });
 
@@ -102,6 +103,7 @@ export default function AdminDashboard() {
       Settings: { C: true, R: true, U: true, D: true },
       Security: { C: true, R: true, U: true, D: true },
       Database: { C: true, R: true, U: true, D: true },
+      Helpdesk: { C: true, R: true, U: true, D: true },
     };
 
     // Executive Level
@@ -116,6 +118,7 @@ export default function AdminDashboard() {
         Settings: { C: false, R: true, U: false, D: false },
         Security: { C: false, R: true, U: false, D: false },
         Database: { C: false, R: false, U: false, D: false },
+        Helpdesk: { C: true, R: true, U: true, D: true },
       };
     });
 
@@ -131,6 +134,7 @@ export default function AdminDashboard() {
         Settings: { C: false, R: false, U: false, D: false },
         Security: { C: false, R: false, U: false, D: false },
         Database: { C: false, R: false, U: false, D: false },
+        Helpdesk: { C: true, R: true, U: true, D: true },
       };
     });
 
@@ -146,6 +150,7 @@ export default function AdminDashboard() {
         Settings: { C: false, R: false, U: false, D: false },
         Security: { C: false, R: false, U: false, D: false },
         Database: { C: false, R: false, U: false, D: false },
+        Helpdesk: { C: true, R: true, U: true, D: false },
       };
     });
 
@@ -161,6 +166,7 @@ export default function AdminDashboard() {
         Settings: { C: false, R: false, U: false, D: false },
         Security: { C: false, R: false, U: false, D: false },
         Database: { C: false, R: false, U: false, D: false },
+        Helpdesk: { C: true, R: true, U: true, D: false },
       };
     });
 
@@ -176,6 +182,7 @@ export default function AdminDashboard() {
         Settings: { C: false, R: false, U: false, D: false },
         Security: { C: false, R: false, U: false, D: false },
         Database: { C: false, R: false, U: false, D: false },
+        Helpdesk: { C: true, R: true, U: true, D: false },
       };
     });
 
@@ -191,6 +198,7 @@ export default function AdminDashboard() {
         Settings: { C: false, R: false, U: false, D: false },
         Security: { C: false, R: false, U: false, D: false },
         Database: { C: false, R: false, U: false, D: false },
+        Helpdesk: { C: true, R: true, U: true, D: false },
       };
     });
 
@@ -206,6 +214,7 @@ export default function AdminDashboard() {
         Settings: { C: false, R: false, U: false, D: false },
         Security: { C: false, R: false, U: false, D: false },
         Database: { C: false, R: false, U: false, D: false },
+        Helpdesk: { C: true, R: true, U: true, D: false },
       };
     });
 
@@ -219,6 +228,7 @@ export default function AdminDashboard() {
       Settings: { C: false, R: false, U: false, D: false },
       Security: { C: false, R: false, U: false, D: false },
       Database: { C: false, R: false, U: false, D: false },
+      Helpdesk: { C: true, R: true, U: false, D: false },
     };
 
     return defaults;
@@ -794,6 +804,12 @@ export default function AdminDashboard() {
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                             <div className="flex flex-col items-center">
                               <span>Database</span>
+                              <span className="text-xs text-gray-400">C/R/U/D</span>
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                            <div className="flex flex-col items-center">
+                              <span>Helpdesk</span>
                               <span className="text-xs text-gray-400">C/R/U/D</span>
                             </div>
                           </th>

@@ -1,6 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { generateDocumentNumber } from "@/lib/documentNumberGenerator";
+
+// Type definitions for better type safety
+interface ProjectWithCounts {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  startDate?: Date;
+  endDate?: Date;
+  budget?: number;
+  ownerId: string;
+  departments: string[];
+  documentTemplate?: string;
+  documentNumber?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  owner: {
+    id: string;
+    name?: string;
+    username: string;
+    department?: string;
+    departmentName?: string;
+  };
+  _count: {
+    tasks: number;
+    documents: number;
+    comments: number;
+    members: number;
+    completedTasks?: number;
+  };
+}
+
+interface TaskWithBasicInfo {
+  id: string;
+  title: string;
+  status: string;
+  parentTaskId?: string;
+}
 
 // GET /api/projects - Get all projects with enhanced filtering and KPI data
 export async function GET(request: NextRequest) {
@@ -26,6 +65,13 @@ export async function GET(request: NextRequest) {
     const includeMembers = searchParams.get("includeMembers") === "true";
     const includeKPI = searchParams.get("includeKPI") === "true";
 
+    // Determine user's permission level
+    const isManagerOrAbove = [
+      "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+      "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+      "MANAGER", "MANAGER_2"
+    ].includes(session.user.role);
+
     const where: any = {};
 
     // Filter by status
@@ -45,6 +91,16 @@ export async function GET(request: NextRequest) {
           userId: memberId,
         },
       };
+    }
+
+    // Department-based filtering - users can only see projects from their department
+    // Managers and above can see all projects, others see only their department
+    if (!isManagerOrAbove) {
+      where.OR = [
+        { departments: { has: session.user.department } },
+        { owner: { department: session.user.department } },
+        { members: { some: { user: { department: session.user.department } } } }
+      ];
     }
 
     const include: any = {
@@ -125,7 +181,7 @@ export async function GET(request: NextRequest) {
 
     // Add completed task counts to each project
     const projectsWithTaskCounts = await Promise.all(
-      projects.map(async (project) => {
+      projects.map(async (project: ProjectWithCounts) => {
         const completedTasksCount = await prisma.task.count({
           where: {
             projectId: project.id,
@@ -133,11 +189,24 @@ export async function GET(request: NextRequest) {
           },
         });
 
+        // Determine project-specific permissions
+        const isOwner = project.ownerId === session.user.id;
+        const isTeamMember = (project as any).members?.some((member: any) => member.userId === session.user.id);
+        const isTeamAssigned = project.departments?.includes(session.user.department);
+
         return {
           ...project,
           _count: {
             ...(project as any)._count,
             completedTasks: completedTasksCount,
+          },
+          permissions: {
+            canEdit: isManagerOrAbove || isOwner,
+            canDelete: isManagerOrAbove || isOwner,
+            canView: true,
+            isOwner,
+            isTeamMember,
+            isTeamAssigned,
           },
         };
       })
@@ -146,15 +215,15 @@ export async function GET(request: NextRequest) {
     // Calculate KPI data if requested
     if (includeKPI) {
       const projectsWithKPI = await Promise.all(
-        projectsWithTaskCounts.map(async (project) => {
+        projectsWithTaskCounts.map(async (project: ProjectWithCounts) => {
           const taskStats = await prisma.task.groupBy({
             by: ["status"],
             where: { projectId: project.id },
             _count: { id: true },
           });
 
-          const totalTasks = taskStats.reduce((sum, stat) => sum + stat._count.id, 0);
-          const completedTasks = taskStats.find(stat => stat.status === "COMPLETED")?._count.id || 0;
+          const totalTasks = taskStats.reduce((sum: number, stat: { _count: { id: number } }) => sum + stat._count.id, 0);
+          const completedTasks = taskStats.find((stat: { status: string; _count: { id: number } }) => stat.status === "COMPLETED")?._count.id || 0;
 
           return {
             ...project,
@@ -218,7 +287,7 @@ export async function POST(request: NextRequest) {
       departments = [],
       tags = [],
       teamMembers = [],
-      documentTemplate,
+      documentTemplateId,
     } = body;
 
     if (!name) {
@@ -230,30 +299,18 @@ export async function POST(request: NextRequest) {
 
     // Generate document number if template is provided
     let documentNumber = null;
-    if (documentTemplate) {
-      const now = new Date();
-      const year = String(now.getFullYear()).slice(-2);
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const dateString = `${year}${month}${day}`;
-      
-      const lastProject = await prisma.project.findFirst({
-        where: {
-          documentTemplate: documentTemplate,
-          documentNumber: {
-            startsWith: `TIPA-${documentTemplate}-${dateString}-`
-          }
-        },
-        orderBy: {
-          documentNumber: 'desc'
-        }
-      });
-
-      if (lastProject) {
-        const lastNumber = parseInt(lastProject.documentNumber!.split('-')[3]);
-        documentNumber = `TIPA-${documentTemplate}-${dateString}-${String(lastNumber + 1).padStart(3, '0')}`;
-      } else {
-        documentNumber = `TIPA-${documentTemplate}-${dateString}-001`;
+    let generatedDocumentNumber = null;
+    
+    if (documentTemplateId) {
+      try {
+        generatedDocumentNumber = await generateDocumentNumber(documentTemplateId, undefined, session.user.id);
+        documentNumber = generatedDocumentNumber.documentNumber;
+      } catch (error) {
+        console.error("Error generating document number:", error);
+        return NextResponse.json(
+          { error: "Failed to generate document number" },
+          { status: 400 }
+        );
       }
     }
 
@@ -275,7 +332,7 @@ export async function POST(request: NextRequest) {
         where: { id: { in: teamMembers } },
         select: { id: true },
       });
-      const validUserIds = validUsers.map(user => user.id);
+      const validUserIds = validUsers.map((user: { id: string }) => user.id);
       const invalidMembers = teamMembers.filter((id: string) => !validUserIds.includes(id));
       
       if (invalidMembers.length > 0) {
@@ -296,7 +353,7 @@ export async function POST(request: NextRequest) {
         budget: budget ? parseFloat(budget) : null,
         ownerId: currentUser.id, // Use the verified user ID
         departments,
-        documentTemplate,
+        documentTemplate: documentTemplateId,
         documentNumber,
         members: {
           create: teamMembers.map((memberId: string) => ({
@@ -338,6 +395,14 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Link the generated document number to the project if it exists
+    if (generatedDocumentNumber) {
+      await prisma.documentNumber.update({
+        where: { id: generatedDocumentNumber.id },
+        data: { projectId: project.id },
+      });
+    }
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
@@ -415,30 +480,30 @@ export async function PATCH(request: NextRequest) {
         });
 
         // Separate main tasks and sub-tasks
-        const mainTasks = projectTasks.filter(task => !task.parentTaskId);
-        const subTasks = projectTasks.filter(task => task.parentTaskId);
+        const mainTasks = projectTasks.filter((task: TaskWithBasicInfo) => !task.parentTaskId);
+        const subTasks = projectTasks.filter((task: TaskWithBasicInfo) => task.parentTaskId);
 
         // Check if any main tasks are incomplete
-        const incompleteMainTasks = mainTasks.filter(task => task.status !== 'COMPLETED');
+        const incompleteMainTasks = mainTasks.filter((task: TaskWithBasicInfo) => task.status !== 'COMPLETED');
         if (incompleteMainTasks.length > 0) {
           return NextResponse.json(
             { 
               error: "Cannot complete project with incomplete tasks",
               projectId: projectId,
-              incompleteTasks: incompleteMainTasks.map(t => ({ id: t.id, title: t.title }))
+              incompleteTasks: incompleteMainTasks.map((t: TaskWithBasicInfo) => ({ id: t.id, title: t.title }))
             },
             { status: 400 }
           );
         }
 
         // Check if any sub-tasks are incomplete
-        const incompleteSubTasks = subTasks.filter(task => task.status !== 'COMPLETED');
+        const incompleteSubTasks = subTasks.filter((task: TaskWithBasicInfo) => task.status !== 'COMPLETED');
         if (incompleteSubTasks.length > 0) {
           return NextResponse.json(
             { 
               error: "Cannot complete project with incomplete sub-tasks",
               projectId: projectId,
-              incompleteSubTasks: incompleteSubTasks.map(t => ({ id: t.id, title: t.title }))
+              incompleteSubTasks: incompleteSubTasks.map((t: TaskWithBasicInfo) => ({ id: t.id, title: t.title }))
             },
             { status: 400 }
           );

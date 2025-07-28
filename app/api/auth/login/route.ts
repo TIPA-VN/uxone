@@ -10,10 +10,8 @@ export async function POST(request: Request) {
     const { username, password } = body
   
 
-    // Use a specific salt (3)
-    const salt = bcrypt.genSaltSync(3)
-    const hashedPassword = bcrypt.hashSync(password, salt)
-
+    // Hash password with salt rounds 12 (as expected by central API)
+    const hashedPassword = await bcrypt.hash(password, 12)
 
     // Call central authentication API
     const response = await fetch("http://10.116.3.138:8888/api/web_check_login", {
@@ -23,7 +21,6 @@ export async function POST(request: Request) {
     })
 
     const data = await response.json()
-
 
     if (!response.ok) {
       return NextResponse.json(

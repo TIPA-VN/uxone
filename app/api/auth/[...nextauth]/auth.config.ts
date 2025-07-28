@@ -19,7 +19,8 @@ const ADMIN_CREDENTIALS = {
 const ADMIN_OVERRIDE_USERS = [
   'administrator', // Your username
   'admin',
-  // '22023312', // Add your actual username here
+  '22023312', // Add your actual username here
+  'ericnguyen', // Add your username here
   // Add more admin usernames as needed
 ];
 
@@ -30,7 +31,13 @@ function shouldOverrideToAdmin(username: string): boolean {
 
 // Map central API positions to our role system
 function mapPositionToRole(position: string): string {
+  // Normalize the position to uppercase for consistent matching
+  const normalizedPosition = position?.toUpperCase().trim();
+  
   const positionMap: { [key: string]: string } = {
+    // System Administrator
+    'ADMIN': 'ADMIN',
+    
     // Executive Level
     'GENERAL DIRECTOR': 'GENERAL_DIRECTOR',
     'GENERAL MANAGER': 'GENERAL_MANAGER',
@@ -79,27 +86,28 @@ function mapPositionToRole(position: string): string {
   };
   
   // Return mapped role or default to STAFF if position not found
-  return positionMap[position] || 'STAFF';
+  return positionMap[normalizedPosition] || 'STAFF';
 }
 
 // Check if central API is available
 async function isCentralApiAvailable(): Promise<boolean> {
   try {
-    // Just check if the central API endpoint is reachable
+    // Just check if the endpoint is reachable with a simple request
     const response = await fetch("http://10.116.3.138:8888/api/web_check_login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        username: "health_check", 
-        password: "health_check" 
+        username: "test", 
+        password: "test" 
       }),
-      // Short timeout to fail fast
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(5000)
     })
     
-    // Consider it available if we get any response (even if auth fails)
-    return true // If we get here, the API is reachable
+    // If we get any response (even 401 for wrong credentials), the API is available
+    console.log("Central API response status:", response.status)
+    return true
   } catch (error) {
+    console.log("Central API check failed:", error)
     return false
   }
 }
@@ -132,44 +140,46 @@ export const authConfig = {
           throw new Error('Missing credentials')
         }
 
-        try {
+                try {
           // First, check if central API is available
           const centralApiAvailable = await isCentralApiAvailable()
+          console.log("Central API available:", centralApiAvailable)
           
           // If central API is down, check for admin fallback authentication
           if (!centralApiAvailable) {
-            const isAdmin = await validateAdminCredentials(
-              credentials.username as string, 
-              credentials.password as string
-            )
-            
-            if (isAdmin) {
+              const isAdmin = await validateAdminCredentials(
+                credentials.username as string, 
+                credentials.password as string
+              )
               
-              // Create a virtual admin user without database access
-              const virtualAdminUser = {
-                id: 'admin-fallback-' + Date.now(),
-                username: ADMIN_CREDENTIALS.username,
-                name: ADMIN_CREDENTIALS.name,
-                email: ADMIN_CREDENTIALS.email,
-                department: ADMIN_CREDENTIALS.department,
-                departmentName: ADMIN_CREDENTIALS.departmentName,
-                role: ADMIN_CREDENTIALS.role,
-                hashedPassword: process.env.ADMIN_FALLBACK_HASHED_PASSWORD || '',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              };
+              if (isAdmin) {
+                
+                // Create a virtual admin user without database access
+                const virtualAdminUser = {
+                  id: 'admin-fallback-' + Date.now(),
+                  username: ADMIN_CREDENTIALS.username,
+                  name: ADMIN_CREDENTIALS.name,
+                  email: ADMIN_CREDENTIALS.email,
+                  department: ADMIN_CREDENTIALS.department,
+                  departmentName: ADMIN_CREDENTIALS.departmentName,
+                  role: ADMIN_CREDENTIALS.role,
+                  hashedPassword: process.env.ADMIN_FALLBACK_HASHED_PASSWORD || '',
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                };
 
-              return {
-                id: virtualAdminUser.id,
-                name: virtualAdminUser.name || virtualAdminUser.username,
-                email: virtualAdminUser.email || `${virtualAdminUser.username}@tipa.co.th`,
-                username: virtualAdminUser.username,
-                department: virtualAdminUser.department || 'IT',
-                departmentName: virtualAdminUser.departmentName || 'Information Technology',
-                role: virtualAdminUser.role || 'GENERAL DIRECTOR',
-                position: virtualAdminUser.departmentName || 'Information Technology',
-                isFallbackAuth: true, // Flag to indicate fallback authentication
-              }
+                return {
+                  id: virtualAdminUser.id,
+                  name: virtualAdminUser.name || virtualAdminUser.username,
+                  email: virtualAdminUser.email || `${virtualAdminUser.username}@tipa.co.th`,
+                  username: virtualAdminUser.username,
+                  department: virtualAdminUser.department || 'IT',
+                  centralDepartment: virtualAdminUser.department || 'IT',
+                  departmentName: virtualAdminUser.departmentName || 'Information Technology',
+                  role: virtualAdminUser.role || 'GENERAL DIRECTOR',
+                  position: virtualAdminUser.departmentName || 'Information Technology',
+                  isFallbackAuth: true, // Flag to indicate fallback authentication
+                }
             } else {
               throw new Error('Central authentication service is unavailable. Only admin accounts can access the system.')
             }
@@ -177,6 +187,7 @@ export const authConfig = {
 
           // Central API is available, proceed with normal authentication
           const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+          console.log("Attempting authentication with central API...")
           
           try {
             const response = await fetch(`${baseUrl}/api/auth/login`, {
@@ -209,20 +220,11 @@ export const authConfig = {
 
             // Check if this user should have admin override
             const isAdminOverride = shouldOverrideToAdmin(data.emp_code);
+            
             const mappedRole = mapPositionToRole(data.emp_pos);
             const finalRole = isAdminOverride ? 'ADMIN' : mappedRole;
 
-            // Debug logging for admin override and role mapping
-            if (isAdminOverride) {
-              console.log(`🔐 Admin override applied for user: ${data.emp_code}`);
-              console.log(`   Original position from central API: ${data.emp_pos}`);
-              console.log(`   Mapped role: ${mappedRole}`);
-              console.log(`   Final role: ${finalRole}`);
-            } else {
-              console.log(`🔄 Role mapping for user: ${data.emp_code}`);
-              console.log(`   Original position from central API: ${data.emp_pos}`);
-              console.log(`   Mapped to role: ${finalRole}`);
-            }
+
 
             // Upsert the user in the local DB with the latest info from the central API
             await prisma.user.upsert({
@@ -230,15 +232,17 @@ export const authConfig = {
               update: {
                 name: data.emp_name || data.emp_code,
                 email: data.email || `${data.emp_code}@tipa.co.th`,
-                department: data.emp_dept || 'UNKNOWN',
+                centralDepartment: data.emp_dept || 'UNKNOWN', // Always update central department
                 departmentName: data.emp_dept_name || 'Unknown Department',
                 role: finalRole, // Use admin override if applicable
+                // Note: department field is NOT updated on subsequent logins
               },
               create: {
                 username: data.emp_code,
                 name: data.emp_name || data.emp_code,
                 email: data.email || `${data.emp_code}@tipa.co.th`,
-                department: data.emp_dept || 'UNKNOWN',
+                department: 'OPS', // Default to Operations for new users
+                centralDepartment: data.emp_dept || 'UNKNOWN', // Store central department
                 departmentName: data.emp_dept_name || 'Unknown Department',
                 role: finalRole, // Use admin override if applicable
                 hashedPassword: '',
@@ -260,7 +264,8 @@ export const authConfig = {
               name: dbUser.name || dbUser.username,
               email: dbUser.email || `${dbUser.username}@tipa.co.th`,
               username: dbUser.username,
-              department: dbUser.department || 'UNKNOWN',
+              department: dbUser.department || 'OPS', // Local department (defaults to Operations)
+              centralDepartment: dbUser.centralDepartment || 'UNKNOWN', // Central API department
               departmentName: dbUser.departmentName || 'Unknown Department',
               role: dbUser.role || 'USER',
               position: dbUser.departmentName || 'Unknown Department',
@@ -299,6 +304,7 @@ export const authConfig = {
                 department: virtualAdminUser.department || 'IT',
                 departmentName: virtualAdminUser.departmentName || 'Information Technology',
                 role: virtualAdminUser.role || 'GENERAL DIRECTOR',
+                centralDepartment: virtualAdminUser.department || 'IT',
                 position: virtualAdminUser.departmentName || 'Information Technology',
                 isFallbackAuth: true, // Flag to indicate fallback authentication
               }
@@ -321,12 +327,24 @@ export const authConfig = {
     error: '/auth/error',
   },
   callbacks: {
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      // After successful sign in, redirect to LVM (department routing handled in main page)
+      if (url.startsWith(baseUrl)) {
+        return `${baseUrl}/lvm`
+      }
+      // Allows relative callback URLs
+      else if (url.startsWith("/")) {
+        return `${baseUrl}${url}`
+      }
+      return baseUrl
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
         token.username = user.username
         token.role = user.role
         token.department = user.department
+        token.centralDepartment = user.centralDepartment
         token.departmentName = user.departmentName
         token.position = user.position
         token.isFallbackAuth = user.isFallbackAuth
@@ -341,6 +359,7 @@ export const authConfig = {
           username: token.username as string,
           role: token.role as string,
           department: token.department as string,
+          centralDepartment: token.centralDepartment as string,
           departmentName: token.departmentName as string,
           position: (token.position as string | null) || 'Unknown',
           isFallbackAuth: token.isFallbackAuth as boolean,

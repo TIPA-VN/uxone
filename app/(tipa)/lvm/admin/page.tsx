@@ -4,32 +4,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-  Truck, 
-  Package, 
-  MapPin, 
-  BarChart3, 
+  Users, 
   Settings, 
+  Shield, 
+  BarChart3, 
+  Database, 
   Plus,
-  Clock,
-  CheckCircle,
+  Activity,
   AlertCircle,
-  Warehouse
+  CheckCircle
 } from "lucide-react";
 import Link from "next/link";
 
-export default function LogisticsHomePage() {
+export default function AdminHomePage() {
   // Mock data - replace with real data from your API
   const stats = {
-    totalShipments: 234,
-    inTransit: 45,
-    delivered: 189,
-    delayed: 3
+    totalUsers: 156,
+    activeUsers: 142,
+    systemAlerts: 2,
+    pendingApprovals: 8
   };
 
-  const recentShipments = [
-    { id: "LOG-001", destination: "Bangkok", status: "in-transit", carrier: "Express Logistics", eta: "2025-01-28" },
-    { id: "LOG-002", destination: "Chiang Mai", status: "delivered", carrier: "FastTrack", eta: "2025-01-27" },
-    { id: "LOG-003", destination: "Phuket", status: "delayed", carrier: "SpeedShip", eta: "2025-01-29" },
+  const recentActivities = [
+    { id: 1, action: "User created", user: "john.doe", timestamp: "2025-01-27 14:30", status: "completed" },
+    { id: 2, action: "Role updated", user: "jane.smith", timestamp: "2025-01-27 13:45", status: "completed" },
+    { id: 3, action: "System backup", user: "system", timestamp: "2025-01-27 12:00", status: "completed" },
   ];
 
   return (
@@ -37,19 +36,19 @@ export default function LogisticsHomePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Logistics Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Administration Dashboard</h1>
           <p className="text-gray-600 mt-2">
-            Supply chain and logistics management system
+            System administration and user management
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            Logistics Department
+          <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+            Admin Department
           </Badge>
           <Button asChild>
-            <Link href="/lvm/logistics/shipments/new">
+            <Link href="/lvm/admin/users/new">
               <Plus className="w-4 h-4 mr-2" />
-              New Shipment
+              New User
             </Link>
           </Button>
         </div>
@@ -59,52 +58,52 @@ export default function LogisticsHomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Shipments</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalShipments}</div>
+            <div className="text-2xl font-bold">{stats.totalUsers}</div>
             <p className="text-xs text-muted-foreground">
-              This month
+              Registered users
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Transit</CardTitle>
-            <Truck className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.inTransit}</div>
-            <p className="text-xs text-muted-foreground">
-              Currently shipping
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.delivered}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.activeUsers}</div>
             <p className="text-xs text-muted-foreground">
-              Successfully delivered
+              Currently active
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delayed</CardTitle>
+            <CardTitle className="text-sm font-medium">System Alerts</CardTitle>
             <AlertCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.delayed}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.systemAlerts}</div>
             <p className="text-xs text-muted-foreground">
-              Behind schedule
+              Requires attention
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+            <Activity className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pendingApprovals}</div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting approval
             </p>
           </CardContent>
         </Card>
@@ -113,125 +112,121 @@ export default function LogisticsHomePage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/shipments">
+          <Link href="/lvm/admin/users">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Truck className="h-5 w-5 text-blue-600" />
-                <span>Shipments</span>
+                <Users className="h-5 w-5 text-blue-600" />
+                <span>User Management</span>
               </CardTitle>
               <CardDescription>
-                Track and manage all shipments
+                Manage system users and permissions
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/shipments/new">
+          <Link href="/lvm/admin/roles">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Plus className="h-5 w-5 text-green-600" />
-                <span>New Shipment</span>
+                <Shield className="h-5 w-5 text-green-600" />
+                <span>Role Management</span>
               </CardTitle>
               <CardDescription>
-                Create a new shipment order
+                Configure roles and permissions
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/inventory">
+          <Link href="/lvm/admin/departments">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Warehouse className="h-5 w-5 text-purple-600" />
-                <span>Inventory</span>
+                <Database className="h-5 w-5 text-purple-600" />
+                <span>Department Codes</span>
               </CardTitle>
               <CardDescription>
-                Manage warehouse inventory
+                Manage department configurations
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/routes">
+          <Link href="/lvm/admin/document-templates">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <MapPin className="h-5 w-5 text-indigo-600" />
-                <span>Routes</span>
+                <BarChart3 className="h-5 w-5 text-indigo-600" />
+                <span>Document Templates</span>
               </CardTitle>
               <CardDescription>
-                Optimize delivery routes
+                Manage document templates
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/reports">
+          <Link href="/lvm/admin/system">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5 text-teal-600" />
-                <span>Logistics Reports</span>
+                <Settings className="h-5 w-5 text-teal-600" />
+                <span>System Settings</span>
               </CardTitle>
               <CardDescription>
-                View logistics analytics and reports
+                Configure system-wide settings
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/settings">
+          <Link href="/lvm/admin/audit">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Settings className="h-5 w-5 text-gray-600" />
-                <span>Logistics Settings</span>
+                <Activity className="h-5 w-5 text-gray-600" />
+                <span>Audit Logs</span>
               </CardTitle>
               <CardDescription>
-                Configure logistics settings
+                View system audit trails
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
       </div>
 
-      {/* Recent Shipments */}
+      {/* Recent Activities */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Shipments</CardTitle>
+          <CardTitle>Recent System Activities</CardTitle>
           <CardDescription>
-            Latest shipments and their delivery status
+            Latest administrative activities and changes
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentShipments.map((shipment) => (
-              <div key={shipment.id} className="flex items-center justify-between p-4 border rounded-lg">
+            {recentActivities.map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div>
-                    <p className="font-medium">{shipment.destination}</p>
-                    <p className="text-sm text-gray-500">ID: {shipment.id}</p>
+                    <p className="font-medium">{activity.action}</p>
+                    <p className="text-sm text-gray-500">User: {activity.user}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <Badge 
-                    variant={shipment.status === 'delivered' ? 'default' : 
-                           shipment.status === 'in-transit' ? 'secondary' : 'destructive'}
-                  >
-                    {shipment.status}
+                  <Badge variant="outline">
+                    {activity.status}
                   </Badge>
-                  <p className="text-sm text-gray-500">{shipment.carrier}</p>
-                  <p className="text-sm text-gray-500">ETA: {shipment.eta}</p>
+                  <p className="text-sm text-gray-500">{activity.timestamp}</p>
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-4">
             <Button variant="outline" asChild>
-              <Link href="/lvm/logistics/shipments">
-                View All Shipments
+              <Link href="/lvm/admin/audit">
+                View All Activities
               </Link>
             </Button>
           </div>
@@ -239,4 +234,4 @@ export default function LogisticsHomePage() {
       </Card>
     </div>
   );
-}
+} 

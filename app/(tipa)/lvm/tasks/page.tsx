@@ -130,8 +130,9 @@ export default function TasksPage() {
     {
       key: "task",
       header: "Task",
+      className: "w-1/3 max-w-xs",
       render: (task: Task) => (
-        <div className="flex items-center">
+        <div className="flex items-center min-w-0">
           <div className="flex-shrink-0">
             <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
               <span className="text-xs font-medium text-blue-600">
@@ -139,10 +140,10 @@ export default function TasksPage() {
               </span>
             </div>
           </div>
-          <div className="ml-2">
-            <div className="text-sm font-medium text-gray-900">{task.title}</div>
+          <div className="ml-2 min-w-0 flex-1">
+            <div className="text-sm font-medium text-gray-900 truncate">{task.title}</div>
             {task.description && (
-              <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+              <p className="text-xs text-gray-500 mt-0.5 truncate">
                 {task.description}
               </p>
             )}
@@ -153,16 +154,17 @@ export default function TasksPage() {
     {
       key: "assignee",
       header: "Assignee",
+      className: "w-1/6",
       render: (task: Task) => (
-        <div className="flex items-center">
-          <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
+        <div className="flex items-center min-w-0">
+          <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-xs font-medium text-gray-600">
               {task.assignee?.name?.charAt(0).toUpperCase() || '?'}
             </span>
           </div>
-          <div className="ml-2">
-            <div className="text-sm text-gray-900">{task.assignee?.name || 'Unassigned'}</div>
-            <div className="text-xs text-gray-500">{task.assignee?.username || 'N/A'}</div>
+          <div className="ml-2 min-w-0">
+            <div className="text-sm text-gray-900 truncate">{task.assignee?.name || 'Unassigned'}</div>
+            <div className="text-xs text-gray-500 truncate">@{task.assignee?.username || 'N/A'}</div>
           </div>
         </div>
       )
@@ -170,8 +172,9 @@ export default function TasksPage() {
     {
       key: "project",
       header: "Project",
+      className: "w-1/6",
       render: (task: Task) => (
-        <div className="text-sm text-gray-900">
+        <div className="text-sm text-gray-900 truncate">
           {task.project?.name || 'No Project'}
         </div>
       )
@@ -179,6 +182,7 @@ export default function TasksPage() {
     {
       key: "status",
       header: "Status",
+      className: "w-20",
       render: (task: Task) => (
         <StatusBadge status={task.status} size="sm" />
       )
@@ -186,6 +190,7 @@ export default function TasksPage() {
     {
       key: "priority",
       header: "Priority",
+      className: "w-20",
       render: (task: Task) => (
         <PriorityBadge priority={task.priority} size="sm" />
       )
@@ -193,6 +198,7 @@ export default function TasksPage() {
     {
       key: "dueDate",
       header: "Due Date",
+      className: "w-24",
       render: (task: Task) => (
         <div className="text-sm text-gray-900">
           {task.dueDate ? (
@@ -432,7 +438,7 @@ export default function TasksPage() {
 
         {/* Tasks List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">All Tasks</h2>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -442,12 +448,16 @@ export default function TasksPage() {
             </div>
           </div>
 
-          <DataTable
-            data={tasks}
-            columns={taskColumns}
-            loading={loading}
-            emptyMessage="No tasks available"
-          />
+          <div className="overflow-x-auto">
+            <div className="min-w-full">
+              <DataTable
+                data={tasks}
+                columns={taskColumns}
+                loading={loading}
+                emptyMessage="No tasks available"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

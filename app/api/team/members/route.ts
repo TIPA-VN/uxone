@@ -16,8 +16,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Access denied. Team management access required." }, { status: 403 });
     }
 
-    // Get all users with their task and project statistics
+    // Determine user's permission level
+    const isManagerOrAbove = [
+      "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+      "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
+      "MANAGER", "MANAGER_2"
+    ].includes(session.user.role);
+
+    // Filter users by department - users can only see their own department
+    const whereClause = {
+      department: session.user.department,
+      isActive: true
+    };
+
+    // Get users from the same department with their task and project statistics
     const users = await prisma.user.findMany({
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -36,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate detailed statistics for each user
     const teamMembers = await Promise.all(
-      users.map(async (user) => {
+      users.map(async (user: any) => {
         // Get task statistics
         const taskStats = await prisma.task.groupBy({
           by: ["status"],
@@ -44,9 +58,9 @@ export async function GET(request: NextRequest) {
           _count: { id: true },
         });
 
-        const totalTasks = taskStats.reduce((sum, stat) => sum + stat._count.id, 0);
-        const completedTasks = taskStats.find(stat => stat.status === "COMPLETED")?._count.id || 0;
-        const inProgressTasks = taskStats.find(stat => stat.status === "IN_PROGRESS")?._count.id || 0;
+        const totalTasks = taskStats.reduce((sum: number, stat: any) => sum + stat._count.id, 0);
+        const completedTasks = taskStats.find((stat: any) => stat.status === "COMPLETED")?._count.id || 0;
+        const inProgressTasks = taskStats.find((stat: any) => stat.status === "IN_PROGRESS")?._count.id || 0;
         const overdueTasks = await prisma.task.count({
           where: {
             assigneeId: user.id,
@@ -64,9 +78,9 @@ export async function GET(request: NextRequest) {
           _count: { id: true },
         });
 
-        const totalProjects = projectStats.reduce((sum, stat) => sum + stat._count.id, 0);
-        const completedProjects = projectStats.find(stat => stat.status === "COMPLETED")?._count.id || 0;
-        const activeProjects = projectStats.find(stat => stat.status === "ACTIVE")?._count.id || 0;
+        const totalProjects = projectStats.reduce((sum: number, stat: any) => sum + stat._count.id, 0);
+        const completedProjects = projectStats.find((stat: any) => stat.status === "COMPLETED")?._count.id || 0;
+        const activeProjects = projectStats.find((stat: any) => stat.status === "ACTIVE")?._count.id || 0;
 
         const projectEfficiency = totalProjects > 0 ? (completedProjects / totalProjects) * 100 : 0;
 
@@ -89,6 +103,12 @@ export async function GET(request: NextRequest) {
             completed: completedProjects,
             active: activeProjects,
             efficiency: projectEfficiency,
+          },
+          // Add permission information
+          permissions: {
+            canEdit: isManagerOrAbove,
+            canDelete: isManagerOrAbove,
+            canView: true, // All team members can view
           },
         };
       })

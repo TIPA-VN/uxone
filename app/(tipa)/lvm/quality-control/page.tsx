@@ -4,32 +4,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-  Truck, 
-  Package, 
-  MapPin, 
+  CheckCircle, 
+  AlertTriangle, 
+  FileText, 
   BarChart3, 
   Settings, 
   Plus,
   Clock,
-  CheckCircle,
-  AlertCircle,
-  Warehouse
+  XCircle,
+  Shield
 } from "lucide-react";
 import Link from "next/link";
 
-export default function LogisticsHomePage() {
+export default function QCHomePage() {
   // Mock data - replace with real data from your API
   const stats = {
-    totalShipments: 234,
-    inTransit: 45,
-    delivered: 189,
-    delayed: 3
+    totalInspections: 89,
+    passedInspections: 76,
+    failedInspections: 8,
+    pendingInspections: 5
   };
 
-  const recentShipments = [
-    { id: "LOG-001", destination: "Bangkok", status: "in-transit", carrier: "Express Logistics", eta: "2025-01-28" },
-    { id: "LOG-002", destination: "Chiang Mai", status: "delivered", carrier: "FastTrack", eta: "2025-01-27" },
-    { id: "LOG-003", destination: "Phuket", status: "delayed", carrier: "SpeedShip", eta: "2025-01-29" },
+  const recentInspections = [
+    { id: "QC-001", product: "Product A", status: "passed", inspector: "John Doe", date: "2025-01-27" },
+    { id: "QC-002", product: "Product B", status: "failed", inspector: "Jane Smith", date: "2025-01-27" },
+    { id: "QC-003", product: "Product C", status: "pending", inspector: "Mike Johnson", date: "2025-01-27" },
   ];
 
   return (
@@ -37,19 +36,19 @@ export default function LogisticsHomePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Logistics Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Quality Control Dashboard</h1>
           <p className="text-gray-600 mt-2">
-            Supply chain and logistics management system
+            Quality inspection and control management system
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            Logistics Department
+          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+            QC Department
           </Badge>
           <Button asChild>
-            <Link href="/lvm/logistics/shipments/new">
+            <Link href="/lvm/quality-control/inspections/new">
               <Plus className="w-4 h-4 mr-2" />
-              New Shipment
+              New Inspection
             </Link>
           </Button>
         </div>
@@ -59,11 +58,11 @@ export default function LogisticsHomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Shipments</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Inspections</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalShipments}</div>
+            <div className="text-2xl font-bold">{stats.totalInspections}</div>
             <p className="text-xs text-muted-foreground">
               This month
             </p>
@@ -72,39 +71,39 @@ export default function LogisticsHomePage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Transit</CardTitle>
-            <Truck className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.inTransit}</div>
-            <p className="text-xs text-muted-foreground">
-              Currently shipping
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+            <CardTitle className="text-sm font-medium">Passed</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.delivered}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.passedInspections}</div>
             <p className="text-xs text-muted-foreground">
-              Successfully delivered
+              Quality approved
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delayed</CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-500" />
+            <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.delayed}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.failedInspections}</div>
             <p className="text-xs text-muted-foreground">
-              Behind schedule
+              Quality issues
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pendingInspections}</div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting inspection
             </p>
           </CardContent>
         </Card>
@@ -113,70 +112,70 @@ export default function LogisticsHomePage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/shipments">
+          <Link href="/lvm/quality-control/inspections">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Truck className="h-5 w-5 text-blue-600" />
-                <span>Shipments</span>
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span>Inspections</span>
               </CardTitle>
               <CardDescription>
-                Track and manage all shipments
+                Manage quality inspections and reports
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/shipments/new">
+          <Link href="/lvm/quality-control/inspections/new">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Plus className="h-5 w-5 text-green-600" />
-                <span>New Shipment</span>
+                <Plus className="h-5 w-5 text-blue-600" />
+                <span>New Inspection</span>
               </CardTitle>
               <CardDescription>
-                Create a new shipment order
+                Create a new quality inspection
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/inventory">
+          <Link href="/lvm/quality-control/reports">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Warehouse className="h-5 w-5 text-purple-600" />
-                <span>Inventory</span>
+                <BarChart3 className="h-5 w-5 text-purple-600" />
+                <span>Quality Reports</span>
               </CardTitle>
               <CardDescription>
-                Manage warehouse inventory
+                View quality analytics and reports
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/routes">
+          <Link href="/lvm/quality-control/standards">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <MapPin className="h-5 w-5 text-indigo-600" />
-                <span>Routes</span>
+                <Shield className="h-5 w-5 text-indigo-600" />
+                <span>Quality Standards</span>
               </CardTitle>
               <CardDescription>
-                Optimize delivery routes
+                Manage quality standards and criteria
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/logistics/reports">
+          <Link href="/lvm/quality-control/issues">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5 text-teal-600" />
-                <span>Logistics Reports</span>
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <span>Quality Issues</span>
               </CardTitle>
               <CardDescription>
-                View logistics analytics and reports
+                Track and resolve quality issues
               </CardDescription>
             </CardHeader>
           </Link>
@@ -187,51 +186,51 @@ export default function LogisticsHomePage() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Settings className="h-5 w-5 text-gray-600" />
-                <span>Logistics Settings</span>
+                <span>QC Settings</span>
               </CardTitle>
               <CardDescription>
-                Configure logistics settings
+                Configure quality control settings
               </CardDescription>
             </CardHeader>
           </Link>
         </Card>
       </div>
 
-      {/* Recent Shipments */}
+      {/* Recent Inspections */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Shipments</CardTitle>
+          <CardTitle>Recent Inspections</CardTitle>
           <CardDescription>
-            Latest shipments and their delivery status
+            Latest quality inspections and their results
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentShipments.map((shipment) => (
-              <div key={shipment.id} className="flex items-center justify-between p-4 border rounded-lg">
+            {recentInspections.map((inspection) => (
+              <div key={inspection.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div>
-                    <p className="font-medium">{shipment.destination}</p>
-                    <p className="text-sm text-gray-500">ID: {shipment.id}</p>
+                    <p className="font-medium">{inspection.product}</p>
+                    <p className="text-sm text-gray-500">ID: {inspection.id}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
                   <Badge 
-                    variant={shipment.status === 'delivered' ? 'default' : 
-                           shipment.status === 'in-transit' ? 'secondary' : 'destructive'}
+                    variant={inspection.status === 'passed' ? 'default' : 
+                           inspection.status === 'failed' ? 'destructive' : 'secondary'}
                   >
-                    {shipment.status}
+                    {inspection.status}
                   </Badge>
-                  <p className="text-sm text-gray-500">{shipment.carrier}</p>
-                  <p className="text-sm text-gray-500">ETA: {shipment.eta}</p>
+                  <p className="text-sm text-gray-500">{inspection.inspector}</p>
+                  <p className="text-sm text-gray-500">{inspection.date}</p>
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-4">
             <Button variant="outline" asChild>
-              <Link href="/lvm/logistics/shipments">
-                View All Shipments
+              <Link href="/lvm/quality-control/inspections">
+                View All Inspections
               </Link>
             </Button>
           </div>
@@ -239,4 +238,4 @@ export default function LogisticsHomePage() {
       </Card>
     </div>
   );
-}
+} 
