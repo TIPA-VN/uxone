@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { canAccessFeature } from "@/config/app";
+import { canAccessFeature, mapUserDepartmentToCode } from "@/config/app";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,9 +23,18 @@ export async function GET(request: NextRequest) {
       "MANAGER", "MANAGER_2"
     ].includes(session.user.role);
 
-    // Filter users by department - users can only see their own department
-    const whereClause = {
-      department: session.user.department,
+    // Map the user's department to the standardized code
+    const userDepartmentCode = mapUserDepartmentToCode(session.user.department || 'OPS');
+    
+    // IS department can see IS and Helpdesk teams, other departments can only see their own
+    const whereClause = userDepartmentCode === 'IS' ? {
+      OR: [
+        { department: 'IS' },
+        { department: 'HELPDESK' } // Helpdesk department
+      ],
+      isActive: true
+    } : {
+      department: userDepartmentCode,
       isActive: true
     };
 

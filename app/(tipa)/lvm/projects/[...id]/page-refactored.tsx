@@ -17,6 +17,8 @@ import { useComments } from "./hooks/useComments";
 import { ProjectHeader } from "./components/ProjectHeader";
 import { ProjectTabs } from "./components/ProjectTabs";
 import { TasksTab } from "./components/TasksTab";
+import { ProjectOverview } from "./components/ProjectOverview";
+import { DepartmentTab } from "./components/DepartmentTab";
 
 // Types
 import { Project } from "./types/project";
@@ -195,221 +197,56 @@ export default function ProjectDetailsPage() {
       <div className="mt-6">
         {/* Department Tabs */}
         {project.departments?.includes(activeTab) && (
-          <div className="space-y-6">
-            {/* Document Upload */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload Document</h3>
-              <form onSubmit={(e) => { e.preventDefault(); documentsHook.uploadDocument(); }} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      File *
-                    </label>
-                    <input
-                      type="file"
-                      ref={documentsHook.fileInputRef}
-                      onChange={(e) => documentsHook.setFile(e.target.files?.[0] || null)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type
-                    </label>
-                    <input
-                      type="text"
-                      value={documentsHook.meta.type}
-                      onChange={(e) => documentsHook.setMeta({ ...documentsHook.meta, type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Document type"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <input
-                      type="text"
-                      value={documentsHook.meta.description}
-                      onChange={(e) => documentsHook.setMeta({ ...documentsHook.meta, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Document description"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-end space-x-3">
-                  <button
-                    type="submit"
-                    disabled={documentsHook.uploading || !documentsHook.file}
-                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
-                  >
-                    {documentsHook.uploading ? "Uploading..." : "Upload Document"}
-                  </button>
-                </div>
-                
-                {documentsHook.uploadStatus && (
-                  <div className={`text-sm p-3 rounded-lg ${
-                    documentsHook.uploadStatus.includes("successful") 
-                      ? "bg-green-50 text-green-800 border border-green-200" 
-                      : "bg-red-50 text-red-800 border border-red-200"
-                  }`}>
-                    {documentsHook.uploadStatus}
-                  </div>
-                )}
-              </form>
-            </div>
-
-            {/* Document List */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {activeTab} Documents ({documentsHook.docs.length})
-                </h3>
-              </div>
-              
-              {documentsHook.docs.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No documents uploaded yet.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Document
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Type
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Uploaded
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {documentsHook.docs.map((doc) => (
-                        <tr key={doc.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{doc.fileName}</div>
-                              {doc.metadata?.description && (
-                                <div className="text-sm text-gray-500">{doc.metadata.description}</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-900">{doc.metadata?.type || "N/A"}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-900">{doc.workflowState || "Pending"}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-900">
-                              {new Date(doc.createdAt).toLocaleDateString()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="relative">
-                              <button
-                                onClick={() => toggleDropdown(doc.id)}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
-                              >
-                                <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                </svg>
-                              </button>
-                              
-                              {dropdownOpen === doc.id && (
-                                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
-                                  <button
-                                    onClick={() => handleViewDoc(doc)}
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-                                  >
-                                    View
-                                  </button>
-                                  <button
-                                    onClick={() => handleDownloadDoc(doc)}
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-                                  >
-                                    Download
-                                  </button>
-                                  {doc.workflowState !== "APPROVED" && (
-                                    <button
-                                      onClick={() => documentsHook.approveDocument(doc.id)}
-                                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-                                    >
-                                      {documentsHook.docActionStatus[doc.id] || "Approve"}
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => documentsHook.deleteDocument(doc.id)}
-                                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer"
-                                  >
-                                    {documentsHook.docActionStatus[doc.id] || "Delete"}
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
+          <DepartmentTab
+            projectId={projectId}
+            department={activeTab}
+            docs={documentsHook.docs}
+            user={user}
+            project={project}
+            onDocumentAction={() => {
+              documentsHook.fetchDocuments();
+            }}
+          />
         )}
 
         {/* MAIN Tab */}
         {activeTab === "MAIN" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Overview</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Project Details</h4>
-                  <dl className="space-y-2 text-sm">
-                    <div>
-                      <dt className="font-medium text-gray-700">Name:</dt>
-                      <dd className="text-gray-900">{project.name}</dd>
-                    </div>
-                    {project.description && (
-                      <div>
-                        <dt className="font-medium text-gray-700">Description:</dt>
-                        <dd className="text-gray-900">{project.description}</dd>
-                      </div>
-                    )}
-                    <div>
-                      <dt className="font-medium text-gray-700">Status:</dt>
-                      <dd className="text-gray-900">{project.status}</dd>
-                    </div>
-                  </dl>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Departments</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {project.departments?.map((dept) => (
-                      <span
-                        key={dept}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-                      >
-                        {dept}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ProjectOverview
+              project={project}
+              tasks={tasksHook.tasks}
+              user={user}
+              onUpdateProjectStatus={async (newStatus) => {
+                try {
+                  const res = await fetch("/api/projects", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                      projectIds: [projectId], 
+                      updates: { status: newStatus } 
+                    }),
+                  });
+
+                  if (res.ok) {
+                    updateProject({ ...project, status: newStatus });
+                  } else {
+                    const errorData = await res.json();
+                    if (errorData.error === "Cannot complete project with incomplete tasks") {
+                      alert(`Cannot complete project. Please complete all tasks first.`);
+                    } else if (errorData.error === "Cannot complete project with incomplete sub-tasks") {
+                      alert(`Cannot complete project. Please complete all sub-tasks first.`);
+                    } else {
+                      alert(errorData.error || "Failed to update project status");
+                    }
+                  }
+                } catch (error) {
+                  console.error("Error updating project status:", error);
+                  alert("Failed to update project status");
+                }
+              }}
+              onEditDueDates={() => setShowDueDateEditor(true)}
+              showDueDateEditor={showDueDateEditor}
+            />
 
             {/* Comments Section */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -492,15 +329,15 @@ export default function ProjectDetailsPage() {
         {/* TASKS Tab */}
         {activeTab === "tasks" && (
           <TasksTab
+            projectId={projectId}
             tasks={tasksHook.tasks}
             users={tasksHook.users}
-            showCreateTask={tasksHook.showCreateTask}
-            setShowCreateTask={tasksHook.setShowCreateTask}
-            creatingTask={tasksHook.creatingTask}
-            taskForm={tasksHook.taskForm}
-            setTaskForm={tasksHook.setTaskForm}
-            onCreateTask={tasksHook.createTask}
-            onUpdateTaskStatus={tasksHook.updateTaskStatus}
+            onTaskCreated={(newTask) => {
+              tasksHook.fetchTasks();
+            }}
+            onTaskStatusUpdated={(taskId, newStatus) => {
+              tasksHook.updateTaskStatus(taskId, newStatus);
+            }}
           />
         )}
 

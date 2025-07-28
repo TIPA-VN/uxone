@@ -41,19 +41,19 @@ export function ProjectHeader({ project, user, onApproval, actionStatus, activeT
     approvalState[activeTab] !== "REJECTED";
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
+      <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+            <h1 className="text-lg font-bold text-gray-900">{project.name}</h1>
             {project.description && (
-              <p className="mt-1 text-sm text-gray-600">{project.description}</p>
+              <p className="mt-0.5 text-xs text-gray-600">{project.description}</p>
             )}
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             <div className="flex items-center">
               {getStatusIcon(project.status)}
-              <span className="ml-2 text-sm font-medium text-gray-900">
+              <span className="ml-1.5 text-xs font-medium text-gray-900">
                 {project.status || "UNKNOWN"}
               </span>
             </div>
@@ -63,13 +63,13 @@ export function ProjectHeader({ project, user, onApproval, actionStatus, activeT
 
       {/* Approval Section */}
       {canApprove && (
-        <div className="px-6 py-4 bg-yellow-50 border-b border-yellow-200">
+        <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-200">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-yellow-800">
+              <h3 className="text-xs font-medium text-yellow-800">
                 Department Approval Required
               </h3>
-              <p className="text-sm text-yellow-700 mt-1">
+              <p className="text-xs text-yellow-700 mt-0.5">
                 {user?.role?.toUpperCase() === "ADMIN" 
                   ? `As an Admin, you can approve or reject this project for the ${activeTab} department.`
                   : project.ownerId === user?.id
@@ -78,16 +78,16 @@ export function ProjectHeader({ project, user, onApproval, actionStatus, activeT
                 }
               </p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex space-x-2">
               <button
                 onClick={() => onApproval("approved")}
-                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors cursor-pointer"
               >
                 Approve
               </button>
               <button
                 onClick={() => onApproval("disapproved")}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors cursor-pointer"
               >
                 Reject
               </button>
@@ -98,41 +98,12 @@ export function ProjectHeader({ project, user, onApproval, actionStatus, activeT
 
       {/* Action Status */}
       {actionStatus && (
-        <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
-          <p className="text-sm text-blue-800">{actionStatus}</p>
+        <div className="px-4 py-2 bg-blue-50 border-b border-blue-200">
+          <p className="text-xs text-blue-800">{actionStatus}</p>
         </div>
       )}
 
-      {/* Project Details */}
-      <div className="px-6 py-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div>
-            <span className="font-medium text-gray-700">Departments:</span>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {project.departments?.map((dept) => (
-                <span
-                  key={dept}
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                >
-                  {dept}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Request Date:</span>
-            <p className="mt-1 text-gray-600">
-              {project.requestDate ? new Date(project.requestDate).toLocaleDateString() : "Not set"}
-            </p>
-          </div>
-          <div>
-            <span className="font-medium text-gray-700">Created:</span>
-            <p className="mt-1 text-gray-600">
-              {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : "Unknown"}
-            </p>
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 } 

@@ -42,7 +42,7 @@ export function useDocuments(projectId: string, department?: string) {
   const fetchProductionDocuments = async () => {
     if (!projectId) return;
     try {
-      const res = await fetch(`/api/documents?projectId=${projectId}&production=true`);
+      const res = await fetch(`/api/documents?projectId=${projectId}&workflowState=production`);
       if (res.ok) {
         const data = await res.json();
         setProductionDocs(data);

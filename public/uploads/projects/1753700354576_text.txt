@@ -1,0 +1,2 @@
+AUTH_SECRET="eqnWfXBprsuxKdoIxhLUCdJqhqyEqS7zM87aI9jbDRY=" # Added by `npx auth`. Read more: https://cli.authjs.dev
+AUTH_URL=http://localhost:3000

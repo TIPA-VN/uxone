@@ -45,6 +45,7 @@ export const APP_CONFIG = {
   // Department Codes Configuration
   departmentCodes: {
     IS: "Information Systems",
+    HELPDESK: "Helpdesk",
     QC: "Quality Control", 
     QA: "Quality Assurance",
     HR: "Human Resources",
@@ -154,6 +155,13 @@ export const APP_CONFIG = {
       code: "IS",
       color: "bg-cyan-500",
       description: "IT and information systems management"
+    },
+    {
+      value: "HELPDESK",
+      label: "Helpdesk",
+      code: "HELPDESK",
+      color: "bg-violet-500",
+      description: "Technical support and helpdesk services"
     },
     {
       value: "SALES",

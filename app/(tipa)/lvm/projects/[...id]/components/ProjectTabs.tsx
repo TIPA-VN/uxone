@@ -49,7 +49,7 @@ export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabs
   };
 
   return (
-    <div className="flex flex-wrap gap-1 border-b mb-4" role="tablist" aria-label="Department Tabs">
+    <div className="flex flex-wrap gap-0.5 border-b mb-3" role="tablist" aria-label="Department Tabs">
       {/* Department Tabs */}
       {departments.map((dept: string) => {
         const isActive = activeTab === dept;
@@ -61,7 +61,7 @@ export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabs
             aria-controls={`dept-pane-${dept}`}
             id={`dept-tab-${dept}`}
             tabIndex={isActive ? 0 : -1}
-            className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+            className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
               getTabColor(dept, isActive)
             }`}
             onClick={() => onTabChange(dept)}
@@ -79,7 +79,7 @@ export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabs
         aria-controls="main-pane"
         id="main-tab"
         tabIndex={activeTab === "MAIN" ? 0 : -1}
-        className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
           activeTab === "MAIN" 
             ? "border-b-2 bg-white shadow-sm border-slate-500 text-slate-700" 
             : "border-transparent border-slate-500 text-slate-600 bg-slate-50 hover:bg-slate-100"
@@ -97,7 +97,7 @@ export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabs
         aria-controls="analytics-pane"
         id="analytics-tab"
         tabIndex={activeTab === "ANALYTICS" ? 0 : -1}
-        className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
           activeTab === "ANALYTICS" 
             ? "border-b-2 bg-white shadow-sm border-purple-500 text-purple-700" 
             : "border-transparent border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100"
@@ -115,7 +115,7 @@ export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabs
         aria-controls="tasks-pane"
         id="tasks-tab"
         tabIndex={activeTab === "tasks" ? 0 : -1}
-        className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
           activeTab === "tasks" 
             ? "border-b-2 bg-white shadow-sm border-purple-500 text-purple-700" 
             : "border-transparent border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100"
@@ -133,7 +133,7 @@ export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabs
         aria-controls="production-pane"
         id="production-tab"
         tabIndex={activeTab === "PRODUCTION" ? 0 : -1}
-        className={`px-3 py-1.5 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
           activeTab === "PRODUCTION" 
             ? "border-b-2 bg-white shadow-sm border-orange-500 text-orange-700" 
             : "border-transparent border-orange-500 text-orange-600 bg-orange-50 hover:bg-orange-100"

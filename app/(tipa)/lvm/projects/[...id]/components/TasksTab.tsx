@@ -1,325 +1,305 @@
-import { useState } from 'react';
-import { Task, User, TaskForm } from '../types/project';
-import { Plus, Calendar, User as UserIcon, Tag, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+"use client";
+import { useState, useEffect } from "react";
+import { CheckCircle, XCircle, Clock, Menu } from "lucide-react";
+import { Task, User } from "../types/project";
 
 interface TasksTabProps {
+  projectId: string;
   tasks: Task[];
   users: User[];
-  showCreateTask: boolean;
-  setShowCreateTask: (show: boolean) => void;
-  creatingTask: boolean;
-  taskForm: TaskForm;
-  setTaskForm: (form: TaskForm) => void;
-  onCreateTask: (e: React.FormEvent) => Promise<{ success: boolean; message: string }>;
-  onUpdateTaskStatus: (taskId: string, newStatus: string) => Promise<{ success: boolean; message: string }>;
+  onTaskCreated: (task: Task) => void;
+  onTaskStatusUpdated: (taskId: string, newStatus: string) => void;
 }
 
-const getPriorityColor = (priority: string) => {
-  switch(priority) {
-    case 'URGENT': return 'bg-red-100 text-red-800 border-red-200';
-    case 'HIGH': return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'LOW': return 'bg-green-100 text-green-800 border-green-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getStatusIcon = (status: string) => {
-  switch(status) {
-    case 'COMPLETED': return <CheckCircle className="w-4 h-4 text-green-500" />;
-    case 'IN_PROGRESS': return <Clock className="w-4 h-4 text-blue-500" />;
-    case 'BLOCKED': return <XCircle className="w-4 h-4 text-red-500" />;
-    default: return <AlertCircle className="w-4 h-4 text-gray-400" />;
-  }
-};
-
-export function TasksTab({
-  tasks,
-  users,
-  showCreateTask,
-  setShowCreateTask,
-  creatingTask,
-  taskForm,
-  setTaskForm,
-  onCreateTask,
-  onUpdateTaskStatus
-}: TasksTabProps) {
-  const [actionStatus, setActionStatus] = useState<string | null>(null);
+export function TasksTab({ projectId, tasks, users, onTaskCreated, onTaskStatusUpdated }: TasksTabProps) {
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    title: "",
+    description: "",
+    status: "TODO",
+    priority: "MEDIUM",
+    assigneeId: "",
+    dueDate: "",
+    estimatedHours: "",
+    tags: [] as string[],
+  });
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
   const handleCreateTask = async (e: React.FormEvent) => {
-    const result = await onCreateTask(e);
-    setActionStatus(result.message);
-    setTimeout(() => setActionStatus(null), 3000);
+    e.preventDefault();
+    if (!taskForm.title.trim()) return;
+
+    setCreatingTask(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...taskForm,
+          projectId,
+          estimatedHours: taskForm.estimatedHours ? parseFloat(taskForm.estimatedHours) : null,
+        }),
+      });
+
+      if (res.ok) {
+        const newTask = await res.json();
+        onTaskCreated(newTask);
+        setTaskForm({
+          title: "",
+          description: "",
+          status: "TODO",
+          priority: "MEDIUM",
+          assigneeId: "",
+          dueDate: "",
+          estimatedHours: "",
+          tags: [],
+        });
+        setShowCreateTask(false);
+      } else {
+        const error = await res.json();
+        alert(`Failed to create task: ${error.error}`);
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      alert("Failed to create task");
+    } finally {
+      setCreatingTask(false);
+    }
   };
 
-  const handleStatusUpdate = async (taskId: string, newStatus: string) => {
-    const result = await onUpdateTaskStatus(taskId, newStatus);
-    setActionStatus(result.message);
-    setTimeout(() => setActionStatus(null), 3000);
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        onTaskStatusUpdated(taskId, newStatus);
+      } else {
+        const errorData = await res.json();
+        if (errorData.error === "Cannot complete task with incomplete sub-tasks") {
+          alert(`Cannot complete task. Please complete the following sub-tasks first:\n${errorData.incompleteSubtasks.map((st: any) => `- ${st.title}`).join('\n')}`);
+        } else {
+          alert(errorData.error || "Failed to update task status");
+        }
+      }
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      alert("Failed to update task status");
+    }
+  };
+
+  const toggleDropdown = (taskId: string) => {
+    setDropdownOpen(dropdownOpen === taskId ? null : taskId);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Project Tasks</h2>
-        <button
-          onClick={() => setShowCreateTask(true)}
-          className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Task
-        </button>
-      </div>
-
-      {/* Action Status */}
-      {actionStatus && (
-        <div className={`p-3 rounded-lg text-sm ${
-          actionStatus.includes('successfully') || actionStatus.includes('updated')
-            ? 'bg-green-50 text-green-800 border border-green-200'
-            : 'bg-red-50 text-red-800 border border-red-200'
-        }`}>
-          {actionStatus}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Tasks</h3>
+          <button
+            onClick={() => setShowCreateTask(!showCreateTask)}
+            className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
+          >
+            {showCreateTask ? "Cancel" : "New Task"}
+          </button>
         </div>
-      )}
 
-      {/* Create Task Form */}
-      {showCreateTask && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Task</h3>
-          <form onSubmit={handleCreateTask} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Task Title *
-                </label>
-                <input
-                  type="text"
-                  value={taskForm.title}
-                  onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Enter task title"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Assignee
-                </label>
-                <select
-                  value={taskForm.assigneeId}
-                  onChange={(e) => setTaskForm({ ...taskForm, assigneeId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                >
-                  <option value="">Select assignee</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.username}) - {user.departmentName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                value={taskForm.description}
-                onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                placeholder="Enter task description"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
-                </label>
-                <select
-                  value={taskForm.priority}
-                  onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  value={taskForm.status}
-                  onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                >
-                  <option value="TODO">To Do</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="BLOCKED">Blocked</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  value={taskForm.dueDate}
-                  onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estimated Hours
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={taskForm.estimatedHours}
-                  onChange={(e) => setTaskForm({ ...taskForm, estimatedHours: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="0.0"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowCreateTask(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={creatingTask || !taskForm.title.trim()}
-                className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
-              >
-                {creatingTask ? "Creating..." : "Create Task"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Tasks List */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Tasks ({tasks.length})</h3>
-        </div>
-        
-        {tasks.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <AlertCircle className="w-6 h-6 text-purple-400" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-900 mb-1">No tasks yet</h3>
-            <p className="text-xs text-gray-600 mb-3">Create your first task to get started</p>
-            <button
-              onClick={() => setShowCreateTask(true)}
-              className="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              Create Task
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Task
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        {/* Task Creation Form */}
+        {showCreateTask && (
+          <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <h4 className="font-medium text-purple-900 mb-3">Create New Task</h4>
+            <form onSubmit={handleCreateTask} className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Task Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={taskForm.title}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, title: e.target.value }))}
+                    required
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Enter task title"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Assignee
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  </label>
+                  <select
+                    value={taskForm.assigneeId}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, assigneeId: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
+                  >
+                    <option value="">Select assignee</option>
+                    {(Array.isArray(users) ? users : []).map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name || user.username} ({user.department})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={taskForm.description}
+                  onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                  rows={2}
+                  placeholder="Enter task description"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Priority
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  </label>
+                  <select
+                    value={taskForm.priority}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, priority: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Due Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hours
-                  </th>
+                  </label>
+                  <input
+                    type="date"
+                    value={taskForm.dueDate}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Estimated Hours
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={taskForm.estimatedHours}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, estimatedHours: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={taskForm.status}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
+                  >
+                    <option value="TODO">To Do</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="BLOCKED">Blocked</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateTask(false)}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingTask || !taskForm.title.trim()}
+                  className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                >
+                  {creatingTask ? "Creating..." : "Create Task"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Tasks List */}
+        <div className="bg-gray-100 rounded p-1 overflow-x-auto pb-16">
+          {tasks.length === 0 ? (
+            <div className="text-gray-400 text-xs">No tasks found for this project.</div>
+          ) : (
+            <table className="w-full text-xs min-w-[400px]">
+              <thead>
+                <tr className="border-b bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                  <th className="py-2 px-3 text-left font-medium text-xs w-1/3">Title</th>
+                  <th className="py-2 px-3 text-left font-medium text-xs w-1/3">Status</th>
+                  <th className="py-2 px-3 text-left font-medium text-xs w-1/3">Due Date</th>
+                  <th className="py-2 px-3 text-center font-medium text-xs w-1/10 min-w-[60px]">Option</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{task.title}</div>
-                        {task.description && (
-                          <div className="text-sm text-gray-500 mt-1 line-clamp-2">{task.description}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {task.assignee_name ? (
-                        <div className="flex items-center">
-                          <UserIcon className="w-4 h-4 text-gray-400 mr-2" />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{task.assignee_name}</div>
-                            <div className="text-xs text-gray-500">{task.assignee_department}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
+              <tbody>
+                {tasks.map((task, index) => (
+                  <tr key={task.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <td className="py-0.5 px-3 break-words w-1/3">{task.title}</td>
+                    <td className="py-0.5 px-3 w-1/3">
+                      <span className={`font-medium text-xs px-2 py-0.5 rounded-full ${
+                        task.status === "COMPLETED" ? "bg-green-100 text-green-800" :
+                        task.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-800" :
+                        task.status === "TODO" ? "bg-gray-100 text-gray-800" :
+                        "bg-red-100 text-red-800"
+                      }`}>
+                        {task.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        {getStatusIcon(task.status)}
-                        <select
-                          value={task.status}
-                          onChange={(e) => handleStatusUpdate(task.id, e.target.value)}
-                          className="ml-2 text-sm border-0 bg-transparent focus:ring-0 cursor-pointer"
+                    <td className="py-0.5 px-3 w-1/3">
+                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : <span className="text-gray-400 italic">No due date</span>}
+                    </td>
+                    <td className="py-0.5 px-3 w-1/10 min-w-[60px]">
+                      <div className="relative dropdown-container flex justify-center">
+                        <button
+                          onClick={() => toggleDropdown(task.id)}
+                          className="p-1 hover:bg-gray-100 rounded"
                         >
-                          <option value="TODO">To Do</option>
-                          <option value="IN_PROGRESS">In Progress</option>
-                          <option value="COMPLETED">Completed</option>
-                          <option value="BLOCKED">Blocked</option>
-                        </select>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {task.dueDate ? (
-                        <div className="flex items-center">
-                          <Calendar className="w-4 h-4 text-gray-400 mr-1" />
-                          <span className="text-sm text-gray-900">
-                            {new Date(task.dueDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">No due date</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {task.estimatedHours ? `${task.estimatedHours}h` : '-'}
-                        {task.actualHours && (
-                          <span className="text-gray-500 ml-1">
-                            / {task.actualHours}h
-                          </span>
+                          <Menu className="w-4 h-4 text-gray-600" />
+                        </button>
+                        {dropdownOpen === task.id && (
+                          <div className="absolute right-0 mt-1 w-28 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                            <button
+                              onClick={() => handleUpdateTaskStatus(task.id, "COMPLETED")}
+                              className="w-full px-2 py-1 text-left text-xs hover:bg-green-100 flex items-center gap-1"
+                            >
+                              <CheckCircle className="w-3 h-3 text-green-600" />
+                              Complete
+                            </button>
+                            <button
+                              onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
+                              className="w-full px-2 py-1 text-left text-xs hover:bg-blue-100 flex items-center gap-1"
+                            >
+                              <Clock className="w-3 h-3 text-blue-600" />
+                              In Progress
+                            </button>
+                            <button
+                              onClick={() => handleUpdateTaskStatus(task.id, "TODO")}
+                              className="w-full px-2 py-1 text-left text-xs hover:bg-gray-100 flex items-center gap-1"
+                            >
+                              <XCircle className="w-3 h-3 text-gray-600" />
+                              To Do
+                            </button>
+                          </div>
                         )}
                       </div>
                     </td>
@@ -327,8 +307,8 @@ export function TasksTab({
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

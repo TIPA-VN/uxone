@@ -14,6 +14,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+
+
     const { id } = await params;
     if (!id) {
       return NextResponse.json({ error: "Document ID required" }, { status: 400 });
@@ -29,16 +31,23 @@ export async function PATCH(
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
-    // Check if user is department head for this document's department
-    if ((session.user.department || '').toUpperCase() !== (document.department || '').toUpperCase()) {
-      return NextResponse.json({ error: "Not authorized for this department" }, { status: 403 });
-    }
+
 
     // Check if user has approval permissions (SENIOR MANAGER or ADMIN)
     const isAdmin = session.user.role?.toUpperCase() === "ADMIN";
-    const isSeniorManager = session.user.role?.toUpperCase() === "SENIOR MANAGER";
+    const isSeniorManager = session.user.role?.toUpperCase() === "SENIOR MANAGER" || 
+                           session.user.role?.toUpperCase() === "SENIOR_MANAGER";
+    
     if (!isAdmin && !isSeniorManager) {
       return NextResponse.json({ error: "Insufficient permissions to approve documents" }, { status: 403 });
+    }
+
+    // For non-admin users, check if they are the department head for this document's department
+    const userDept = (session.user.department || '').toUpperCase();
+    const docDept = (document.department || '').toUpperCase();
+    
+    if (!isAdmin && userDept !== docDept) {
+      return NextResponse.json({ error: "Not authorized for this department" }, { status: 403 });
     }
 
     // Update document metadata to mark as approved

@@ -86,17 +86,23 @@ type Task = {
 };
 
 const DEPARTMENTS = [
-  { value: "logistics", label: "Logistics", color: "bg-blue-500" },
-  { value: "procurement", label: "Procurement", color: "bg-green-500" },
-  { value: "pc", label: "Production Planning", color: "bg-purple-500" },
-  { value: "qa", label: "Quality Assurance", color: "bg-orange-500" },
-  { value: "qc", label: "Quality Control", color: "bg-red-500" },
-  { value: "pm", label: "Production Maintenance", color: "bg-indigo-500" },
-  { value: "fm", label: "Facility Management", color: "bg-yellow-500" },
-  { value: "hra", label: "Human Resources", color: "bg-pink-500" },
-  { value: "cs", label: "Customer Service", color: "bg-teal-500" },
-  { value: "sales", label: "Sales", color: "bg-cyan-500" },
-  { value: "LVM-EXPAT", label: "LVM EXPATS", color: "bg-violet-500" },
+  { value: "LOG", label: "Logistics", color: "bg-blue-500" },
+  { value: "PROC", label: "Procurement", color: "bg-green-500" },
+  { value: "PC", label: "Production Planning", color: "bg-purple-500" },
+  { value: "QA", label: "Quality Assurance", color: "bg-orange-500" },
+  { value: "QC", label: "Quality Control", color: "bg-red-500" },
+  { value: "PM", label: "Production Maintenance", color: "bg-indigo-500" },
+  { value: "FM", label: "Facility Management", color: "bg-yellow-500" },
+  { value: "HR", label: "Human Resources", color: "bg-pink-500" },
+  { value: "CS", label: "Customer Service", color: "bg-teal-500" },
+  { value: "SALES", label: "Sales", color: "bg-cyan-500" },
+  { value: "IS", label: "Information Systems", color: "bg-cyan-500" },
+  { value: "HELPDESK", label: "Helpdesk", color: "bg-violet-500" },
+  { value: "OPS", label: "Operations", color: "bg-gray-500" },
+  { value: "FIN", label: "Finance", color: "bg-emerald-500" },
+  { value: "RD", label: "Research & Development", color: "bg-amber-500" },
+  { value: "MKT", label: "Marketing", color: "bg-rose-500" },
+  { value: "ADMIN", label: "Administration", color: "bg-slate-500" },
 ];
 
 export default function TeamManagementPage() {
@@ -138,6 +144,8 @@ export default function TeamManagementPage() {
     "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
     "MANAGER", "MANAGER_2"
   ].includes(user.role);
+
+
 
   useEffect(() => {
     if (user && hasTeamAccess) {
@@ -341,10 +349,16 @@ export default function TeamManagementPage() {
                     Read Only
                   </span>
                 )}
+                {user?.department === 'IS' && (
+                  <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    IS & Helpdesk Access
+                  </span>
+                )}
               </h1>
               <p className="mt-2 text-gray-600">
                 Monitor team performance, tasks, and project KPIs
                 {!isManagerOrAbove && " (View only - Manager access required for editing)"}
+                {user?.department === 'IS' && " (IS department can view IS and Helpdesk teams)"}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -629,7 +643,9 @@ export default function TeamManagementPage() {
                     onChange={(e) => setFilterDepartment(e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="all">All Departments</option>
+                    <option value="all">
+                      {user?.department === 'IS' ? 'IS & Helpdesk Teams' : 'All Departments'}
+                    </option>
                     {DEPARTMENTS.map(dept => (
                       <option key={dept.value} value={dept.value}>{dept.label}</option>
                     ))}

@@ -19,8 +19,7 @@ const ADMIN_CREDENTIALS = {
 const ADMIN_OVERRIDE_USERS = [
   'administrator', // Your username
   'admin',
-  '22023312', // Add your actual username here
-  'ericnguyen', // Add your username here
+  //'22023312', // Add your actual username here
   // Add more admin usernames as needed
 ];
 
@@ -104,10 +103,8 @@ async function isCentralApiAvailable(): Promise<boolean> {
     })
     
     // If we get any response (even 401 for wrong credentials), the API is available
-    console.log("Central API response status:", response.status)
     return true
   } catch (error) {
-    console.log("Central API check failed:", error)
     return false
   }
 }
@@ -143,7 +140,6 @@ export const authConfig = {
                 try {
           // First, check if central API is available
           const centralApiAvailable = await isCentralApiAvailable()
-          console.log("Central API available:", centralApiAvailable)
           
           // If central API is down, check for admin fallback authentication
           if (!centralApiAvailable) {
@@ -187,7 +183,6 @@ export const authConfig = {
 
           // Central API is available, proceed with normal authentication
           const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-          console.log("Attempting authentication with central API...")
           
           try {
             const response = await fetch(`${baseUrl}/api/auth/login`, {
