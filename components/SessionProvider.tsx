@@ -18,8 +18,21 @@ export function SessionProvider({
         // Check if the response is JSON
         const contentType = response.headers.get("content-type");
         if (contentType?.includes("text/html")) {
-          console.error("Received HTML response instead of JSON");
-          throw new Error("Invalid response type: expected JSON, got HTML");
+          // Get the URL that caused the issue
+          const url = args[0] instanceof Request ? args[0].url : args[0];
+          console.error("Received HTML response instead of JSON from:", url);
+          console.error("Response status:", response.status);
+          console.error("Response status text:", response.statusText);
+          
+          // Try to get the response text for debugging
+          try {
+            const responseText = await response.text();
+            console.error("Response body (first 500 chars):", responseText.substring(0, 500));
+          } catch (e) {
+            console.error("Could not read response body:", e);
+          }
+          
+          throw new Error(`Invalid response type: expected JSON, got HTML from ${url}`);
         }
         
         return response;
