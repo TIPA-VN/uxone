@@ -18,7 +18,7 @@ export function useProject(projectId: string) {
         
         const data = await res.json();
         const proj = Array.isArray(data)
-          ? data.find((p: any) => String(p.id) === String(projectId))
+          ? data.find((p: { id: string | number }) => String(p.id) === String(projectId))
           : data;
         
         setProject(proj);

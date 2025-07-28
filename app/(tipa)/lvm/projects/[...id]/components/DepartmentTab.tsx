@@ -1,16 +1,27 @@
 "use client";
-import { useState, useRef } from "react";
-import { Check, Upload, Trash2, Menu, Eye, Download, RotateCcw } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Check, Upload, Trash2, Menu, Eye, Download, RotateCcw, Shield } from "lucide-react";
 import { PDFTools } from "@/components/PDFTools";
-import { Document } from "../types/project";
+import { SimpleDocumentViewer } from "@/components/SimpleDocumentViewer";
+import { Document, DOCUMENT_TYPES } from "../types/project";
+import { isRestrictedDocumentType } from "@/lib/documentAccess";
 
 interface DepartmentTabProps {
   projectId: string;
   department: string;
   docs: Document[];
-  user: any;
-  project: any;
+  user: {
+    id: string;
+    role?: string;
+    department?: string;
+  } | undefined;
+  project: {
+    ownerId?: string;
+    approvalState?: Record<string, string>;
+  };
   onDocumentAction: () => void;
+  onApproval: (action: "approved" | "disapproved") => void;
+  actionStatus: string | null;
 }
 
 export function DepartmentTab({ 
@@ -19,27 +30,61 @@ export function DepartmentTab({
   docs, 
   user, 
   project, 
-  onDocumentAction 
+  onDocumentAction,
+  onApproval,
+  actionStatus
 }: DepartmentTabProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [meta, setMeta] = useState({ type: "", description: "" });
+  const [meta, setMeta] = useState({ type: "general", description: "" });
   const [docActionStatus, setDocActionStatus] = useState<Record<string, string | null>>({});
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [currentDocPage, setCurrentDocPage] = useState(1);
   const docsPerPage = 10;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<{
+    fileName: string;
+    filePath: string;
+    documentId: string;
+  } | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Upload permission check
   const canUpload = user && (user.role?.toUpperCase() === "ADMIN" || 
     user.role?.toUpperCase() === "SENIOR MANAGER" || 
+    user.role?.toUpperCase() === "SENIOR_MANAGER" ||
     user.role?.toUpperCase() === "MANAGER" || 
     project?.ownerId === user?.id);
 
+  // Approval permission check
+  const approvalState = project?.approvalState || {};
+  const isSeniorManagerOfDept =
+    user &&
+    (user.role?.toUpperCase() === "SENIOR MANAGER" || user.role?.toUpperCase() === "SENIOR_MANAGER") &&
+    (user.department?.toUpperCase() === department?.toUpperCase() || 
+     user.department?.toLowerCase() === department?.toLowerCase());
+  const canApprove =
+    user &&
+    project &&
+    (user.role?.toUpperCase() === "ADMIN" || 
+     isSeniorManagerOfDept || 
+     project.ownerId === user.id) &&
+    approvalState[department] !== "APPROVED" &&
+    approvalState[department] !== "REJECTED";
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file) {
+      setUploadStatus("Please select a file to upload.");
+      return;
+    }
+    
+    if (!meta.type) {
+      setUploadStatus("Please select a document type before uploading.");
+      return;
+    }
     
     setUploading(true);
     setUploadStatus(null);
@@ -58,14 +103,14 @@ export function DepartmentTab({
       if (res.ok) {
         setUploadStatus("Upload successful!");
         setFile(null);
-        setMeta({ type: "", description: "" });
+        setMeta({ type: "general", description: "" });
         if (fileInputRef.current) fileInputRef.current.value = "";
         setCurrentDocPage(1);
         onDocumentAction();
       } else {
         setUploadStatus("Upload failed.");
       }
-    } catch (error) {
+    } catch {
       setUploadStatus("Upload failed.");
     } finally {
       setUploading(false);
@@ -85,7 +130,7 @@ export function DepartmentTab({
       } else {
         setDocActionStatus(prev => ({ ...prev, [docId]: "Approval failed" }));
       }
-    } catch (error) {
+    } catch {
       setDocActionStatus(prev => ({ ...prev, [docId]: "Approval failed" }));
     }
   };
@@ -103,7 +148,7 @@ export function DepartmentTab({
       } else {
         setDocActionStatus(prev => ({ ...prev, [docId]: "Failed to send to production" }));
       }
-    } catch (error) {
+    } catch {
       setDocActionStatus(prev => ({ ...prev, [docId]: "Failed to send to production" }));
     }
   };
@@ -125,28 +170,97 @@ export function DepartmentTab({
         const errorData = await res.json();
         setDocActionStatus(prev => ({ ...prev, [docId]: errorData.error || "Delete failed" }));
       }
-    } catch (error) {
+    } catch {
       setDocActionStatus(prev => ({ ...prev, [docId]: "Delete failed" }));
     }
   };
 
   const handleViewDoc = (doc: Document) => {
-    // This will be handled by the parent component
-    window.open(`/api/documents/${doc.id}/view`, '_blank');
+    // Create a document object with the correct filePath URL for viewing
+    const documentForViewing = {
+      fileName: doc.fileName,
+      filePath: `/api/documents/${doc.id}/view`,
+      documentId: doc.id
+    };
+    setSelectedDocument(documentForViewing);
+    setViewerOpen(true);
+    setDropdownOpen(null); // Close dropdown when opening viewer
   };
 
   const handleDownloadDoc = (doc: Document) => {
     window.open(`/api/documents/${doc.id}/download`, '_blank');
+    setDropdownOpen(null); // Close dropdown after download action
   };
 
   const toggleDropdown = (docId: string) => {
     setDropdownOpen(dropdownOpen === docId ? null : docId);
   };
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(null);
+      }
+    };
+
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen]);
+
   return (
-    <div className="flex flex-col md:flex-row gap-4">
+    <>
+      <div className="flex flex-col md:flex-row gap-4">
       {/* Left: Approval panel and PDF tools stacked vertically */}
       <div className="md:w-1/3 w-full flex flex-col gap-4">
+        {/* Approval Section */}
+        {canApprove && (
+          <div className="bg-white rounded-lg shadow p-4 border border-yellow-200">
+            <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    Department Approval Required
+                  </h3>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    {user?.role?.toUpperCase() === "ADMIN" 
+                      ? `As an Admin, you can approve or reject this project for the ${department} department.`
+                      : project.ownerId === user?.id
+                      ? `As the project owner, you can approve or reject this project for the ${department} department.`
+                      : `As a Senior Manager of ${department}, you can approve or reject this project.`
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => onApproval("approved")}
+                  className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => onApproval("disapproved")}
+                  className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+            {/* Action Status */}
+            {actionStatus && (
+              <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                <p className="text-xs text-blue-800">{actionStatus}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* PDF Tools Section */}
         <div className="bg-white rounded-lg shadow p-4">
           <PDFTools 
@@ -159,76 +273,106 @@ export function DepartmentTab({
       
       {/* Right: Document upload form and list */}
       <div className="md:w-2/3 w-full bg-white rounded-lg shadow p-3 text-sm">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Upload Document</h3>
-          <div className="w-1/4">
-            <select
-              value={meta.type}
-              onChange={e => setMeta(m => ({ ...m, type: e.target.value }))}
-              className="w-full border rounded px-2 py-1 text-xs"
-            >
-              <option value="">Select Type</option>
-              <option value="request">Request</option>
-              <option value="design">Design</option>
-              <option value="routing">Routing</option>
-              <option value="testing">Testing</option>
-              <option value="purchasing">Purchasing</option>
-              <option value="quote">Quote</option>
-              <option value="manufacturing">Manufacturing</option>
-              <option value="completed">Completed</option>
-              <option value="released">Released</option>
-            </select>
-          </div>
-        </div>
-        {canUpload && (
-          <form onSubmit={handleUpload} className="flex flex-col gap-3 mb-2">
-            <label className="flex flex-col gap-1">
-              <span className="font-medium text-xs">File</span>
+        <div className="mb-3">
+          <h3 className="font-semibold mb-2">Upload Document</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Document Type Selection */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Document Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={meta.type}
+                onChange={e => setMeta(m => ({ ...m, type: e.target.value }))}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                {DOCUMENT_TYPES.map((docType) => (
+                  <option key={docType.value} value={docType.value}>
+                    {docType.label}
+                  </option>
+                ))}
+              </select>
+              {meta.type && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {DOCUMENT_TYPES.find(t => t.value === meta.type)?.description}
+                </p>
+              )}
+            </div>
+            
+            {/* File Selection */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                File <span className="text-red-500">*</span>
+              </label>
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={e => setFile(e.target.files?.[0] || null)}
                 required
-                className="border rounded px-2 py-1 text-xs"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-            </label>
-            <div className="flex gap-3">
-              <div className="w-3/4">
-                <label className="flex flex-col gap-1">
-                  <span className="font-medium text-xs">Description</span>
-                  <textarea
-                    placeholder="Enter document description..."
-                    value={meta.description}
-                    onChange={e => setMeta(m => ({ ...m, description: e.target.value }))}
-                    className="border rounded px-2 py-1 text-xs resize-none w-full"
-                    rows={6}
-                  />
-                </label>
-              </div>
-              <div className="w-1/4 flex flex-col gap-2 justify-center">
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="w-2/3 mx-auto bg-green-600 text-white px-2 py-1.5 rounded hover:bg-green-700 text-xs font-medium flex items-center justify-center gap-1"
-                >
-                  <Upload className="w-3 h-3" />
-                  {uploading ? "Uploading..." : "Upload"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFile(null);
-                    setMeta({ type: "", description: "" });
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                  className="w-2/3 mx-auto bg-orange-500 text-white px-2 py-1.5 rounded hover:bg-orange-600 text-xs font-medium flex items-center justify-center gap-1"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Clear
-                </button>
-              </div>
+              {file && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
             </div>
-            {uploadStatus && <div className="text-xs text-center mt-2">{uploadStatus}</div>}
+          </div>
+        </div>
+        {canUpload && (
+          <form onSubmit={handleUpload} className="space-y-3 mb-4">
+            {/* Description */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                placeholder="Enter document description (optional)..."
+                value={meta.description}
+                onChange={e => setMeta(m => ({ ...m, description: e.target.value }))}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+              />
+            </div>
+
+            {/* Upload Status */}
+            {uploadStatus && (
+              <div className={`text-xs p-2 rounded ${
+                uploadStatus.includes('successful') 
+                  ? 'bg-green-50 text-green-700 border border-green-200' 
+                  : uploadStatus.includes('failed') || uploadStatus.includes('Please')
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : 'bg-blue-50 text-blue-700 border border-blue-200'
+              }`}>
+                {uploadStatus}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={uploading || !file || !meta.type}
+                className="w-1/4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                {uploading ? "Uploading..." : "Upload"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFile(null);
+                  setMeta({ type: "general", description: "" });
+                  setUploadStatus(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="w-1/4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Clear
+              </button>
+            </div>
           </form>
         )}
         <div className="bg-gray-100 rounded p-1 overflow-x-auto">
@@ -236,10 +380,11 @@ export function DepartmentTab({
             <div className="text-gray-400 text-xs">No documents for this department.</div>
           ) : (
             <>
-              <table className="w-full text-xs min-w-[400px]">
+              <table className="w-full text-xs min-w-[500px]">
                 <thead>
                   <tr className="border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                    <th className="py-2 px-3 text-left font-medium text-xs w-3/5">File Name</th>
+                    <th className="py-2 px-3 text-left font-medium text-xs w-2/5">File Name</th>
+                    <th className="py-2 px-3 text-left font-medium text-xs w-1/5">Type</th>
                     <th className="py-2 px-3 text-left font-medium text-xs w-1/5">Uploaded At</th>
                     <th className="py-2 px-3 text-center font-medium text-xs w-1/5">Actions</th>
                     <th className="py-2 px-3 text-center font-medium text-xs w-1/5">Option</th>
@@ -249,9 +394,9 @@ export function DepartmentTab({
                   {docs
                     .slice((currentDocPage - 1) * docsPerPage, currentDocPage * docsPerPage)
                     .map((doc, index) => {
-                      const isApproved = (doc.metadata as any)?.approved === true;
+                      const isApproved = (doc.metadata as { approved?: boolean })?.approved === true;
                       const isProduction = doc.workflowState === "production";
-                      const isSeniorManagerOfDept = user?.role?.toUpperCase() === "SENIOR MANAGER" &&
+                      const isSeniorManagerOfDept = (user?.role?.toUpperCase() === "SENIOR MANAGER" || user?.role?.toUpperCase() === "SENIOR_MANAGER") &&
                         (user.department?.toUpperCase() === department?.toUpperCase() || 
                          user.department?.toLowerCase() === department?.toLowerCase());
                       const canApproveDoc = (user?.role?.toUpperCase() === "ADMIN" || isSeniorManagerOfDept || project?.ownerId === user?.id) && !isApproved && !isProduction;
@@ -259,23 +404,44 @@ export function DepartmentTab({
                       const isProjectOwner = project?.ownerId === user?.id;
                       const canDeleteDoc = isProjectOwner && !isProduction;
                       
+                      // Check if user can access this document type
+                      const documentType = (doc.metadata as any)?.type as string;
+                      const isRestricted = isRestrictedDocumentType(documentType);
+                      const userRole = user?.role?.toUpperCase();
+                      const isAdmin = userRole === "ADMIN";
+                      const isSeniorManager = userRole === "SENIOR MANAGER" || userRole === "SENIOR_MANAGER";
+                      const canAccessRestricted = isAdmin || isSeniorManager || isProjectOwner;
+                      const canViewDownload = !isRestricted || canAccessRestricted;
+                      
                       return (
                       <tr key={doc.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="py-0.5 px-3 break-words w-3/5">{doc.fileName}</td>
+                        <td className="py-0.5 px-3 break-words w-2/5">
+                          <div className="flex items-center gap-2">
+                            {isRestricted && (
+                              <Shield className="w-3 h-3 text-orange-500" />
+                            )}
+                            {doc.fileName}
+                          </div>
+                        </td>
+                        <td className="py-0.5 px-3 w-1/5">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {DOCUMENT_TYPES.find(t => t.value === (doc.metadata as any)?.type)?.label || 'General'}
+                          </span>
+                        </td>
                         <td className="py-0.5 px-3 w-1/5">{new Date(doc.createdAt).toLocaleString()}</td>
                         <td className="py-0.5 px-3 w-1/5">
                           <div className="flex justify-center gap-2">
                             {/* Approve Icon */}
                             <button
                               onClick={() => handleApproveDoc(doc.id)}
-                              disabled={docActionStatus[doc.id] === "Approving..." || (doc.metadata as any)?.approved === true || doc.workflowState === "production"}
-                              className={`p-1.5 rounded transition-colors ${
-                                (doc.metadata as any)?.approved === true
-                                  ? "bg-green-100 text-green-600 cursor-not-allowed"
-                                  : canApproveDoc
-                                  ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
-                                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                              } disabled:opacity-50`}
+                              disabled={docActionStatus[doc.id] === "Approving..." || (doc.metadata as { approved?: boolean })?.approved === true || doc.workflowState === "production"}
+                                                              className={`p-1.5 rounded transition-colors ${
+                                  (doc.metadata as { approved?: boolean })?.approved === true
+                                    ? "bg-green-100 text-green-600 cursor-not-allowed"
+                                    : canApproveDoc
+                                    ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                } disabled:opacity-50`}
                               title={canApproveDoc ? "Approve Document" : "Approval not available"}
                             >
                               <Check className="w-4 h-4" />
@@ -284,15 +450,15 @@ export function DepartmentTab({
                             {/* Upload to Production Icon */}
                             <button
                               onClick={() => handleSendToProduction(doc.id)}
-                              disabled={docActionStatus[doc.id] === "Sending to production..." || doc.workflowState === "production" || !(doc.metadata as any)?.approved}
-                              className={`p-1.5 rounded transition-colors ${
-                                doc.workflowState === "production"
-                                  ? "bg-green-100 text-green-600 cursor-not-allowed"
-                                  : (doc.metadata as any)?.approved && canSendToProduction
-                                  ? "bg-orange-100 text-orange-600 hover:bg-orange-200"
-                                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                              } disabled:opacity-50`}
-                              title={canSendToProduction && (doc.metadata as any)?.approved ? "Send to Production" : "Production not available"}
+                              disabled={docActionStatus[doc.id] === "Sending to production..." || doc.workflowState === "production" || !(doc.metadata as { approved?: boolean })?.approved}
+                                                              className={`p-1.5 rounded transition-colors ${
+                                  doc.workflowState === "production"
+                                    ? "bg-green-100 text-green-600 cursor-not-allowed"
+                                    : (doc.metadata as { approved?: boolean })?.approved && canSendToProduction
+                                    ? "bg-orange-100 text-orange-600 hover:bg-orange-200"
+                                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                } disabled:opacity-50`}
+                              title={canSendToProduction && (doc.metadata as { approved?: boolean })?.approved ? "Send to Production" : "Production not available"}
                             >
                               <Upload className="w-4 h-4" />
                             </button>
@@ -318,7 +484,7 @@ export function DepartmentTab({
                           )}
                         </td>
                         <td className="py-0.5 px-3 w-1/5">
-                          <div className="relative dropdown-container flex justify-center">
+                          <div className="relative dropdown-container flex justify-center" ref={dropdownRef}>
                             <button
                               onClick={() => toggleDropdown(doc.id)}
                               className="p-1 hover:bg-gray-100 rounded"
@@ -327,26 +493,36 @@ export function DepartmentTab({
                             </button>
                             {dropdownOpen === doc.id && (
                               <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                                <button
-                                  onClick={() => handleViewDoc(doc)}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                  View
-                                </button>
-                                <button
-                                  onClick={() => handleDownloadDoc(doc)}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                                >
-                                  <Download className="w-4 h-4" />
-                                  Download
-                                </button>
+                                {canViewDownload ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleViewDoc(doc)}
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      View
+                                    </button>
+                                    <button
+                                      onClick={() => handleDownloadDoc(doc)}
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                      Download
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="px-3 py-2 text-sm text-gray-500 flex items-center gap-2">
+                                    <Eye className="w-4 h-4" />
+                                    Access Restricted
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
                         </td>
                       </tr>
-                      )})}
+                    )
+                  })}
                 </tbody>
               </table>
               
@@ -381,6 +557,21 @@ export function DepartmentTab({
           )}
         </div>
       </div>
-    </div>
+      
+      </div>
+      
+      {/* Document Viewer Modal - Rendered outside main component */}
+      {viewerOpen && selectedDocument && (
+        <SimpleDocumentViewer
+          fileName={selectedDocument.fileName}
+          filePath={selectedDocument.filePath}
+          documentId={selectedDocument.documentId}
+          onClose={() => {
+            setViewerOpen(false);
+            setSelectedDocument(null);
+          }}
+        />
+      )}
+    </>
   );
 } 

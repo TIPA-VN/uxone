@@ -13,8 +13,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const taskId = searchParams.get("taskId");
     const projectId = searchParams.get("projectId");
-    const parentCommentId = searchParams.get("parentCommentId");
-    const includeReplies = searchParams.get("includeReplies") === "true";
 
     if (!taskId && !projectId) {
       return NextResponse.json(
@@ -23,24 +21,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const where: any = {};
-
-    if (taskId) {
-      where.taskId = taskId;
-    }
-
-    if (projectId) {
-      where.projectId = projectId;
-    }
-
-    if (parentCommentId) {
-      where.parentCommentId = parentCommentId;
-    } else if (!includeReplies) {
-      // Only show top-level comments unless explicitly requesting replies
-      where.parentCommentId = null;
-    }
-
-    const include: any = {
+    const include = {
       author: {
         select: {
           id: true,
@@ -52,8 +33,11 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    if (includeReplies) {
-      include.replies = {
+    // Use ProjectComment for project comments, Comment for task comments
+    let comments;
+    if (projectId) {
+      comments = await prisma.projectComment.findMany({
+        where: { projectId },
         include: {
           author: {
             select: {
@@ -65,15 +49,16 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { createdAt: "asc" },
-      };
+        orderBy: { createdAt: "desc" },
+      });
+    } else {
+      const where = { taskId };
+      comments = await prisma.comment.findMany({
+        where,
+        include,
+        orderBy: { createdAt: "desc" },
+      });
     }
-
-    const comments = await prisma.comment.findMany({
-      where,
-      include,
-      orderBy: { createdAt: "desc" },
-    });
 
     return NextResponse.json(comments);
   } catch (error) {
@@ -94,7 +79,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { content, taskId, projectId, parentCommentId, mentions = [] } = body;
+    const { content, taskId, projectId: rawProjectId } = body;
+    
+    // Ensure projectId is a string, not an array
+    const projectId = Array.isArray(rawProjectId) ? rawProjectId[0] : rawProjectId;
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -136,71 +124,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate parent comment exists if provided
-    if (parentCommentId) {
-      const parentComment = await prisma.comment.findUnique({
-        where: { id: parentCommentId },
-      });
-      if (!parentComment) {
-        return NextResponse.json(
-          { error: "Parent comment not found" },
-          { status: 404 }
-        );
-      }
-    }
 
-    // Validate mentioned users exist
-    if (mentions.length > 0) {
-      const mentionedUsers = await prisma.user.findMany({
-        where: { id: { in: mentions } },
-        select: { id: true },
-      });
-      const validMentionIds = mentionedUsers.map(user => user.id);
-      const invalidMentions = mentions.filter((id: string) => !validMentionIds.includes(id));
-      
-      if (invalidMentions.length > 0) {
-        return NextResponse.json(
-          { error: `Invalid user mentions: ${invalidMentions.join(", ")}` },
-          { status: 400 }
-        );
-      }
-    }
 
-    const comment = await prisma.comment.create({
-      data: {
-        content: content.trim(),
-        authorId: session.user.id,
-        taskId,
-        projectId,
-        parentCommentId,
-        mentions,
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            department: true,
-            departmentName: true,
-          },
+    // Use ProjectComment for project comments, Comment for task comments
+    let comment;
+    if (projectId) {
+      comment = await prisma.projectComment.create({
+        data: {
+          content: content.trim(),
+          authorId: session.user.id,
+          projectId,
         },
-        replies: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                department: true,
-                departmentName: true,
-              },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              department: true,
+              departmentName: true,
             },
           },
-          orderBy: { createdAt: "asc" },
         },
-      },
-    });
+      });
+    } else {
+      comment = await prisma.comment.create({
+        data: {
+          content: content.trim(),
+          authorId: session.user.id,
+          taskId,
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              department: true,
+              departmentName: true,
+            },
+          },
+        },
+      });
+    }
 
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CheckCircle, XCircle, Clock, Menu } from "lucide-react";
 import { Task, User } from "../types/project";
 
@@ -81,7 +81,7 @@ export function TasksTab({ projectId, tasks, users, onTaskCreated, onTaskStatusU
       } else {
         const errorData = await res.json();
         if (errorData.error === "Cannot complete task with incomplete sub-tasks") {
-          alert(`Cannot complete task. Please complete the following sub-tasks first:\n${errorData.incompleteSubtasks.map((st: any) => `- ${st.title}`).join('\n')}`);
+          alert(`Cannot complete task. Please complete the following sub-tasks first:\n${errorData.incompleteSubtasks.map((st: { title: string }) => `- ${st.title}`).join('\n')}`);
         } else {
           alert(errorData.error || "Failed to update task status");
         }

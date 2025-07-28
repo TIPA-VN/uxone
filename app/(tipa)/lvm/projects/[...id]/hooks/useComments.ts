@@ -4,7 +4,6 @@ import { Comment } from '../types/project';
 export function useComments(projectId: string) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
-  const [commentType, setCommentType] = useState<'comment' | 'update'>('comment');
   const [submittingComment, setSubmittingComment] = useState(false);
 
   const fetchComments = async () => {
@@ -36,7 +35,6 @@ export function useComments(projectId: string) {
         body: JSON.stringify({
           content: newComment,
           projectId,
-          type: commentType,
         }),
       });
 
@@ -60,8 +58,6 @@ export function useComments(projectId: string) {
     comments,
     newComment,
     setNewComment,
-    commentType,
-    setCommentType,
     submittingComment,
     submitComment,
     fetchComments,

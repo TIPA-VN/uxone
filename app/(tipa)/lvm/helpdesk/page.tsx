@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,24 +13,153 @@ import {
   Plus,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  Eye,
+  Edit
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+interface Ticket {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  status: string;
+  priority: string;
+  category: string;
+  assignedTo?: {
+    name: string;
+    username: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DashboardStats {
+  totalTickets: number;
+  openTickets: number;
+  resolvedToday: number;
+  pendingTickets: number;
+  averageResolutionTime: number;
+  customerSatisfaction: number;
+}
 
 export default function ISHomePage() {
-  // Mock data - replace with real data from your API
-  const stats = {
-    totalTickets: 156,
-    openTickets: 23,
-    resolvedToday: 8,
-    pendingTickets: 5
+  const [stats, setStats] = useState<DashboardStats>({
+    totalTickets: 0,
+    openTickets: 0,
+    resolvedToday: 0,
+    pendingTickets: 0,
+    averageResolutionTime: 0,
+    customerSatisfaction: 0
+  });
+  const [recentTickets, setRecentTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch all tickets for stats calculation
+        const ticketsResponse = await fetch('/api/tickets?limit=1000');
+        if (!ticketsResponse.ok) {
+          throw new Error('Failed to fetch tickets');
+        }
+        
+        const ticketsData = await ticketsResponse.json();
+        const tickets = ticketsData.tickets || [];
+        
+        // Calculate stats
+        const totalTickets = tickets.length;
+        const openTickets = tickets.filter((ticket: Ticket) => 
+          ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS'
+        ).length;
+        const pendingTickets = tickets.filter((ticket: Ticket) => 
+          ticket.status === 'PENDING'
+        ).length;
+        
+        // Calculate resolved today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const resolvedToday = tickets.filter((ticket: Ticket) => {
+          if (ticket.status !== 'RESOLVED') return false;
+          const resolvedDate = new Date(ticket.updatedAt);
+          return resolvedDate >= today;
+        }).length;
+        
+        // Calculate average resolution time (mock for now)
+        const averageResolutionTime = 4.5; // hours
+        
+        // Calculate customer satisfaction (mock for now)
+        const customerSatisfaction = 92; // percentage
+        
+        setStats({
+          totalTickets,
+          openTickets,
+          resolvedToday,
+          pendingTickets,
+          averageResolutionTime,
+          customerSatisfaction
+        });
+        
+        // Get recent tickets (last 5)
+        const recentTicketsData = tickets
+          .sort((a: Ticket, b: Ticket) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 5);
+        
+        setRecentTickets(recentTicketsData);
+        
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const handleViewTicket = (ticketId: string) => {
+    router.push(`/lvm/helpdesk/tickets/${ticketId}`);
   };
 
-  const recentTickets = [
-    { id: "TKT-001", title: "Network connectivity issue", status: "open", priority: "high", assignedTo: "John Doe" },
-    { id: "TKT-002", title: "Software installation request", status: "in-progress", priority: "medium", assignedTo: "Jane Smith" },
-    { id: "TKT-003", title: "Password reset", status: "resolved", priority: "low", assignedTo: "Mike Johnson" },
-  ];
+  const handleEditTicket = (ticketId: string) => {
+    router.push(`/lvm/helpdesk/tickets/${ticketId}/edit`);
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Error loading dashboard: {error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="outline" 
+            className="mt-2"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -55,7 +185,7 @@ export default function ISHomePage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
@@ -107,38 +237,36 @@ export default function ISHomePage() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Resolution</CardTitle>
+            <BarChart3 className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.averageResolutionTime}h</div>
+            <p className="text-xs text-muted-foreground">
+              Average time
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Satisfaction</CardTitle>
+            <CheckCircle className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{stats.customerSatisfaction}%</div>
+            <p className="text-xs text-muted-foreground">
+              Customer rating
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/helpdesk/tickets">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Ticket className="h-5 w-5 text-blue-600" />
-                <span>Manage Tickets</span>
-              </CardTitle>
-              <CardDescription>
-                View and manage all helpdesk tickets
-              </CardDescription>
-            </CardHeader>
-          </Link>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/helpdesk/tickets/new">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Plus className="h-5 w-5 text-green-600" />
-                <span>Create Ticket</span>
-              </CardTitle>
-              <CardDescription>
-                Create a new helpdesk ticket
-              </CardDescription>
-            </CardHeader>
-          </Link>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <Link href="/lvm/helpdesk/reports">
             <CardHeader>
@@ -182,7 +310,7 @@ export default function ISHomePage() {
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/settings">
+          <Link href="/lvm/helpdesk/settings">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Settings className="h-5 w-5 text-gray-600" />
@@ -198,43 +326,95 @@ export default function ISHomePage() {
 
       {/* Recent Tickets */}
       <Card>
-        <CardHeader>
-          <CardTitle>Recent Tickets</CardTitle>
-          <CardDescription>
-            Latest helpdesk tickets and their status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentTickets.map((ticket) => (
-              <div key={ticket.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div>
-                    <p className="font-medium">{ticket.title}</p>
-                    <p className="text-sm text-gray-500">ID: {ticket.id}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <Badge 
-                    variant={ticket.status === 'resolved' ? 'default' : 
-                           ticket.status === 'in-progress' ? 'secondary' : 'destructive'}
-                  >
-                    {ticket.status}
-                  </Badge>
-                  <Badge variant="outline">
-                    {ticket.priority}
-                  </Badge>
-                  <p className="text-sm text-gray-500">{ticket.assignedTo}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4">
-            <Button variant="outline" asChild>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Recent Tickets</CardTitle>
+              <CardDescription className="text-sm">
+                Latest helpdesk tickets and their status
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
               <Link href="/lvm/helpdesk/tickets">
-                View All Tickets
+                View All
               </Link>
             </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="space-y-2">
+            {recentTickets.length === 0 ? (
+              <div className="text-center py-6">
+                <Ticket className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No tickets found</p>
+              </div>
+            ) : (
+              recentTickets.map((ticket) => (
+                <div key={ticket.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1 cursor-pointer" onClick={() => handleViewTicket(ticket.id)}>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center space-x-2">
+                        <p className="font-medium text-sm truncate hover:text-blue-600">{ticket.title}</p>
+                        <span className="text-xs text-gray-400">#{ticket.ticketNumber}</span>
+                      </div>
+                      <div className="flex items-center space-x-3 mt-1">
+                        <span className="text-xs text-gray-500">
+                          {new Date(ticket.createdAt).toLocaleDateString()}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {ticket.assignedTo ? ticket.assignedTo.name : 'Unassigned'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-3">
+                    <Badge 
+                      variant={
+                        ticket.status === 'RESOLVED' ? 'default' : 
+                        ticket.status === 'IN_PROGRESS' ? 'secondary' : 
+                        ticket.status === 'PENDING' ? 'outline' : 'destructive'
+                      }
+                      className="text-xs px-2 py-0.5"
+                    >
+                      {ticket.status.replace('_', ' ')}
+                    </Badge>
+                    <Badge variant="outline" className={`text-xs px-2 py-0.5 ${
+                      ticket.priority === 'HIGH' ? 'border-red-200 text-red-700' :
+                      ticket.priority === 'MEDIUM' ? 'border-yellow-200 text-yellow-700' :
+                      'border-green-200 text-green-700'
+                    }`}>
+                      {ticket.priority}
+                    </Badge>
+                    <div className="flex items-center space-x-1 ml-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-blue-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewTicket(ticket.id);
+                        }}
+                        title="View Ticket"
+                      >
+                        <Eye className="h-3 w-3 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-green-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTicket(ticket.id);
+                        }}
+                        title="Edit Ticket"
+                      >
+                        <Edit className="h-3 w-3 text-gray-500" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

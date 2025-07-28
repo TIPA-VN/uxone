@@ -7,11 +7,17 @@ interface ProjectAnalyticsProps {
   approvalState: Record<string, any>;
   comments: Array<{
     id: string;
-    text: string;
-    author: string;
+    content: string;
+    author: {
+      id: string;
+      name: string;
+      username: string;
+      department: string;
+      departmentName: string;
+    };
     authorId: string;
-    timestamp: string;
-    type: 'comment' | 'update';
+    createdAt: string;
+    updatedAt: string;
   }>;
   docs: any[];
   productionDocs: any[];
@@ -76,10 +82,10 @@ export const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ project, app
   });
   comments.forEach((c) => {
     timeline.push({
-      type: c.type === "comment" ? "COMMENT" : "UPDATE",
-      user: c.author,
-      timestamp: c.timestamp,
-      text: c.text,
+      type: "COMMENT",
+      user: c.author.name,
+      timestamp: c.createdAt,
+      text: c.content,
     });
   });
   timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());

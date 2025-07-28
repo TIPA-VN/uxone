@@ -35,7 +35,10 @@ export function useTasks(projectId: string) {
       const res = await fetch("/api/users");
       if (res.ok) {
         const data = await res.json();
-        setUsers(data);
+        // Handle paginated response from users API
+        const userList = data.users || data;
+        console.log("Fetched users for task assignment:", userList);
+        setUsers(userList);
       }
     } catch (error) {
       console.error("Error fetching users:", error);

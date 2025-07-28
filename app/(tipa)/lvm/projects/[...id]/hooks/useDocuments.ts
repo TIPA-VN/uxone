@@ -93,7 +93,7 @@ export function useDocuments(projectId: string, department?: string) {
       } else {
         setUploadStatus("Upload failed.");
       }
-    } catch (error) {
+    } catch {
       setUploadStatus("Upload failed.");
     } finally {
       setUploading(false);
@@ -113,7 +113,7 @@ export function useDocuments(projectId: string, department?: string) {
       } else {
         setDocActionStatus(prev => ({ ...prev, [docId]: "Approval failed" }));
       }
-    } catch (error) {
+    } catch {
       setDocActionStatus(prev => ({ ...prev, [docId]: "Approval failed" }));
     }
   };
@@ -132,7 +132,7 @@ export function useDocuments(projectId: string, department?: string) {
       } else {
         setDocActionStatus(prev => ({ ...prev, [docId]: "Failed to send to production" }));
       }
-    } catch (error) {
+    } catch {
       setDocActionStatus(prev => ({ ...prev, [docId]: "Failed to send to production" }));
     }
   };
@@ -151,7 +151,7 @@ export function useDocuments(projectId: string, department?: string) {
       } else {
         setDocActionStatus(prev => ({ ...prev, [docId]: "Deletion failed" }));
       }
-    } catch (error) {
+    } catch {
       setDocActionStatus(prev => ({ ...prev, [docId]: "Deletion failed" }));
     }
   };

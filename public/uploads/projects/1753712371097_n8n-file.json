@@ -1,0 +1,253 @@
+{
+  "name": "Customer Service AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-service",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Customer Service Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming customer request\nconst requestBody = $input.first().json.body;\nconst query = requestBody.query || '';\nconst customerId = requestBody.customer_id || '';\nconst orderId = requestBody.order_id || '';\n\n// Determine the intent based on the query\nlet intent = 'general';\nlet mcpMethod = 'get_customer_orders';\nlet mcpParams = {};\n\nif (query.toLowerCase().includes('order status') || query.toLowerCase().includes('status')) {\n  intent = 'order_status';\n  mcpMethod = 'get_order_status';\n  mcpParams = { order_id: orderId };\n} else if (query.toLowerCase().includes('production') || query.toLowerCase().includes('delivery')) {\n  intent = 'production_update';\n  mcpMethod = 'get_production_updates';\n  mcpParams = { order_id: orderId };\n} else if (query.toLowerCase().includes('alert') || query.toLowerCase().includes('notification')) {\n  intent = 'alerts';\n  mcpMethod = 'get_customer_alerts';\n  mcpParams = { customer_id: customerId };\n} else if (query.toLowerCase().includes('report')) {\n  intent = 'report';\n  mcpMethod = 'generate_report';\n  mcpParams = { type: 'summary' };\n} else if (customerId) {\n  mcpParams = { customer_id: customerId };\n}\n\nreturn {\n  original_query: query,\n  customer_id: customerId,\n  order_id: orderId,\n  intent: intent,\n  mcp_method: mcpMethod,\n  mcp_params: mcpParams,\n  request_id: `req_${Date.now()}`\n};"
+      },
+      "id": "intent-analysis",
+      "name": "Analyze Customer Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/mcp/request",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "method",
+              "value": "={{ $json.mcp_method }}"
+            },
+            {
+              "name": "params",
+              "value": "={{ $json.mcp_params }}"
+            },
+            {
+              "name": "request_id",
+              "value": "={{ $json.request_id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "mcp-request",
+      "name": "Send MCP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a helpful customer service AI agent for a motor vehicle manufacturer. You provide updates on sales orders, production status, delivery estimates, and handle customer inquiries professionally. Always be clear, concise, and helpful."
+            },
+            {
+              "role": "user",
+              "content": "Customer Query: {{ $('Analyze Customer Intent').first().json.original_query }}\n\nData from MCP Server: {{ $json.result }}\n\nPlease provide a helpful response to the customer based on this information."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 500
+        }
+      },
+      "id": "ai-response",
+      "name": "Generate AI Response",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the final response\nconst originalData = $('Analyze Customer Intent').first().json;\nconst mcpData = $('Send MCP Request').first().json;\nconst aiResponse = $('Generate AI Response').first().json;\n\nconst response = {\n  success: true,\n  timestamp: new Date().toISOString(),\n  customer_id: originalData.customer_id,\n  order_id: originalData.order_id,\n  intent: originalData.intent,\n  ai_response: aiResponse.choices[0].message.content,\n  data: mcpData.result,\n  request_id: originalData.request_id\n};\n\nreturn response;"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "webhook-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/sse/stream",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "text/event-stream"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 0
+        }
+      },
+      "id": "sse-listener",
+      "name": "SSE Stream Listener",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [240, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process SSE events\nconst sseData = $input.first().json;\n\n// Parse SSE data if it's a string\nlet eventData;\ntry {\n  eventData = typeof sseData === 'string' ? JSON.parse(sseData) : sseData;\n} catch (e) {\n  eventData = sseData;\n}\n\n// Handle different event types\nif (eventData.type === 'mcp_response') {\n  // Log MCP responses\n  console.log('MCP Response received:', eventData);\n} else if (eventData.type === 'periodic_update') {\n  // Handle periodic updates\n  console.log('Periodic update:', eventData);\n} else if (eventData.type === 'connected') {\n  // Handle connection events\n  console.log('SSE Connected:', eventData.client_id);\n}\n\nreturn {\n  event_type: eventData.type,\n  timestamp: new Date().toISOString(),\n  data: eventData\n};"
+      },
+      "id": "process-sse",
+      "name": "Process SSE Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "customer_service_logs",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "values": {
+            "timestamp": "={{ $json.timestamp }}",
+            "event_type": "={{ $json.event_type }}",
+            "data": "={{ JSON.stringify($json.data) }}"
+          }
+        }
+      },
+      "id": "log-events",
+      "name": "Log SSE Events",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 500]
+    }
+  ],
+  "connections": {
+    "Customer Service Webhook": {
+      "main": [
+        [
+          {
+            "node": "Analyze Customer Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Customer Intent": {
+      "main": [
+        [
+          {
+            "node": "Send MCP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send MCP Request": {
+      "main": [
+        [
+          {
+            "node": "Generate AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate AI Response": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSE Stream Listener": {
+      "main": [
+        [
+          {
+            "node": "Process SSE Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process SSE Events": {
+      "main": [
+        [
+          {
+            "node": "Log SSE Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

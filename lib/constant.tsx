@@ -8,6 +8,7 @@ import { LiaPencilRulerSolid, LiaToolsSolid } from "react-icons/lia";
 import { MdEngineering } from "react-icons/md";
 import { VscSettingsGear } from "react-icons/vsc";
 import { RiCustomerService2Fill } from "react-icons/ri";
+import { FaServer } from "react-icons/fa";
 
 
 export const SidebarLinks = [
@@ -29,6 +30,11 @@ export const SidebarLinks = [
         route: "/lvm/cs",
         label: "Customer Care",
         icon: <RiCustomerService2Fill />,
+      },
+      {
+        route: "/lvm/is",
+        label: "Information Systems",
+        icon: <FaServer />,
       },
       {
         route: "/lvm/helpdesk",

@@ -18,10 +18,29 @@ export async function GET(
 
     const comments = await prisma.taskComment.findMany({
       where: { taskId: id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            username: true
+          }
+        }
+      },
       orderBy: { createdAt: 'asc' }
     });
 
-    return NextResponse.json(comments);
+    // Transform the data to match frontend expectations
+    const transformedComments = comments.map(comment => ({
+      id: comment.id,
+      taskId: comment.taskId,
+      text: comment.content,
+      authorId: comment.authorId,
+      author: comment.author.name || comment.author.username || 'Unknown User',
+      timestamp: comment.createdAt
+    }));
+
+    return NextResponse.json(transformedComments);
   } catch (error) {
     console.error('Error fetching task comments:', error);
     return NextResponse.json([], { status: 500 });
@@ -67,10 +86,29 @@ export async function POST(
         taskId: id,
         content: text,
         authorId: session.user.id,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            username: true
+          }
+        }
       }
     });
 
-    return NextResponse.json(comment);
+    // Transform the data to match frontend expectations
+    const transformedComment = {
+      id: comment.id,
+      taskId: comment.taskId,
+      text: comment.content,
+      authorId: comment.authorId,
+      author: comment.author.name || comment.author.username || 'Unknown User',
+      timestamp: comment.createdAt
+    };
+
+    return NextResponse.json(transformedComment);
   } catch (error) {
     console.error('Error creating task comment:', error);
     return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 });

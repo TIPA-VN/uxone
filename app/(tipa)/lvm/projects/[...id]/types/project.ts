@@ -4,7 +4,7 @@ export type Project = {
   description?: string;
   status: string;
   departments: string[];
-  approvalState?: Record<string, any>;
+  approvalState?: Record<string, string>;
   ownerId?: string;
   requestDate?: string;
   departmentDueDates?: Record<string, string>;
@@ -16,6 +16,8 @@ export type Document = {
   id: string;
   fileName: string;
   filePath: string;
+  fileType?: string;
+  size?: number;
   createdAt: string;
   version?: number;
   department?: string;
@@ -29,6 +31,32 @@ export type Document = {
     [key: string]: unknown 
   };
 };
+
+// Document Types Configuration
+export const DOCUMENT_TYPES = [
+  { value: "general", label: "General", description: "General purpose documents" },
+  { value: "drawing", label: "Drawing", description: "Technical drawings and CAD files" },
+  { value: "specification", label: "Specification", description: "Technical specifications and requirements" },
+  { value: "procedure", label: "Procedure", description: "Work procedures and instructions" },
+  { value: "manual", label: "Manual", description: "User manuals and guides" },
+  { value: "report", label: "Report", description: "Reports and analysis documents" },
+  { value: "contract", label: "Contract", description: "Contracts and agreements" },
+  { value: "quote", label: "Quote", description: "Quotes and pricing documents" },
+  { value: "invoice", label: "Invoice", description: "Invoices and billing documents" },
+  { value: "certificate", label: "Certificate", description: "Certificates and compliance documents" },
+  { value: "test", label: "Test", description: "Test results and validation documents" },
+  { value: "inspection", label: "Inspection", description: "Inspection reports and checklists" },
+  { value: "quality", label: "Quality", description: "Quality control documents" },
+  { value: "safety", label: "Safety", description: "Safety documentation and procedures" },
+  { value: "maintenance", label: "Maintenance", description: "Maintenance schedules and records" },
+  { value: "training", label: "Training", description: "Training materials and records" },
+  { value: "policy", label: "Policy", description: "Company policies and guidelines" },
+  { value: "form", label: "Form", description: "Forms and templates" },
+  { value: "template", label: "Template", description: "Document templates" },
+  { value: "other", label: "Other", description: "Other document types" },
+] as const;
+
+export type DocumentType = typeof DOCUMENT_TYPES[number]['value'];
 
 export type Task = {
   id: string;
@@ -58,11 +86,17 @@ export type User = {
 
 export type Comment = {
   id: string;
-  text: string;
-  author: string;
+  content: string;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    department: string;
+    departmentName: string;
+  };
   authorId: string;
-  timestamp: string;
-  type: 'comment' | 'update';
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TaskForm = {
@@ -92,6 +126,7 @@ export const DEPARTMENTS = [
   { value: "hra", label: "Human Resources" },
   { value: "cs", label: "Customer Service" },
   { value: "sales", label: "Sales" },
+  { value: "is", label: "Information Systems" },
   { value: "LVM-EXPAT", label: "LVM EXPATS" },
 ] as const;
 

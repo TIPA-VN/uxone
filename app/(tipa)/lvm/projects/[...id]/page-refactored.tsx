@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import { ProjectAnalytics } from "@/components/ProjectAnalytics";
 import { DueDateEditor } from "@/components/DueDateEditor";
 import { PDFTools } from "@/components/PDFTools";
-import { DocumentViewer } from "@/components/DocumentViewer";
 
 // Custom hooks
 import { useProject } from "./hooks/useProject";
@@ -19,14 +18,14 @@ import { ProjectTabs } from "./components/ProjectTabs";
 import { TasksTab } from "./components/TasksTab";
 import { ProjectOverview } from "./components/ProjectOverview";
 import { DepartmentTab } from "./components/DepartmentTab";
+import { ProductionTab } from "./components/ProductionTab";
 
 // Types
-import { Project } from "./types/project";
 
 export default function ProjectDetailsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const projectId = params?.id as string;
+  const projectId = Array.isArray(params?.id) ? params.id[0] : params?.id as string;
   const { data: session } = useSession();
   const user = session?.user;
 
@@ -35,10 +34,7 @@ export default function ProjectDetailsPage() {
   const [urlTabHandled, setUrlTabHandled] = useState(false);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [showDueDateEditor, setShowDueDateEditor] = useState(false);
-  const [dueDateEditorDepartment, setDueDateEditorDepartment] = useState<string | null>(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerDoc, setViewerDoc] = useState<any>(null);
-  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+
 
   // Custom hooks
   const { project, loading, error, updateProject } = useProject(projectId);
@@ -97,7 +93,7 @@ export default function ProjectDetailsPage() {
       } else {
         setActionStatus("Action failed.");
       }
-    } catch (error) {
+    } catch {
       setActionStatus("Action failed.");
     }
   };
@@ -118,41 +114,17 @@ export default function ProjectDetailsPage() {
         setActionStatus("Due dates updated successfully!");
         setTimeout(() => setActionStatus(null), 3000);
       }
-    } catch (error) {
+    } catch {
       setActionStatus("Failed to update due dates.");
     }
   };
 
   // Handle document actions
-  const handleViewDoc = (doc: any) => {
-    setViewerDoc(doc);
-    setViewerOpen(true);
-  };
 
-  const handleDownloadDoc = (doc: any) => {
-    window.open(`/api/documents/${doc.id}/download`, '_blank');
-  };
 
-  const toggleDropdown = (docId: string) => {
-    setDropdownOpen(dropdownOpen === docId ? null : docId);
-  };
 
-  const closeViewer = () => {
-    setViewerOpen(false);
-    setViewerDoc(null);
-  };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownOpen) {
-        setDropdownOpen(null);
-      }
-    };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [dropdownOpen]);
 
   if (loading) {
     return (
@@ -181,8 +153,6 @@ export default function ProjectDetailsPage() {
       <ProjectHeader
         project={project}
         user={user}
-        onApproval={handleApproval}
-        actionStatus={actionStatus}
         activeTab={activeTab}
       />
 
@@ -206,121 +176,155 @@ export default function ProjectDetailsPage() {
             onDocumentAction={() => {
               documentsHook.fetchDocuments();
             }}
+            onApproval={handleApproval}
+            actionStatus={actionStatus}
           />
         )}
 
         {/* MAIN Tab */}
         {activeTab === "MAIN" && (
-          <div className="space-y-6">
-            <ProjectOverview
-              project={project}
-              tasks={tasksHook.tasks}
-              user={user}
-              onUpdateProjectStatus={async (newStatus) => {
-                try {
-                  const res = await fetch("/api/projects", {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                      projectIds: [projectId], 
-                      updates: { status: newStatus } 
-                    }),
-                  });
+          <div className="max-w-6xl mx-auto">
+            {/* Project Overview Section */}
+            <div className="mb-8">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">Project Overview</h2>
+                </div>
+                <ProjectOverview
+                  project={project}
+                  tasks={tasksHook.tasks}
+                  user={user}
+                  onUpdateProjectStatus={async (newStatus) => {
+                    try {
+                      const res = await fetch("/api/projects", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ 
+                          projectIds: [projectId], 
+                          updates: { status: newStatus } 
+                        }),
+                      });
 
-                  if (res.ok) {
-                    updateProject({ ...project, status: newStatus });
-                  } else {
-                    const errorData = await res.json();
-                    if (errorData.error === "Cannot complete project with incomplete tasks") {
-                      alert(`Cannot complete project. Please complete all tasks first.`);
-                    } else if (errorData.error === "Cannot complete project with incomplete sub-tasks") {
-                      alert(`Cannot complete project. Please complete all sub-tasks first.`);
-                    } else {
-                      alert(errorData.error || "Failed to update project status");
+                      if (res.ok) {
+                        updateProject({ ...project, status: newStatus });
+                      } else {
+                        const errorData = await res.json();
+                        if (errorData.error === "Cannot complete project with incomplete tasks") {
+                          alert(`Cannot complete project. Please complete all tasks first.`);
+                        } else if (errorData.error === "Cannot complete project with incomplete sub-tasks") {
+                          alert(`Cannot complete project. Please complete all sub-tasks first.`);
+                        } else {
+                          alert(errorData.error || "Failed to update project status");
+                        }
+                      }
+                    } catch (error) {
+                      console.error("Error updating project status:", error);
+                      alert("Failed to update project status");
                     }
-                  }
-                } catch (error) {
-                  console.error("Error updating project status:", error);
-                  alert("Failed to update project status");
-                }
-              }}
-              onEditDueDates={() => setShowDueDateEditor(true)}
-              showDueDateEditor={showDueDateEditor}
-            />
+                  }}
+                  onEditDueDates={() => setShowDueDateEditor(true)}
+                  showDueDateEditor={showDueDateEditor}
+                />
+              </div>
+            </div>
 
             {/* Comments Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Comments & Updates</h3>
-              
-              <form onSubmit={commentsHook.submitComment} className="mb-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Add Comment
-                    </label>
-                    <textarea
-                      value={commentsHook.newComment}
-                      onChange={(e) => commentsHook.setNewComment(e.target.value)}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Add a comment or update..."
-                    />
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="comment"
-                          checked={commentsHook.commentType === 'comment'}
-                          onChange={(e) => commentsHook.setCommentType(e.target.value as 'comment' | 'update')}
-                          className="mr-2"
-                        />
-                        <span className="text-sm text-gray-700">Comment</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="update"
-                          checked={commentsHook.commentType === 'update'}
-                          onChange={(e) => commentsHook.setCommentType(e.target.value as 'comment' | 'update')}
-                          className="mr-2"
-                        />
-                        <span className="text-sm text-gray-700">Update</span>
-                      </label>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={commentsHook.submittingComment || !commentsHook.newComment.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
-                    >
-                      {commentsHook.submittingComment ? "Submitting..." : "Submit"}
-                    </button>
+                  <h3 className="text-lg font-semibold text-gray-900">Comments & Updates</h3>
+                  <div className="ml-auto">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {commentsHook.comments.length} comments
+                    </span>
                   </div>
                 </div>
-              </form>
-
-              <div className="space-y-4">
-                {commentsHook.comments.map((comment) => (
-                  <div key={comment.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-900">{comment.author}</span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(comment.timestamp).toLocaleString()}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          comment.type === 'update' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {comment.type}
-                        </span>
+              </div>
+              
+              <div className="p-6">
+                <form onSubmit={commentsHook.submitComment} className="mb-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Share your thoughts
+                        </label>
+                        <textarea
+                          value={commentsHook.newComment}
+                          onChange={(e) => commentsHook.setNewComment(e.target.value)}
+                          rows={3}
+                          className="w-full px-4 py-3 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all duration-200 bg-white shadow-sm text-sm"
+                          placeholder="Write a comment or share an update about this project..."
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-3">
+                        <div className="text-xs text-gray-500">
+                          {commentsHook.newComment.length}/500 characters
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={commentsHook.submittingComment || !commentsHook.newComment.trim()}
+                          className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 cursor-pointer shadow-sm"
+                        >
+                          {commentsHook.submittingComment ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Submitting...
+                            </div>
+                          ) : (
+                            "Post Comment"
+                          )}
+                        </button>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-700 mt-1">{comment.text}</p>
                   </div>
-                ))}
+                </form>
+
+                <div className="h-80 overflow-y-auto border border-gray-200 rounded-xl bg-gray-50">
+                  <div className="p-4 space-y-3">
+                    {commentsHook.comments.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-500 text-sm">No comments yet. Be the first to share your thoughts!</p>
+                      </div>
+                    ) : (
+                      commentsHook.comments.map((comment) => (
+                        <div key={comment.id} className="bg-white rounded-xl p-3 border border-gray-100 hover:border-gray-200 transition-all duration-200 shadow-sm">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-sm font-semibold text-blue-700">
+                                {comment.author.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-semibold text-gray-900">{comment.author.name}</span>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                  {new Date(comment.createdAt).toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-700 leading-relaxed">{comment.content}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -332,7 +336,7 @@ export default function ProjectDetailsPage() {
             projectId={projectId}
             tasks={tasksHook.tasks}
             users={tasksHook.users}
-            onTaskCreated={(newTask) => {
+            onTaskCreated={() => {
               tasksHook.fetchTasks();
             }}
             onTaskStatusUpdated={(taskId, newStatus) => {
@@ -354,22 +358,18 @@ export default function ProjectDetailsPage() {
 
         {/* PRODUCTION Tab */}
         {activeTab === "PRODUCTION" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Documents</h3>
-              <PDFTools projectId={projectId} department={activeTab} />
-            </div>
-          </div>
+          <ProductionTab
+            projectId={projectId}
+            productionDocs={documentsHook.productionDocs}
+            user={user}
+            onRefresh={() => {
+              documentsHook.fetchProductionDocuments();
+            }}
+          />
         )}
       </div>
 
-      {/* Document Viewer Modal */}
-      {viewerOpen && viewerDoc && (
-        <DocumentViewer
-          fileName={viewerDoc.fileName}
-          filePath={viewerDoc.filePath}
-        />
-      )}
+
 
       {/* Due Date Editor Modal */}
       {showDueDateEditor && (

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "12");
+    const limit = parseInt(searchParams.get("limit") || "50"); // Increased limit to get more users
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || ""; // active, inactive, all
 

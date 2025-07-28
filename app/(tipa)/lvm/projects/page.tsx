@@ -110,7 +110,7 @@ export default function ProjectsPage() {
           </div>
           <div className="ml-2">
             <Link 
-              href={`/lvm/projects/${project.id}`}
+              href={`/lvm/projects/${project.id}?tab=kpi`}
               className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
             >
               {project.name}
@@ -172,16 +172,16 @@ export default function ProjectsPage() {
               onClick={handleMenuClick}
             >
               <Link
+                href={`/lvm/projects/${project.id}?tab=kpi`}
+                className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
+              >
+                ANALYTICS
+              </Link>
+              <Link
                 href={`/lvm/projects/${project.id}`}
                 className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
               >
                 MAIN
-              </Link>
-              <Link
-                href={`/lvm/projects/${project.id}?tab=kpi`}
-                className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
-              >
-                KPI
               </Link>
               <Link
                 href={`/lvm/projects/${project.id}?tab=production`}

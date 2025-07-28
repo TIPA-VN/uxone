@@ -10,6 +10,10 @@ async function main() {
         { username: "qa_head", email: "qa@demo.com", role: "MANAGER", department: "qa", name: "QA Head", hashedPassword: "demopass1" },
         { username: "pc_head", email: "pc@demo.com", role: "MANAGER", department: "pc", name: "PC Head", hashedPassword: "demopass1" },
         { username: "admin", email: "admin@demo.com", role: "ADMIN", department: "hra", name: "Admin User", hashedPassword: "demopass1" },
+        // IS Team Members
+        { username: "is_manager", email: "is_manager@demo.com", role: "SENIOR_MANAGER", department: "is", name: "IS Manager", hashedPassword: "demopass1" },
+        { username: "is_developer", email: "is_developer@demo.com", role: "DEVELOPER", department: "is", name: "IS Developer", hashedPassword: "demopass1" },
+        { username: "is_support", email: "is_support@demo.com", role: "SUPPORT", department: "is", name: "IS Support", hashedPassword: "demopass1" },
       ],
       skipDuplicates: true,
     });
@@ -29,7 +33,7 @@ async function main() {
         ownerId: admin.id,
         departments: ["logistics", "qa", "pc"],
         approvalState: { logistics: "PENDING", qa: "PENDING", pc: "PENDING" },
-        status: "STARTED",
+        status: "ACTIVE",
       },
     });
   

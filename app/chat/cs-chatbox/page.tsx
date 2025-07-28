@@ -17,7 +17,7 @@ export default function CSAgentPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const webhookUrl = 'http://10.116.2.72:5678/webhook-test/cs-agent-prompt';
+  const webhookUrl = 'http://10.116.2.72:5678/webhook/cs-agent-v2';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
