@@ -182,7 +182,7 @@ export const authConfig = {
           }
 
           // Central API is available, proceed with normal authentication
-          const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+          const baseUrl = process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'production' ? 'http://10.116.2.72:8090' : 'http://localhost:3000')
           
           try {
             const response = await fetch(`${baseUrl}/api/auth/login`, {
