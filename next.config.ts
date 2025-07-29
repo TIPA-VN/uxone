@@ -11,12 +11,6 @@ const nextConfig: NextConfig = {
     // your project has TypeScript errors.
     ignoreBuildErrors: true,
   },
-  // Handle different ports for development and production
-  env: {
-    NEXTAUTH_URL: process.env.NODE_ENV === 'production' 
-      ? process.env.NEXTAUTH_URL || 'http://10.116.2.72:8090'
-      : 'http://localhost:3000',
-  },
 };
 
 export default nextConfig;
