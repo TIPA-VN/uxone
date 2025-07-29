@@ -2,17 +2,33 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { 
-  Calendar, 
+  TrendingUp, 
+  TrendingDown, 
   Users, 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
-  TrendingUp,
-  BarChart3,
   FileText,
-  Target,
-  Activity
+  Activity,
+  BarChart3,
+  PieChart,
+  LineChart
 } from "lucide-react";
+
+interface DashboardData {
+  totalProjects: number;
+  activeProjects: number;
+  completedProjects: number;
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  totalUsers: number;
+  activeUsers: number;
+  recentActivities: Array<{
+    id: string;
+    type: string;
+    description: string;
+    timestamp: string;
+    user: string;
+  }>;
+}
 
 type Project = {
   id: string;
@@ -58,8 +74,9 @@ type DashboardStats = {
   efficiency: number;
 };
 
-export default function UnifiedDashboard() {
+export default function DashboardPage() {
   const { data: session } = useSession();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const user = session?.user;
   
   const [projects, setProjects] = useState<Project[]>([]);
@@ -78,6 +95,7 @@ export default function UnifiedDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'tasks' | 'analytics'>('overview');
+  const [myProjects] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   useEffect(() => {
     if (user) {
@@ -187,7 +205,7 @@ export default function UnifiedDashboard() {
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'projects', label: 'Projects', icon: FileText },
-              { id: 'tasks', label: 'Tasks', icon: Target },
+              { id: 'tasks', label: 'Tasks', icon: Users },
               { id: 'analytics', label: 'Analytics', icon: Activity },
             ].map((tab) => {
               const IconComponent = tab.icon;
@@ -229,7 +247,7 @@ export default function UnifiedDashboard() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center">
                   <div className="p-2 bg-green-100 rounded-lg">
-                    <Target className="w-6 h-6 text-green-600" />
+                    <Users className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">My Tasks</p>
@@ -241,7 +259,7 @@ export default function UnifiedDashboard() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center">
                   <div className="p-2 bg-orange-100 rounded-lg">
-                    <Clock className="w-6 h-6 text-orange-600" />
+                    <TrendingUp className="w-6 h-6 text-orange-600" />
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Hours</p>

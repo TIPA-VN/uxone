@@ -1,7 +1,10 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getDepartmentCodes, getDepartmentNameByCode, getDepartmentByCode } from "@/config/app";
+import { 
+  getDepartmentCodes, 
+  getDepartmentByCode 
+} from "@/config/app";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Code, Users } from "lucide-react";
 
@@ -83,8 +86,8 @@ export default function DepartmentCodesPage() {
                 <h4 className="font-medium text-gray-900 mb-2">User Department Mapping</h4>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• User departments are automatically mapped to standardized codes</li>
-                  <li>• Case-insensitive matching (e.g., "is" → "IS")</li>
-                  <li>• Partial name matching (e.g., "Information Systems" → "IS")</li>
+                  <li>• Case-insensitive matching (e.g., &quot;is&quot; → &quot;IS&quot;)</li>
+                  <li>• Partial name matching (e.g., &quot;Information Systems&quot; → &quot;IS&quot;)</li>
                   <li>• Fallback to original value if no match found</li>
                 </ul>
               </div>
@@ -102,10 +105,10 @@ export default function DepartmentCodesPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-medium text-blue-900 mb-2">Example Mapping</h4>
               <div className="text-sm text-blue-800 space-y-1">
-                <p><strong>User Department:</strong> "Information Systems" → <strong>Code:</strong> "IS"</p>
-                <p><strong>User Department:</strong> "Quality Control" → <strong>Code:</strong> "QC"</p>
-                <p><strong>User Department:</strong> "is" → <strong>Code:</strong> "IS"</p>
-                <p><strong>User Department:</strong> "qc" → <strong>Code:</strong> "QC"</p>
+                <p><strong>User Department:</strong> &quot;Information Systems&quot; → <strong>Code:</strong> &quot;IS&quot;</p>
+                <p><strong>User Department:</strong> &quot;Quality Control&quot; → <strong>Code:</strong> &quot;QC&quot;</p>
+                <p><strong>User Department:</strong> &quot;is&quot; → <strong>Code:</strong> &quot;IS&quot;</p>
+                <p><strong>User Department:</strong> &quot;qc&quot; → <strong>Code:</strong> &quot;QC&quot;</p>
               </div>
             </div>
           </div>

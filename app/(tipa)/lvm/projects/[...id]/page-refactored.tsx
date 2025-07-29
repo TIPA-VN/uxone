@@ -4,7 +4,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ProjectAnalytics } from "@/components/ProjectAnalytics";
 import { DueDateEditor } from "@/components/DueDateEditor";
-import { PDFTools } from "@/components/PDFTools";
 
 // Custom hooks
 import { useProject } from "./hooks/useProject";

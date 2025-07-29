@@ -1,7 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { Plus, Edit, Trash2, Eye, Calendar, Hash } from "lucide-react";
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  FileText,
+  AlertCircle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,10 +34,10 @@ interface DocumentTemplate {
 }
 
 export default function DocumentTemplatesPage() {
-  const { data: session } = useSession();
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
 
@@ -61,7 +66,7 @@ export default function DocumentTemplatesPage() {
       } else {
         setError('Failed to fetch templates');
       }
-    } catch (err) {
+    } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Failed to fetch templates');
     } finally {
       setLoading(false);
@@ -96,7 +101,7 @@ export default function DocumentTemplatesPage() {
         const error = await response.json();
         setError(error.error || 'Failed to save template');
       }
-    } catch (err) {
+    } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Failed to save template');
     }
   };
@@ -131,16 +136,19 @@ export default function DocumentTemplatesPage() {
     if (!confirm('Are you sure you want to delete this template?')) return;
     
     try {
-      const response = await fetch(`/api/document-templates/${templateId}`, {
+      const response = await fetch(`/api/document-templates?id=${templateId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         fetchTemplates();
+        setSuccess('Template deleted successfully!');
+        setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError('Failed to delete template');
+        const error = await response.json();
+        setError(error.error || 'Failed to delete template');
       }
-    } catch (err) {
+    } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Failed to delete template');
     }
   };
@@ -324,6 +332,13 @@ export default function DocumentTemplatesPage() {
           </div>
         )}
 
+        {/* Success Message */}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-green-800">{success}</p>
+          </div>
+        )}
+
         {/* Templates List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template) => (
@@ -355,12 +370,12 @@ export default function DocumentTemplatesPage() {
                 )}
                 
                 <div className="flex items-center text-xs text-gray-500">
-                  <Calendar className="w-3 h-3 mr-1" />
+                  <FileText className="w-3 h-3 mr-1" />
                   Effective: {formatDate(template.effectiveDate)}
                 </div>
                 
                 <div className="flex items-center text-xs text-gray-500">
-                  <Hash className="w-3 h-3 mr-1" />
+                  <AlertCircle className="w-3 h-3 mr-1" />
                   Created by: {template.createdBy.name} (@{template.createdBy.username})
                 </div>
 

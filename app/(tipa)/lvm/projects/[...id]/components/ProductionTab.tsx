@@ -5,11 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-  FileText, 
   Download, 
   Eye, 
-  Clock, 
-  User,
   Archive,
   GitBranch,
   Lock,
@@ -22,7 +19,7 @@ import { Document } from "../types/project";
 import { isRestrictedDocumentType } from "@/lib/documentAccess";
 
 interface ProductionTabProps {
-  projectId: string;
+  projectId?: string;
   productionDocs: Document[];
   user: {
     id: string;
@@ -32,7 +29,7 @@ interface ProductionTabProps {
   onRefresh: () => void;
 }
 
-export function ProductionTab({ projectId, productionDocs, user, onRefresh }: ProductionTabProps) {
+export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTabProps) {
   const [selectedDocument, setSelectedDocument] = useState<{
     fileName: string;
     filePath: string;
@@ -142,16 +139,9 @@ export function ProductionTab({ projectId, productionDocs, user, onRefresh }: Pr
     return 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
-  // Calculate file type statistics
-  const fileTypeStats = productionDocs.reduce((stats, doc) => {
-    const fileType = getFileTypeName(doc.fileType);
-    stats[fileType] = (stats[fileType] || 0) + 1;
-    return stats;
-  }, {} as Record<string, number>);
-
   // Helper function to check if user can access a document
   const canAccessDocument = (doc: Document) => {
-    const documentType = (doc.metadata as any)?.type as string;
+    const documentType = (doc.metadata as { type?: string })?.type as string;
     const isRestricted = isRestrictedDocumentType(documentType);
     
     if (!isRestricted) return true;
@@ -285,7 +275,7 @@ export function ProductionTab({ projectId, productionDocs, user, onRefresh }: Pr
                             <div className="min-w-0">
                               <div className="flex items-center gap-1">
                                 <span className="font-medium text-sm text-gray-900 truncate">{filename}</span>
-                                {isRestrictedDocumentType((versions[0].metadata as any)?.type) && (
+                                {isRestrictedDocumentType((versions[0].metadata as { type?: string })?.type || '') && (
                                   <Shield className="w-3 h-3 text-orange-500 flex-shrink-0" />
                                 )}
                               </div>

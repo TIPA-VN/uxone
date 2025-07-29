@@ -3,9 +3,15 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import {
-  Users, Settings, Shield, Database, Activity, FileText, BarChart3,
-  UserCheck, Building2, Cog, Eye, Lock, Plus, Edit, Trash2, Search, Filter,
-  UserX, UserCheck as UserCheckIcon
+  Users, 
+  Activity, 
+  TrendingUp, 
+  AlertTriangle,
+  Settings,
+  UserCheck,
+  Calendar,
+  Filter,
+  Shield
 } from "lucide-react";
 import { APP_CONFIG, canAccessPage } from "@/config/app";
 import { Badge } from "@/components/ui/badge";
@@ -257,7 +263,7 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Lock className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
           <p className="text-gray-600">You don't have permission to access the admin panel.</p>
         </div>
@@ -280,10 +286,10 @@ export default function AdminDashboard() {
   const mockDepartments = APP_CONFIG.departments.slice(0, 6);
 
   const tabs = [
-    { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "overview", label: "Overview", icon: TrendingUp },
     { id: "users", label: "User Management", icon: Users },
     { id: "roles", label: "Role Management", icon: UserCheck },
-    { id: "departments", label: "Departments", icon: Building2 },
+    { id: "departments", label: "Departments", icon: Calendar },
     { id: "settings", label: "System Settings", icon: Settings },
   ];
 
@@ -353,14 +359,14 @@ export default function AdminDashboard() {
     switch (role) {
       // Admin
       case 'ADMIN':
-        return { color: 'blue', icon: Shield, bgColor: 'bg-blue-50', textColor: 'text-blue-900' };
+        return { color: 'blue', icon: Users, bgColor: 'bg-blue-50', textColor: 'text-blue-900' };
       
       // Executive Level
       case 'GENERAL_DIRECTOR':
       case 'GENERAL_MANAGER':
       case 'ASSISTANT_GENERAL_MANAGER':
       case 'ASSISTANT_GENERAL_MANAGER_2':
-        return { color: 'green', icon: Shield, bgColor: 'bg-white', textColor: 'text-gray-900' };
+        return { color: 'green', icon: Users, bgColor: 'bg-white', textColor: 'text-gray-900' };
       
       // Senior Management
       case 'SENIOR_MANAGER':
@@ -390,7 +396,7 @@ export default function AdminDashboard() {
       case 'SPECIALIST_2':
       case 'SENIOR_ENGINEER':
       case 'ENGINEER':
-        return { color: 'indigo', icon: Cog, bgColor: 'bg-white', textColor: 'text-gray-900' };
+        return { color: 'indigo', icon: Settings, bgColor: 'bg-white', textColor: 'text-gray-900' };
       
       // Staff Level
       case 'SENIOR_STAFF':
@@ -495,7 +501,7 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center">
                       <div className="p-3 rounded-lg bg-orange-500 text-white">
-                        <Building2 className="h-6 w-6" />
+                        <Calendar className="h-6 w-6" />
                       </div>
                       <div className="ml-4">
                         <p className="text-sm font-medium text-gray-600">Departments</p>
@@ -508,7 +514,7 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center">
                       <div className="p-3 rounded-lg bg-purple-500 text-white">
-                        <Shield className="h-6 w-6" />
+                        <Settings className="h-6 w-6" />
                       </div>
                       <div className="ml-4">
                         <p className="text-sm font-medium text-gray-600">Roles</p>
@@ -599,7 +605,7 @@ export default function AdminDashboard() {
               <div className="mb-4 flex gap-3">
                 <div className="flex-1">
                   <div className="relative">
-                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Filter className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input
                       type="text"
                       placeholder="Search users..."
@@ -695,12 +701,12 @@ export default function AdminDashboard() {
                                 >
                                   {user.isActive ? (
                                     <>
-                                      <UserX className="w-3 h-3 mr-1" />
+                                      <UserCheck className="w-3 h-3 mr-1" />
                                       Disable
                                     </>
                                   ) : (
                                     <>
-                                      <UserCheckIcon className="w-3 h-3 mr-1" />
+                                      <UserCheck className="w-3 h-3 mr-1" />
                                       Enable
                                     </>
                                   )}
@@ -1001,7 +1007,7 @@ export default function AdminDashboard() {
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white p-3 rounded-lg border border-gray-200">
                   <div className="flex items-center">
-                    <Building2 className="h-4 w-4 text-blue-600" />
+                    <Calendar className="h-4 w-4 text-blue-600" />
                     <div className="ml-2">
                       <p className="text-xs font-medium text-gray-600">Total Departments</p>
                       <p className="text-lg font-bold text-gray-900">{totalDepartments}</p>

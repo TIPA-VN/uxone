@@ -3,12 +3,12 @@ import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 
 interface ProjectHeaderProps {
   project: Project;
-  user: {
+  user?: {
     id: string;
     role?: string;
     department?: string;
   } | null | undefined;
-  activeTab: string;
+  activeTab?: string;
 }
 
 const getStatusIcon = (status: string | undefined) => {
@@ -24,7 +24,7 @@ const getStatusIcon = (status: string | undefined) => {
   }
 };
 
-export function ProjectHeader({ project, user, activeTab }: ProjectHeaderProps) {
+export function ProjectHeader({ project, user, activeTab }: ProjectHeaderProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
       <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">

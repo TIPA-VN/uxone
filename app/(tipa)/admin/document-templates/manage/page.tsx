@@ -2,12 +2,11 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { 
-  Plus, 
   Upload, 
   Download, 
-  Trash2, 
+  Plus, 
   Edit, 
-  Eye, 
+  Trash2, 
   FileText,
   AlertCircle,
   CheckCircle,
@@ -83,7 +82,7 @@ export default function DocumentTemplateManagePage() {
       } else {
         setError('Failed to fetch templates');
       }
-    } catch (err) {
+    } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Failed to fetch templates');
     } finally {
       setLoading(false);
@@ -120,7 +119,7 @@ export default function DocumentTemplateManagePage() {
         const error = await response.json();
         setError(error.error || 'Failed to save template');
       }
-    } catch (err) {
+    } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Failed to save template');
     }
   };
@@ -165,7 +164,7 @@ export default function DocumentTemplateManagePage() {
         const error = await response.json();
         setError(error.error || 'Failed to delete template');
       }
-    } catch (err) {
+    } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Failed to delete template');
     }
   };
@@ -205,7 +204,7 @@ export default function DocumentTemplateManagePage() {
       if (!line) continue;
 
       const values = line.split(',').map(v => v.trim());
-      const row: any = {};
+      const row: Record<string, string> = {};
       
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
@@ -257,7 +256,7 @@ export default function DocumentTemplateManagePage() {
         const error = await response.json();
         setError(error.error || 'Failed to create templates');
       }
-    } catch (err) {
+    } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Failed to create templates');
     }
   };

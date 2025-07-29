@@ -25,6 +25,10 @@ export function getWeekNumber(date: Date) {
   return `${tmp.getUTCFullYear()}-W${weekNo.toString().padStart(2, "0")}`;
 }
 
+export function getISOWeekString(date: Date = new Date()) {
+  return getWeekNumber(date);
+}
+
 // Status and Priority Utilities
 export const getStatusIconName = (status: string | undefined) => {
   switch(status?.toUpperCase()) {
