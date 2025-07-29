@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start -p 8090",
+    "start": "NEXTAUTH_TRUST_HOST=true next start -p 8090",
     "lint": "next lint"
   },
   "prisma": {

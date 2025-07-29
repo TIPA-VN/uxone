@@ -137,7 +137,7 @@ export const authConfig = {
           throw new Error('Missing credentials')
         }
 
-                try {
+        try {
           // First, check if central API is available
           const centralApiAvailable = await isCentralApiAvailable()
           
@@ -270,6 +270,7 @@ export const authConfig = {
             return user
           } catch (error) {
             // If normal authentication fails, check if this is an admin user for fallback
+            
             const isAdmin = await validateAdminCredentials(
               credentials.username as string, 
               credentials.password as string
@@ -363,4 +364,5 @@ export const authConfig = {
       return session
     },
   },
+  trustHost: true,
 } as const satisfies NextAuthConfig 
