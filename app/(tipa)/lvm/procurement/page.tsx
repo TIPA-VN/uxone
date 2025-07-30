@@ -72,7 +72,7 @@ export default function ProcurementDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-2">
         <h1 className="text-3xl font-bold text-gray-900">Procurement Dashboard</h1>
         <p className="mt-2 text-sm text-gray-600">
           AI-powered procurement management and analytics

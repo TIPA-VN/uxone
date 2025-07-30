@@ -1,16 +1,9 @@
-import QueryProvider from "@/lib/QueryProvider";
+import { Suspense } from "react";
 
-export default function TipaLayout({
+export default function DashboardLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-  return (
-    <div className="h-screen flex ">
-      {/* Main content area */}
-      <div className=" bg-gray-100 p-2 overflow-scroll">
-        <QueryProvider>{children}</QueryProvider>
-      </div>
-    </div>
-  );
+}) {
+  return <>{children}</>;
 }

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import oracledb from 'oracledb';
+import { prisma } from './prisma';
 
 // JDE Connection Configuration
 export interface JDEConfig {
@@ -63,6 +64,10 @@ export interface JDEPurchaseOrderHeader {
   PHDCTO: string;   // PO Type
   lineItemCount: number; // Number of line items
   supplierAddress?: string; // Supplier Address (enhanced from F0101)
+  // Approval information (only second approver)
+  DB_NAME?: string;  // Second approver name (from HORPER → ABAN8 → ABALPH)
+  HORPER?: number;   // Second approver ID
+  HOARTG?: string;   // Order routing for approval
 }
 
 export interface JDEPurchaseOrderDetail {
@@ -116,15 +121,49 @@ export interface JDESalesOrderDetail {
   SDSTS: string;    // Status
 }
 
+export interface JDEInventoryLevel {
+  IMITM: string;    // Item Number
+  IMLITM: string;   // Item Description
+  IMTYP: string;    // Item Type
+  IMUM: string;     // Unit of Measure (legacy field)
+  IMUOM1: string;   // Primary UOM (from F4101)
+  IMUOM3: string;   // Purchasing UOM (from F4101)
+  IMSSQ: number;    // Safety Stock
+  IMMOQ: number;    // Minimum Order Quantity
+  IMMXQ: number;    // Maximum Order Quantity
+  IMLOTS: number;   // Lot Size
+  IMCC: string;     // Cost Center
+  IMPL: string;     // Planner
+  IMBUY: string;    // Buyer
+  IMGLPT: string;   // General Ledger Posting Type
+  LIMCU: string;    // Business Unit (from F41021)
+  
+  // Stock Levels from F41021
+  TotalQOH: number;           // Total Quantity On Hand (PQOH)
+  TotalQOO: number;           // Total Quantity On Order (PREQ)
+  TotalQC: number;            // Total Quantity Committed (PHCM + PSCM)
+  TotalHardCommit: number;    // Total Hard Committed (LIHCOM)
+  TotalSoftCommit: number;    // Total Soft Committed (LISWSC)
+  
+  // Additional F41021 fields (for future use)
+  TotalInTransit?: number;    // Total Quantity In Transit (PTNT)
+  TotalBackorder?: number;    // Total Quantity on Backorder
+  
+  // Calculated Values
+  AvailableStock: number;     // PQOH - (PHCM + PSCM)
+  NetStock: number;           // PQOH + PREQ - (PHCM + PSCM)
+  
+  // Status Logic
+  StockStatus: string;        // OUT, LOW, OK
+}
+
 // JDE Service Class
 export class JDEService {
   private config: JDEConfig;
-  private prisma: PrismaClient;
   private connection: oracledb.Connection | null = null;
 
   constructor(config: JDEConfig) {
     this.config = config;
-    this.prisma = new PrismaClient();
   }
 
   // Get OracleDB connection
@@ -217,7 +256,6 @@ export class JDEService {
       console.error('Error fetching Item Master from JDE:', error);
       
       // Fallback to mock data if JDE connection fails
-      console.log('Falling back to mock data...');
       return this.getMockItemMaster(itemNumber);
     }
   }
@@ -312,7 +350,7 @@ export class JDEService {
   }
 
   // Get Purchase Orders from JDE F4301
-  async getPurchaseOrders(poNumber?: string): Promise<JDEPurchaseOrderHeader[]> {
+  async getPurchaseOrders(poNumber?: string, page: number = 1, pageSize: number = 10, search?: string, status?: string): Promise<JDEPurchaseOrderHeader[]> {
     try {
       const connection = await this.getConnection();
       
@@ -376,10 +414,8 @@ export class JDEService {
       }));
     } catch (error) {
       console.error('Error fetching Purchase Orders from JDE:', error);
-      
-      // Fallback to mock data if JDE connection fails
-      console.log('Falling back to mock data...');
-      return this.getMockPurchaseOrders(poNumber);
+      // Do NOT fall back to mock data
+      return [];
     }
   }
 
@@ -434,7 +470,7 @@ export class JDEService {
   }
 
   // Mock data fallback
-  private getMockPurchaseOrders(poNumber?: string): JDEPurchaseOrderHeader[] {
+  private getMockPurchaseOrders(poNumber?: string, page: number = 1, pageSize: number = 10, search?: string, status?: string): JDEPurchaseOrderHeader[] {
     const mockData: JDEPurchaseOrderHeader[] = [
       {
         PDDOCO: 'PO001',
@@ -443,8 +479,8 @@ export class JDEService {
         PDRQDC: new Date(),
         PDPDDJ: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         PDSTS: 'A',
-        PDTOA: 5000.00, // Already in correct format
-        PDFAP: 250.00, // Foreign amount
+        PDTOA: 5000.00,
+        PDFAP: 250.00,
         PDCNDJ: 'USD',
         PDCNDC: 'USD',
         PDBUY: 'BUYER1',
@@ -459,22 +495,206 @@ export class JDEService {
         PDRQDC: new Date(),
         PDPDDJ: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
         PDSTS: 'A',
-        PDTOA: 7500.00, // Already in correct format
-        PDFAP: 300.00, // Foreign amount
+        PDTOA: 7500.00,
+        PDFAP: 300.00,
         PDCNDJ: 'USD',
         PDCNDC: 'USD',
         PDBUY: 'BUYER2',
         PHMCU: '00200',
         PHDCTO: 'OP',
         lineItemCount: 3
+      },
+      {
+        PDDOCO: 'PO003',
+        PDAN8: 'SUP003',
+        PDALPH: 'Supplier C',
+        PDRQDC: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        PDSTS: 'C',
+        PDTOA: 12000.00,
+        PDFAP: 600.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER3',
+        PHMCU: '00300',
+        PHDCTO: 'CL',
+        lineItemCount: 8
+      },
+      {
+        PDDOCO: 'PO004',
+        PDAN8: 'SUP004',
+        PDALPH: 'Supplier D',
+        PDRQDC: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
+        PDSTS: 'A',
+        PDTOA: 8500.00,
+        PDFAP: 425.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER1',
+        PHMCU: '00100',
+        PHDCTO: 'OP',
+        lineItemCount: 4
+      },
+      {
+        PDDOCO: 'PO005',
+        PDAN8: 'SUP005',
+        PDALPH: 'Supplier E',
+        PDRQDC: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000),
+        PDSTS: 'A',
+        PDTOA: 15000.00,
+        PDFAP: 750.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER2',
+        PHMCU: '00200',
+        PHDCTO: 'OP',
+        lineItemCount: 12
+      },
+      {
+        PDDOCO: 'PO006',
+        PDAN8: 'SUP006',
+        PDALPH: 'Supplier F',
+        PDRQDC: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 42 * 24 * 60 * 60 * 1000),
+        PDSTS: 'C',
+        PDTOA: 9500.00,
+        PDFAP: 475.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER3',
+        PHMCU: '00300',
+        PHDCTO: 'CL',
+        lineItemCount: 6
+      },
+      {
+        PDDOCO: 'PO007',
+        PDAN8: 'SUP007',
+        PDALPH: 'Supplier G',
+        PDRQDC: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 49 * 24 * 60 * 60 * 1000),
+        PDSTS: 'A',
+        PDTOA: 22000.00,
+        PDFAP: 1100.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER1',
+        PHMCU: '00100',
+        PHDCTO: 'OP',
+        lineItemCount: 15
+      },
+      {
+        PDDOCO: 'PO008',
+        PDAN8: 'SUP008',
+        PDALPH: 'Supplier H',
+        PDRQDC: new Date(Date.now() - 42 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 56 * 24 * 60 * 60 * 1000),
+        PDSTS: 'A',
+        PDTOA: 18000.00,
+        PDFAP: 900.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER2',
+        PHMCU: '00200',
+        PHDCTO: 'OP',
+        lineItemCount: 10
+      },
+      {
+        PDDOCO: 'PO009',
+        PDAN8: 'SUP009',
+        PDALPH: 'Supplier I',
+        PDRQDC: new Date(Date.now() - 49 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 63 * 24 * 60 * 60 * 1000),
+        PDSTS: 'C',
+        PDTOA: 11000.00,
+        PDFAP: 550.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER3',
+        PHMCU: '00300',
+        PHDCTO: 'CL',
+        lineItemCount: 7
+      },
+      {
+        PDDOCO: 'PO010',
+        PDAN8: 'SUP010',
+        PDALPH: 'Supplier J',
+        PDRQDC: new Date(Date.now() - 56 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 70 * 24 * 60 * 60 * 1000),
+        PDSTS: 'A',
+        PDTOA: 25000.00,
+        PDFAP: 1250.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER1',
+        PHMCU: '00100',
+        PHDCTO: 'OP',
+        lineItemCount: 18
+      },
+      {
+        PDDOCO: 'PO011',
+        PDAN8: 'SUP011',
+        PDALPH: 'Supplier K',
+        PDRQDC: new Date(Date.now() - 63 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 77 * 24 * 60 * 60 * 1000),
+        PDSTS: 'A',
+        PDTOA: 16000.00,
+        PDFAP: 800.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER2',
+        PHMCU: '00200',
+        PHDCTO: 'OP',
+        lineItemCount: 9
+      },
+      {
+        PDDOCO: 'PO012',
+        PDAN8: 'SUP012',
+        PDALPH: 'Supplier L',
+        PDRQDC: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000),
+        PDPDDJ: new Date(Date.now() + 84 * 24 * 60 * 60 * 1000),
+        PDSTS: 'C',
+        PDTOA: 13000.00,
+        PDFAP: 650.00,
+        PDCNDJ: 'USD',
+        PDCNDC: 'USD',
+        PDBUY: 'BUYER3',
+        PHMCU: '00300',
+        PHDCTO: 'CL',
+        lineItemCount: 11
       }
     ];
 
+    // Filter by PO number if specified
     if (poNumber) {
       return mockData.filter(po => po.PDDOCO === poNumber);
     }
 
-    return mockData;
+    // Filter by search term
+    let filteredData = mockData;
+    if (search) {
+      filteredData = mockData.filter(po => 
+        po.PDDOCO.toLowerCase().includes(search.toLowerCase()) ||
+        po.PDALPH.toLowerCase().includes(search.toLowerCase()) ||
+        po.PDBUY.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    // Filter by status
+    if (status) {
+      filteredData = filteredData.filter(po => {
+        if (status === 'ACTIVE') return po.PDSTS === 'A';
+        if (status === 'COMPLETED') return po.PDSTS === 'C';
+        if (status === 'PENDING') return po.PDSTS === 'P';
+        return true;
+      });
+    }
+
+    // Apply pagination
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredData.slice(startIndex, endIndex);
   }
 
   // Get line item count for a PO
@@ -538,7 +758,6 @@ export class JDEService {
       
       // If no results, try without company code
       if (!result.rows || result.rows.length === 0) {
-        console.log('No results with company code, trying without company code...');
         query = `
           SELECT 
             PDDOCO, PDLNID, PDITM, PDDSC1, PDUORG, PDUREC, 
@@ -555,7 +774,6 @@ export class JDEService {
       
       // If still no results, try with just basic columns
       if (!result.rows || result.rows.length === 0) {
-        console.log('No results with full query, trying basic columns...');
         query = `
           SELECT PDDOCO, PDLNID, PDITM
           FROM F4311 
@@ -569,11 +787,8 @@ export class JDEService {
       }
       
       if (!result.rows) {
-        console.log('No rows returned from F4311 query');
         return [];
       }
-      
-      console.log(`Found ${result.rows.length} line items for PO ${poNumber}`);
       
       return result.rows.map((row: any) => ({
         PDDOCO: String(row.PDDOCO || '').trim(),
@@ -593,10 +808,8 @@ export class JDEService {
       }));
     } catch (error) {
       console.error('Error fetching Purchase Order Details from JDE:', error);
-      
-      // Fallback to mock data if JDE connection fails
-      console.log('Falling back to mock data...');
-      return this.getMockPurchaseOrderDetails(poNumber);
+      // Do NOT fall back to mock data
+      return [];
     }
   }
 
@@ -733,6 +946,187 @@ export class JDEService {
     }
   }
 
+  // Get real inventory levels with calculations
+  async getInventoryLevels(itemNumber?: string, page: number = 1, pageSize: number = 50): Promise<JDEInventoryLevel[]> {
+    try {
+      const connection = await this.getConnection();
+      
+      let query: string;
+      let bindVars: any[] = [];
+      let offset = (page - 1) * pageSize;
+      
+      if (itemNumber) {
+        // Query specific item with real inventory data from F41021
+        query = `
+          SELECT 
+            i.IMITM,                    -- Item Number
+            i.IMLITM,                   -- Item Description
+            i.IMDSC1,                   -- Item Description 1
+            i.IMDSC2,                   -- Item Description 2
+            'P' as IMTYP,               -- Item Type (default to Product)
+            COALESCE(TRIM(CAST(i.IMUOM1 AS VARCHAR2(4))), 'EA') as IMUM,  -- Primary UOM (fallback to EA)
+            CAST(i.IMUOM1 AS VARCHAR2(4)) as IMUOM1,                   -- Primary UOM
+            CAST(i.IMUOM3 AS VARCHAR2(4)) as IMUOM3,                   -- Purchasing UOM
+            0 as IMSLD,                 -- Safety Stock (default)
+            0 as IMANPL,                -- Min Order Qty (default)
+            0 as IMLOTS,                -- Lot Size (default)
+            '' as IMBUYR,               -- Buyer (default)
+            '' as IMPDGR,               -- Product Group (default)
+            '' as IMDSGP,               -- Dispatch Group (default)
+            i.IMGLPT,                   -- General Ledger Posting Type
+            MAX(l.LIMCU) as LIMCU,      -- Business Unit (from F41021)
+            
+            -- Real inventory data from F41021
+            COALESCE(SUM(l.LIPQOH), 0) as TotalQOH,           -- Total Quantity On Hand
+            COALESCE(SUM(l.LIPREQ), 0) as TotalQOO,           -- Total Quantity On Order
+            COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0) as TotalQC,  -- Total Committed (Hard + Soft)
+            COALESCE(SUM(l.LIHCOM), 0) as TotalHardCommit,    -- Total Hard Committed
+            COALESCE(SUM(l.LISWSC), 0) as TotalSoftCommit,    -- Total Soft Committed
+            
+            -- Additional F41021 fields
+            COALESCE(SUM(l.LIQTIN), 0) as TotalInTransit,     -- Total Quantity In Transit
+            COALESCE(SUM(l.LIPBCK), 0) as TotalBackorder,     -- Total Quantity on Backorder
+            
+            -- Calculated Values
+            COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) as AvailableStock,
+            COALESCE(SUM(l.LIPQOH), 0) + COALESCE(SUM(l.LIPREQ), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) as NetStock,
+            
+            -- Status Logic
+            CASE 
+              WHEN COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) = 0 THEN 'OUT'
+              WHEN COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) < 10 THEN 'LOW'
+              ELSE 'OK'
+            END as StockStatus
+            
+          FROM F4101 i
+          LEFT JOIN F41021 l ON i.IMITM = l.LIITM
+          WHERE i.IMITM = :itemNumber
+          GROUP BY i.IMITM, i.IMLITM, i.IMDSC1, i.IMDSC2, i.IMGLPT, i.IMUOM1, i.IMUOM3
+        `;
+        bindVars = [itemNumber];
+      } else {
+        // Query all items with pagination and real inventory data
+        query = `
+          SELECT 
+            i.IMITM,                    -- Item Number
+            i.IMLITM,                   -- Item Description
+            i.IMDSC1,                   -- Item Description 1
+            i.IMDSC2,                   -- Item Description 2
+            'P' as IMTYP,               -- Item Type (default to Product)
+            COALESCE(TRIM(CAST(i.IMUOM1 AS VARCHAR2(4))), 'EA') as IMUM,  -- Primary UOM (fallback to EA)
+            CAST(i.IMUOM1 AS VARCHAR2(4)) as IMUOM1,                   -- Primary UOM
+            CAST(i.IMUOM3 AS VARCHAR2(4)) as IMUOM3,                   -- Purchasing UOM
+            0 as IMSLD,                 -- Safety Stock (default)
+            0 as IMANPL,                -- Min Order Qty (default)
+            0 as IMLOTS,                -- Lot Size (default)
+            '' as IMBUYR,               -- Buyer (default)
+            '' as IMPDGR,               -- Product Group (default)
+            '' as IMDSGP,               -- Dispatch Group (default)
+            i.IMGLPT,                   -- General Ledger Posting Type
+            MAX(l.LIMCU) as LIMCU,      -- Business Unit (from F41021)
+            
+            -- Real inventory data from F41021
+            COALESCE(SUM(l.LIPQOH), 0) as TotalQOH,           -- Total Quantity On Hand
+            COALESCE(SUM(l.LIPREQ), 0) as TotalQOO,           -- Total Quantity On Order
+            COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0) as TotalQC,  -- Total Committed (Hard + Soft)
+            COALESCE(SUM(l.LIHCOM), 0) as TotalHardCommit,    -- Total Hard Committed
+            COALESCE(SUM(l.LISWSC), 0) as TotalSoftCommit,    -- Total Soft Committed
+            
+            -- Additional F41021 fields
+            COALESCE(SUM(l.LIQTIN), 0) as TotalInTransit,     -- Total Quantity In Transit
+            COALESCE(SUM(l.LIPBCK), 0) as TotalBackorder,     -- Total Quantity on Backorder
+            
+            -- Calculated Values
+            COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) as AvailableStock,
+            COALESCE(SUM(l.LIPQOH), 0) + COALESCE(SUM(l.LIPREQ), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) as NetStock,
+            
+            -- Status Logic
+            CASE 
+              WHEN COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) = 0 THEN 'OUT'
+              WHEN COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) < 10 THEN 'LOW'
+              ELSE 'OK'
+            END as StockStatus
+            
+          FROM F4101 i
+          LEFT JOIN F41021 l ON i.IMITM = l.LIITM
+          GROUP BY i.IMITM, i.IMLITM, i.IMDSC1, i.IMDSC2, i.IMGLPT, i.IMUOM1, i.IMUOM3
+          ORDER BY i.IMITM
+          OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY
+        `;
+        bindVars = [offset, pageSize];
+      }
+      
+      const result = await connection.execute(query, bindVars, {
+        outFormat: oracledb.OUT_FORMAT_OBJECT
+      });
+      
+      if (!result.rows) {
+        return [];
+      }
+      
+      return result.rows.map((row: any) => ({
+        IMITM: String(row.IMITM || '').trim(),
+        IMLITM: String(row.IMLITM || '').trim(),
+        IMTYP: String(row.IMTYP || 'P').trim(),
+        IMUM: String(row.IMUM || 'EA').trim(),
+        IMUOM1: String(row.IMUOM1 || '').trim(),
+        IMUOM3: String(row.IMUOM3 || '').trim(),
+        IMSSQ: parseInt(row.IMSLD) || 0,
+        IMMOQ: parseInt(row.IMANPL) || 0,
+        IMMXQ: parseInt(row.IMLOTS) || 0,
+        IMLOTS: parseInt(row.IMLOTS) || 0,
+        IMCC: String(row.IMPDGR || '').trim(),
+        IMPL: String(row.IMDSGP || '').trim(),
+        IMBUY: String(row.IMBUYR || '').trim(),
+        IMGLPT: String(row.IMGLPT || '').trim(),
+        LIMCU: String(row.LIMCU || '').trim(),
+        
+        // Real inventory calculations from F41021
+        TotalQOH: parseInt(row.TOTALQOH) || 0,
+        TotalQOO: parseInt(row.TOTALQOO) || 0,
+        TotalQC: parseInt(row.TOTALQC) || 0,
+        TotalHardCommit: parseInt(row.TOTALHARDCOMMIT) || 0,
+        TotalSoftCommit: parseInt(row.TOTALSOFTCOMMIT) || 0,
+        TotalInTransit: parseInt(row.TOTALINTRANSIT) || 0,
+        TotalBackorder: parseInt(row.TOTALBACKORDER) || 0,
+        AvailableStock: parseInt(row.AVAILABLESTOCK) || 0,
+        NetStock: parseInt(row.NETSTOCK) || 0,
+        StockStatus: String(row.STOCKSTATUS || 'OK').trim()
+      }));
+    } catch (error) {
+      console.error('Error fetching inventory levels from JDE:', error);
+      // Return empty array instead of mock data for real implementation
+      return [];
+    }
+  }
+
+  // Get total count of inventory items for pagination
+  async getInventoryCount(): Promise<number> {
+    try {
+      const connection = await this.getConnection();
+      
+      const query = `
+        SELECT COUNT(DISTINCT i.IMITM) as total_count
+        FROM F4101 i
+        LEFT JOIN F41021 l ON i.IMITM = l.LIITM
+      `;
+      
+      const result = await connection.execute(query, [], {
+        outFormat: oracledb.OUT_FORMAT_OBJECT
+      });
+      
+      if (!result.rows || result.rows.length === 0) {
+        return 0;
+      }
+      
+      const row = result.rows[0] as any;
+      return parseInt(row.TOTAL_COUNT) || 0;
+    } catch (error) {
+      console.error('Error fetching inventory count from JDE:', error);
+      return 0;
+    }
+  }
+
   // Sync data to local database
   async syncToLocalDatabase(): Promise<{ success: boolean; message: string }> {
     try {
@@ -741,7 +1135,8 @@ export class JDEService {
       // Sync Item Master
       const items = await this.getItemMaster();
       for (const item of items) {
-        await (this.prisma as any).itemMaster.upsert({
+        // Sync to local database
+        await prisma.itemMaster.upsert({
           where: { itemNumber: item.IMITM },
           update: {
             description: item.IMLITM,
@@ -754,7 +1149,7 @@ export class JDEService {
             lotSize: item.IMLOTS,
             costCenter: item.IMCC,
             planner: item.IMPL,
-            buyer: item.IMBUY
+            buyer: item.IMBUY,
           },
           create: {
             itemNumber: item.IMITM,
@@ -768,44 +1163,43 @@ export class JDEService {
             lotSize: item.IMLOTS,
             costCenter: item.IMCC,
             planner: item.IMPL,
-            buyer: item.IMBUY
-          }
+            buyer: item.IMBUY,
+          },
         });
       }
 
-      // Log sync
-      await (this.prisma as any).dataSyncLog.create({
+      // Log sync completion
+      await prisma.dataSyncLog.create({
         data: {
           syncType: 'inventory',
           status: 'success',
           recordsProcessed: items.length,
           recordsFailed: 0,
-          startTime,
-          endTime: new Date()
-        }
+          startTime: new Date(),
+          endTime: new Date(),
+        },
       });
 
-      return { success: true, message: `Synced ${items.length} items successfully` };
+      return { success: true, message: `Successfully synced ${items.length} items` };
     } catch (error) {
-      console.error('Error syncing to local database:', error);
+      console.error('Error syncing item master data:', error);
       
-      // Log failed sync
-      await (this.prisma as any).dataSyncLog.create({
+      // Log sync failure
+      await prisma.dataSyncLog.create({
         data: {
           syncType: 'inventory',
           status: 'failed',
           recordsProcessed: 0,
           recordsFailed: 0,
           startTime: new Date(),
-          errorMessage: error instanceof Error ? error.message : 'Unknown error'
-        }
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
       });
 
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
-  // Close connections
   async disconnect(): Promise<void> {
     if (this.connection) {
       try {
@@ -815,7 +1209,6 @@ export class JDEService {
         console.error('Error closing JDE connection:', error);
       }
     }
-    await this.prisma.$disconnect();
   }
 }
 

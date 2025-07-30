@@ -1,98 +1,72 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { Package, Plus, Search, Filter, Download, RefreshCw } from 'lucide-react';
+import { useInventory } from '@/hooks/useInventory';
 
-interface JDEItemMaster {
-  IMITM: string;
-  IMLITM: string;
-  IMTYP: string;
-  IMUM: string;
-  IMLT: number;
-  IMSSQ: number;
-  IMMOQ: number;
-  IMMXQ: number;
-  IMLOTS: number;
-  IMCC: string;
-  IMPL: string;
-  IMBUY: string;
+interface JDEInventoryLevel {
+  IMITM: string;    // Item Number
+  IMLITM: string;   // Item Description
+  IMTYP: string;    // Item Type
+  IMUM: string;     // Unit of Measure (legacy field)
+  IMUOM1: string;   // Primary UOM (from F4101)
+  IMUOM3: string;   // Purchasing UOM (from F4101)
+  IMSSQ: number;    // Safety Stock
+  IMMOQ: number;    // Minimum Order Quantity
+  IMMXQ: number;    // Maximum Order Quantity
+  IMLOTS: number;   // Lot Size
+  IMCC: string;     // Cost Center
+  IMPL: string;     // Planner
+  IMBUY: string;    // Buyer
+  IMGLPT: string;   // General Ledger Posting Type
+  LIMCU: string;    // Business Unit
+  
+  // Stock Levels
+  TotalQOH: number;           // Total Quantity On Hand
+  TotalQOO: number;           // Total Quantity On Order
+  TotalQC: number;            // Total Quantity Committed
+  TotalHardCommit: number;    // Total Hard Committed
+  TotalSoftCommit: number;    // Total Soft Committed
+  
+  // Calculated Values
+  AvailableStock: number;
+  NetStock: number;
+  
+  // Status Logic
+  StockStatus: string;
 }
 
-interface InventoryItem {
-  id: string;
-  itemCode: string;
-  description: string;
-  category: string;
-  currentStock: number;
-  minStock: number;
-  maxStock: number;
-  unitCost: number;
-  supplier: string;
-  lastUpdated: string;
-  status: 'OK' | 'LOW' | 'OUT';
+interface InventorySummary {
+  totalItems: number;
+  inStock: number;
+  lowStock: number;
+  outOfStock: number;
+  totalValue: number;
+  timestamp: string;
 }
 
 export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState('all');
+  const [selectedGLClass, setSelectedGLClass] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15; // Changed from 50 to 15
 
-  // Fetch JDE inventory data
-  const fetchInventoryData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch('/api/jde/inventory');
-      const data = await response.json();
-      
-      if (data.success && data.data.itemMaster) {
-        // Convert JDE data to InventoryItem format
-        const convertedItems: InventoryItem[] = data.data.itemMaster.map((item: JDEItemMaster, index: number) => ({
-          id: (index + 1).toString(),
-          itemCode: item.IMITM,
-          description: item.IMLITM,
-          category: item.IMTYP === 'P' ? 'Product' : item.IMTYP === 'R' ? 'Raw Material' : 'Component',
-          currentStock: Math.floor(Math.random() * 200) + 50, // Mock stock for now
-          minStock: item.IMSSQ,
-          maxStock: item.IMMXQ,
-          unitCost: Math.floor(Math.random() * 100) + 10, // Mock cost for now
-          supplier: `Supplier ${item.IMBUY}`,
-          lastUpdated: new Date().toISOString().split('T')[0],
-          status: (() => {
-            const stock = Math.floor(Math.random() * 200) + 50;
-            if (stock === 0) return 'OUT';
-            if (stock < item.IMSSQ) return 'LOW';
-            return 'OK';
-          })()
-        }));
-        
-        setInventoryItems(convertedItems);
-      } else {
-        setError('Failed to fetch inventory data');
-      }
-    } catch (err) {
-      setError('Error loading inventory data');
-      console.error('Error fetching inventory:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchInventoryData();
-  }, []);
-
-  const categories = ['all', 'Electronics', 'Components', 'Raw Materials', 'Tools'];
-
-  const filteredItems = inventoryItems.filter(item => {
-    const matchesSearch = item.itemCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+  // Use TanStack Query for data fetching
+  const { data, isLoading, error, refetch } = useInventory({
+    page: currentPage,
+    pageSize,
+    search: searchTerm || undefined,
+    status: selectedStatus !== 'all' ? selectedStatus : undefined,
+    businessUnit: selectedBusinessUnit !== 'all' ? selectedBusinessUnit : undefined,
+    glClass: selectedGLClass !== 'all' ? selectedGLClass : undefined,
   });
+
+  const inventoryItems = data?.data?.inventoryLevels || [];
+  const summary = data?.data?.summary;
+  const pagination = data?.data?.pagination;
+
+  const statuses = ['all', 'OK', 'LOW', 'OUT'];
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -115,6 +89,36 @@ export default function InventoryPage() {
     }).format(amount);
   };
 
+  const getItemTypeLabel = (type: string) => {
+    switch(type) {
+      case 'P':
+        return 'Product';
+      case 'S':
+        return 'Service';
+      case 'L':
+        return 'Labor';
+      default:
+        return type;
+    }
+  };
+
+  const getUnitOfMeasureLabel = (um: string) => {
+    // Just return the raw UOM value, trimmed of spaces
+    return um?.trim() || 'N/A';
+  };
+
+  const getBusinessUnitLabel = (mcu: string) => {
+    // Remove leading/trailing spaces and format
+    const cleanMCU = mcu?.trim() || '';
+    return cleanMCU || 'N/A';
+  };
+
+  const getGLClassLabel = (glpt: string) => {
+    // Remove leading/trailing spaces and format
+    const cleanGLPT = glpt?.trim() || '';
+    return cleanGLPT || 'N/A';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -129,11 +133,11 @@ export default function InventoryPage() {
       </div>
 
       {/* Loading State */}
-      {loading && (
+      {isLoading && (
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center space-x-2">
-            <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
-            <span className="text-gray-600">Loading inventory data from JDE...</span>
+            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+            <span className="text-lg font-medium text-gray-700">Loading inventory data...</span>
           </div>
         </div>
       )}
@@ -141,76 +145,78 @@ export default function InventoryPage() {
       {/* Error State */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center">
+          <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
+              <Package className="w-5 h-5 text-red-400" />
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error loading inventory</h3>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <p className="text-sm text-red-700 mt-1">{error.message}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Package className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Items</p>
-              <p className="text-2xl font-bold text-gray-900">{inventoryItems.length}</p>
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Package className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">In Stock</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {summary.inStock}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Package className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">In Stock</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {inventoryItems.filter(item => item.status === 'OK').length}
-              </p>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Package className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Low Stock</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {summary.lowStock}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Package className="w-6 h-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Low Stock</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {inventoryItems.filter(item => item.status === 'LOW').length}
-              </p>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Package className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Out of Stock</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {summary.outOfStock}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Package className="w-6 h-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Out of Stock</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {inventoryItems.filter(item => item.status === 'OUT').length}
-              </p>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Package className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Items</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {summary.totalItems}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -228,30 +234,60 @@ export default function InventoryPage() {
               />
             </div>
 
-            {/* Category Filter */}
+            {/* Status Filter */}
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
                 className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white"
               >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
+                {statuses.map(status => (
+                  <option key={status} value={status}>
+                    {status === 'all' ? 'All Statuses' : status}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            {/* Business Unit Filter */}
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={selectedBusinessUnit}
+                onChange={(e) => setSelectedBusinessUnit(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="all">All Business Units</option>
+                <option value="2000">2000</option>
+                <option value="3000">3000</option>
+                <option value="4000">4000</option>
+              </select>
+            </div>
+
+            {/* GL-Class Filter */}
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={selectedGLClass}
+                onChange={(e) => setSelectedGLClass(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="all">All GL-Classes</option>
+                <option value="LN10">LN10</option>
+                <option value="IN50">IN50</option>
+                <option value="EX20">EX20</option>
               </select>
             </div>
           </div>
 
           <div className="flex gap-2">
             <button 
-              onClick={fetchInventoryData}
-              disabled={loading}
+              onClick={() => refetch()}
+              disabled={isLoading}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
             <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center">
@@ -271,79 +307,209 @@ export default function InventoryPage() {
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Inventory Items</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Item Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Current Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Min Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Unit Cost
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Supplier
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Updated
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredItems.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {item.itemCode}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.description}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.category}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.currentStock}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.minStock}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(item.unitCost)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.supplier}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(item.lastUpdated).toLocaleDateString()}
-                  </td>
+        
+        {isLoading ? (
+          // Skeleton loading state
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Item Code
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Primary UOM
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Purchasing UOM
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Business Unit
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    GL-Class
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Qty On Hand
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Available Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Hard Commit
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Soft Commit
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Safety Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Qty On Order
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Buyer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {Array.from({ length: 15 }).map((_, index) => (
+                  <tr key={index} className="animate-pulse">
+                    {Array.from({ length: 15 }).map((_, cellIndex) => (
+                      <td key={cellIndex} className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 rounded w-16"></div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Item Code
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Primary UOM
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Purchasing UOM
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Business Unit
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    GL-Class
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Qty On Hand
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Available Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Hard Commit
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Soft Commit
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Safety Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Qty On Order
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Buyer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {inventoryItems.map((item) => (
+                  <tr key={item.IMITM} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {item.IMITM}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="max-w-xs truncate" title={item.IMLITM}>
+                        {item.IMLITM}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getItemTypeLabel(item.IMTYP)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {getUnitOfMeasureLabel(item.IMUOM1)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getUnitOfMeasureLabel(item.IMUOM3)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getBusinessUnitLabel(item.LIMCU)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getGLClassLabel(item.IMGLPT)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.TotalQOH.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.AvailableStock.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.TotalHardCommit.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.TotalSoftCommit.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.IMSSQ.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.TotalQOO.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.IMBUY}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.StockStatus)}`}>
+                        {item.StockStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {pagination && (
+          <div className="px-6 py-4 flex justify-between items-center border-t border-gray-200">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+              disabled={currentPage === pagination.totalPages || pagination.totalItems === 0}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
-      {filteredItems.length === 0 && (
+      {inventoryItems.length === 0 && (
         <div className="text-center py-12">
           <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>

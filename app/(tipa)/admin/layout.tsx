@@ -2,7 +2,6 @@ import MenuPage from "@/components/menu";
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import Link from "next/link";
-import QueryProvider from "@/lib/QueryProvider";
 
 export default function TipaLayout({
   children,
@@ -48,7 +47,7 @@ export default function TipaLayout({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-2">
-          <QueryProvider>{children}</QueryProvider>
+          {children}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ShoppingCart, Calendar, DollarSign, User, MapPin, Package, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Calendar, DollarSign, User, MapPin, Package, RefreshCw, CheckCircle } from 'lucide-react';
 
 interface PurchaseOrderDetail {
   PDDOCO: string;
@@ -33,6 +33,11 @@ interface PurchaseOrder {
   PDCNDC: string;   // Base Currency Code
   PDBUY: string;
   supplierAddress?: string;
+  // Approval information (only second approver)
+  DB_NAME?: string;  // Second approver name
+  HORPER?: number;   // Second approver ID
+  HORDB?: string;    // First approver ID (for reference only)
+  HOARTG?: string;   // Order routing for approval
 }
 
 export default function PurchaseOrderDetailPage() {
@@ -50,23 +55,15 @@ export default function PurchaseOrderDetailPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch PO header with supplier info
-      const poResponse = await fetch(`/api/jde/purchase-orders?poNumber=${poNumber}`);
-      const poData = await poResponse.json();
+      // Fetch PO header and details with approval information
+      const response = await fetch(`/api/jde/purchase-orders/${poNumber}`);
+      const data = await response.json();
 
-      if (poData.success && poData.data.purchaseOrders.length > 0) {
-        setPurchaseOrder(poData.data.purchaseOrders[0]);
+      if (data.success && data.data.purchaseOrder) {
+        setPurchaseOrder(data.data.purchaseOrder);
+        setLineDetails(data.data.lineDetails || []);
       } else {
         setError('Purchase order not found');
-        return;
-      }
-
-      // Fetch PO line details
-      const detailsResponse = await fetch(`/api/jde/purchase-orders?poNumber=${poNumber}&includeDetails=true`);
-      const detailsData = await detailsResponse.json();
-
-      if (detailsData.success) {
-        setLineDetails(detailsData.data.purchaseOrderDetails || []);
       }
     } catch (err) {
       setError('Error loading purchase order details');
@@ -88,6 +85,12 @@ export default function PurchaseOrderDetailPage() {
         return 'bg-green-100 text-green-800 border-green-200';
       case 'ACTIVE':
         return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'APPROVED':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'PARTIALLY_APPROVED':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'PENDING_APPROVAL':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'PENDING':
         return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'CANCELLED':
@@ -284,6 +287,28 @@ export default function PurchaseOrderDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Row 2.5: Approval Information */}
+          {purchaseOrder.DB_NAME && (
+            <div className="mb-4">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-xs font-medium text-gray-600">Approval Information</p>
+                  <div className="mt-1">
+                    <p className="text-xs text-gray-500">Approver:</p>
+                    <p className="text-sm font-semibold text-gray-900">{purchaseOrder.DB_NAME}</p>
+                    <p className="text-xs text-gray-500">ID: {purchaseOrder.HORPER}</p>
+                  </div>
+                  {purchaseOrder.HOARTG && (
+                    <p className="text-xs text-gray-500 mt-1">Routing: {purchaseOrder.HOARTG}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Row 3: Amounts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

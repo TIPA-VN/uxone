@@ -2,7 +2,6 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useEffect, useState, useRef } from "react";
 import { useWOComponents } from "@/hooks/useWOComponents";
-import { useQueryClient } from "@tanstack/react-query";
 
 type FrameTypeGroupItem = {
   frame_type: string | null;
@@ -31,7 +30,6 @@ const COLORS = [
 export default function FrameGroupChart() {
   const [rangeType, setRangeType] = useState<"day" | "week" | "month">("day");
   const [showPercentage, setShowPercentage] = useState(false);
-  const queryClient = useQueryClient();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data, isLoading, isError } = useWOComponents(rangeType);
@@ -61,16 +59,13 @@ export default function FrameGroupChart() {
       const currentIndex = rangeOptions.indexOf(rangeType);
       const nextRange = rangeOptions[(currentIndex + 1) % rangeOptions.length];
 
-      queryClient.prefetchQuery({
-        queryKey: ["wo-components", nextRange],
-        queryFn: async () => {
-          const res = await fetch("http://10.116.2.72:8091/api/wo-comp-query", {
-            method: "POST",
-            body: JSON.stringify({ range_type: nextRange }),
-            headers: { "Content-Type": "application/json" },
-          });
-          return res.json();
-        },
+      // Prefetch next range data (without React Query)
+      fetch("http://10.116.2.72:8091/api/wo-comp-query", {
+        method: "POST",
+        body: JSON.stringify({ range_type: nextRange }),
+        headers: { "Content-Type": "application/json" },
+      }).catch(() => {
+        // Silently fail prefetch
       });
 
       setTimeout(() => setRangeType(nextRange), 200);
@@ -79,7 +74,7 @@ export default function FrameGroupChart() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [rangeType, queryClient]);
+  }, [rangeType]);
 
   return (
     <div className="bg-white rounded-lg p-4 shadow relative min-h-[400px] flex flex-col">
