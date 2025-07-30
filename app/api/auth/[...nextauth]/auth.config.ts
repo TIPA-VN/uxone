@@ -15,6 +15,28 @@ const ADMIN_CREDENTIALS = {
   departmentName: process.env.ADMIN_FALLBACK_DEPARTMENT_NAME || 'Information Technology'
 }
 
+// Test accounts for development
+const TEST_ACCOUNTS = [
+  {
+    username: 'procurement',
+    password: 'proc1234',
+    role: 'MANAGER',
+    name: 'Procurement Manager',
+    email: 'procurement@tipa.co.th',
+    department: 'PROC',
+    departmentName: 'Procurement'
+  },
+  {
+    username: 'procurement_staff',
+    password: 'proc1234',
+    role: 'STAFF',
+    name: 'Procurement Staff',
+    email: 'procurement.staff@tipa.co.th',
+    department: 'PROC',
+    departmentName: 'Procurement'
+  }
+];
+
 // Admin override list - usernames that should always have admin access
 const ADMIN_OVERRIDE_USERS = [
   'administrator', // Your username
@@ -124,6 +146,15 @@ async function validateAdminCredentials(username: string, password: string): Pro
   return false
 }
 
+// Validate test account credentials
+function validateTestCredentials(username: string, password: string): any {
+  const testAccount = TEST_ACCOUNTS.find(account => 
+    account.username === username && account.password === password
+  );
+  
+  return testAccount || null;
+}
+
 export const authConfig = {
   providers: [
     CredentialsProvider({
@@ -141,7 +172,7 @@ export const authConfig = {
           // First, check if central API is available
           const centralApiAvailable = await isCentralApiAvailable()
           
-          // If central API is down, check for admin fallback authentication
+          // If central API is down, check for admin fallback authentication and test accounts
           if (!centralApiAvailable) {
               const isAdmin = await validateAdminCredentials(
                 credentials.username as string, 
@@ -176,10 +207,31 @@ export const authConfig = {
                   position: virtualAdminUser.departmentName || 'Information Technology',
                   isFallbackAuth: true, // Flag to indicate fallback authentication
                 }
-            } else {
-              throw new Error('Central authentication service is unavailable. Only admin accounts can access the system.')
+              }
+              
+              // Check for test accounts
+              const testAccount = validateTestCredentials(
+                credentials.username as string, 
+                credentials.password as string
+              )
+              
+              if (testAccount) {
+                return {
+                  id: 'test-account-' + testAccount.username + '-' + Date.now(),
+                  name: testAccount.name,
+                  email: testAccount.email,
+                  username: testAccount.username,
+                  department: testAccount.department,
+                  centralDepartment: testAccount.department,
+                  departmentName: testAccount.departmentName,
+                  role: testAccount.role,
+                  position: testAccount.departmentName,
+                  isFallbackAuth: true, // Flag to indicate fallback authentication
+                }
+              }
+              
+              throw new Error('Central authentication service is unavailable. Only admin and test accounts can access the system.')
             }
-          }
 
           // Central API is available, proceed with normal authentication
           const baseUrl = process.env.NEXTAUTH_URL || (process.env.NODE_ENV === 'production' ? 'http://10.116.2.72:8090' : 'http://localhost:3000')
@@ -304,9 +356,30 @@ export const authConfig = {
                 position: virtualAdminUser.departmentName || 'Information Technology',
                 isFallbackAuth: true, // Flag to indicate fallback authentication
               }
-            } else {
-              throw new Error('Authentication failed. Central service unavailable and user is not an admin.')
             }
+            
+            // Check for test accounts
+            const testAccount = validateTestCredentials(
+              credentials.username as string, 
+              credentials.password as string
+            )
+            
+            if (testAccount) {
+              return {
+                id: 'test-account-' + testAccount.username + '-' + Date.now(),
+                name: testAccount.name,
+                email: testAccount.email,
+                username: testAccount.username,
+                department: testAccount.department,
+                centralDepartment: testAccount.department,
+                departmentName: testAccount.departmentName,
+                role: testAccount.role,
+                position: testAccount.departmentName,
+                isFallbackAuth: true, // Flag to indicate fallback authentication
+              }
+            }
+            
+            throw new Error('Authentication failed. Central service unavailable and user is not an admin or test account.')
           }
         } catch (error) {
           throw error

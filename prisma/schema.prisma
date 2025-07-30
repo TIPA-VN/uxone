@@ -449,3 +449,229 @@ enum DocumentNumberStatus {
   CANCELLED
   EXPIRED
 }
+
+// ========================================
+// JDE 9.2 Integration Models
+// ========================================
+
+// JDE Item Master (F4101 equivalent)
+model ItemMaster {
+  id          String   @id @default(cuid())
+  itemNumber  String   @unique // IMITM
+  description String   // IMLITM
+  itemType    String   // IMTYP
+  unitOfMeasure String // IMUM
+  leadTime    Int      // IMLT
+  safetyStock Int      // IMSSQ
+  minOrderQty Int      // IMMOQ
+  maxOrderQty Int      // IMMXQ
+  lotSize     Int      // IMLOTS
+  costCenter  String   // IMCC
+  planner     String   // IMPL
+  buyer       String   // IMBUY
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  locations   ItemLocation[]
+  purchaseOrders PurchaseOrderDetail[]
+  receipts    ReceiptDetail[]
+  mrpMessages MrpMessage[]
+  demands     SalesOrderDetail[]
+
+  @@map("item_master")
+}
+
+// JDE Item Location (F4102 equivalent)
+model ItemLocation {
+  id          String   @id @default(cuid())
+  itemNumber  String   // IMITM
+  branch      String   // IMBR
+  location    String   // IMLOC
+  quantityOnHand Int   // IMQOH
+  quantityOnOrder Int  // IMQOO
+  quantityCommitted Int // IMQC
+  lastCountDate DateTime? // IMCDT
+  lastCountQuantity Int? // IMCQ
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
+
+  @@unique([itemNumber, branch, location])
+  @@map("item_location")
+}
+
+// JDE Purchase Order Header (F4301 equivalent)
+model PurchaseOrderHeader {
+  id          String   @id @default(cuid())
+  poNumber    String   @unique // PDDOCO
+  supplierId  String   // PDAN8
+  supplierName String  // PDALPH
+  orderDate   DateTime // PDRQDC
+  promiseDate DateTime? // PDPDDJ
+  status      String   // PDSTS
+  totalAmount Decimal  // PDTOA
+  currency    String   // PDCNDJ
+  buyer       String   // PDBUY
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  details     PurchaseOrderDetail[]
+
+  @@map("purchase_order_header")
+}
+
+// JDE Purchase Order Detail (F4311 equivalent)
+model PurchaseOrderDetail {
+  id          String   @id @default(cuid())
+  poNumber    String   // PDDOCO
+  lineNumber  Int      // PDLINE
+  itemNumber  String   // PDITM
+  description String   // PDDSC1
+  quantity    Int      // PDQTOR
+  quantityReceived Int // PDRQTOR
+  unitPrice   Decimal  // PDUPRC
+  extendedPrice Decimal // PDEXRC
+  promiseDate DateTime? // PDPDDJ
+  status      String   // PDSTS
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  header      PurchaseOrderHeader @relation(fields: [poNumber], references: [poNumber])
+  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
+  receipts    ReceiptDetail[]
+
+  @@unique([poNumber, lineNumber])
+  @@map("purchase_order_detail")
+}
+
+// JDE Receipts Detail (F4312 equivalent)
+model ReceiptDetail {
+  id          String   @id @default(cuid())
+  poNumber    String   // PDDOCO
+  lineNumber  Int      // PDLINE
+  itemNumber  String   // PDITM
+  receiptNumber String // RCRORN
+  receiptDate DateTime // RCRCDJ
+  quantityReceived Int // RCQTOR
+  unitCost    Decimal  // RCUPRC
+  lotNumber   String?  // RCLOTN
+  location    String   // RCLOCN
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  poDetail    PurchaseOrderDetail @relation(fields: [poNumber, lineNumber], references: [poNumber, lineNumber])
+  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
+
+  @@unique([receiptNumber, lineNumber])
+  @@map("receipt_detail")
+}
+
+// JDE MRP Messages (F3411 equivalent)
+model MrpMessage {
+  id          String   @id @default(cuid())
+  itemNumber  String   // MMITM
+  messageType String   // MMMSG
+  messageText String   // MMTEXT
+  quantity    Int      // MMQTY
+  date        DateTime // MMDATE
+  priority    Int      // MMPRI
+  status      String   // MMSTS
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
+
+  @@map("mrp_message")
+}
+
+// JDE Sales Order Detail (F4211 equivalent)
+model SalesOrderDetail {
+  id          String   @id @default(cuid())
+  orderNumber String   // SDDOCO
+  lineNumber  Int      // SDLINE
+  itemNumber  String   // SDITM
+  customerId  String   // SDAN8
+  quantity    Int      // SDQTOR
+  quantityShipped Int  // SDSOQS
+  unitPrice   Decimal  // SDUPRC
+  promiseDate DateTime? // SDPDDJ
+  status      String   // SDSTS
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
+
+  @@unique([orderNumber, lineNumber])
+  @@map("sales_order_detail")
+}
+
+// AI Analytics and Recommendations
+model AiRecommendation {
+  id          String   @id @default(cuid())
+  itemNumber  String
+  recommendationType String // 'purchase', 'inventory', 'supplier'
+  title       String
+  description String
+  priority    String   // 'low', 'medium', 'high', 'critical'
+  confidence  Float    // 0-1
+  data        Json     // Additional recommendation data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ai_recommendation")
+}
+
+// Demand Forecast
+model DemandForecast {
+  id          String   @id @default(cuid())
+  itemNumber  String
+  forecastDate DateTime
+  period      String   // 'monthly', 'weekly', 'daily'
+  quantity    Int
+  confidence  Float    // 0-1
+  model       String   // 'lstm', 'arima', 'ensemble'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([itemNumber, forecastDate, period])
+  @@map("demand_forecast")
+}
+
+// Risk Assessment
+model RiskAssessment {
+  id          String   @id @default(cuid())
+  itemNumber  String
+  riskType    String   // 'over_purchase', 'stockout', 'supplier'
+  riskLevel   String   // 'low', 'medium', 'high', 'critical'
+  probability Float    // 0-1
+  impact      String   // 'low', 'medium', 'high'
+  description String
+  mitigation  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("risk_assessment")
+}
+
+// Data Sync Log
+model DataSyncLog {
+  id          String   @id @default(cuid())
+  syncType    String   // 'inventory', 'purchase_orders', 'receipts', 'mrp'
+  status      String   // 'success', 'failed', 'partial'
+  recordsProcessed Int
+  recordsFailed Int
+  startTime   DateTime
+  endTime     DateTime?
+  errorMessage String?
+  createdAt   DateTime @default(now())
+
+  @@map("data_sync_log")
+}
