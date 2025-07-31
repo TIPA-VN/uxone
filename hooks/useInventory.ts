@@ -59,6 +59,11 @@ interface InventoryResponse {
       totalValue: number;
       timestamp: string;
     };
+    cacheInfo?: {
+      cachedAt: string;
+      cacheAge: number;
+      totalCachedItems: number;
+    };
   };
 }
 
@@ -84,7 +89,8 @@ const fetchInventoryData = async (filters: InventoryFilters): Promise<InventoryR
     params.append('glClass', filters.glClass);
   }
   
-  const response = await fetch(`/api/jde/inventory?${params.toString()}`);
+  // Use the cached endpoint for better performance
+  const response = await fetch(`/api/jde/inventory/cached?${params.toString()}`);
   
   if (!response.ok) {
     throw new Error('Failed to fetch inventory data');

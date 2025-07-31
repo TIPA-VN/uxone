@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingCart, Calendar, DollarSign, User, MapPin, Package, RefreshCw, CheckCircle } from 'lucide-react';
+import { formatQuantityForTable } from '@/lib/quantity-formatter';
+import { formatJDEDate } from '@/lib/jde-date-utils';
 
 interface PurchaseOrderDetail {
   PDDOCO: string;
@@ -14,18 +16,21 @@ interface PurchaseOrderDetail {
   PDEXRC: number;
   PDFRRC: number;   // Foreign Unit Cost (Transaction Currency)
   PDFEA: number;    // Foreign Extended Cost (Transaction Currency)
-  PDPDDJ?: Date;
+  PDPDDJ?: number;  // Promise Date (JDE Julian date)
   PDSTS: string;
   PDNSTS: string;
   PDLSTS: string;
+  IMUOM1?: string;  // Primary UOM
+  IMUOM3?: string;  // Purchasing UOM
 }
 
 interface PurchaseOrder {
   PDDOCO: string;
   PDAN8: string;
   PDALPH: string;
-  PDRQDC: Date;
-  PDPDDJ?: Date;
+  PDRQDC: number;   // Order Date (JDE Julian date)
+  PHDRQJ: number;   // Request Date (JDE Julian date)
+  PDPDDJ?: number;  // Promise Date (JDE Julian date)
   PDSTS: string;
   PDTOA: number;
   PDFAP: number;    // Foreign Amount (Transaction Currency)
@@ -120,13 +125,43 @@ export default function PurchaseOrderDetailPage() {
     }).format(amount);
   };
 
-  const formatDate = (date: Date | string) => {
+  const formatDate = (date: Date | string | number) => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    
+    // Handle JDE Julian dates (numbers)
+    if (typeof date === 'number') {
+      return formatJDEDate(date);
+    }
+    
+    // Handle strings (could be JDE Julian dates or other formats)
+    if (typeof date === 'string') {
+      // Try to parse as JDE Julian date first
+      const jdeDate = parseInt(date);
+      if (!isNaN(jdeDate) && jdeDate > 0) {
+        return formatJDEDate(jdeDate);
+      }
+      
+      // Fall back to regular date parsing
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    }
+    
+    // Handle Date objects
+    if (date instanceof Date) {
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+    
+    return 'N/A';
   };
 
   const calculateLineSummary = () => {
@@ -136,12 +171,20 @@ export default function PurchaseOrderDetailPage() {
     const totalValue = lineDetails.reduce((sum, line) => sum + line.PDEXRC, 0);
     const pendingQuantity = totalQuantity - totalReceived;
 
+    // Get the most common UOM for formatting
+    const uomCounts: { [key: string]: number } = {};
+    lineDetails.forEach(line => {
+      const uom = line.IMUOM1 || 'EA';
+      uomCounts[uom] = (uomCounts[uom] || 0) + 1;
+    });
+    const mostCommonUOM = Object.keys(uomCounts).reduce((a, b) => uomCounts[a] > uomCounts[b] ? a : b, 'EA');
+
     return {
       totalLines,
-      totalQuantity,
-      totalReceived,
+      totalQuantity: formatQuantityForTable(totalQuantity * 100, mostCommonUOM),
+      totalReceived: formatQuantityForTable(totalReceived * 100, mostCommonUOM),
       totalValue,
-      pendingQuantity,
+      pendingQuantity: formatQuantityForTable(pendingQuantity * 100, mostCommonUOM),
       completionRate: totalQuantity > 0 ? (totalReceived / totalQuantity) * 100 : 0
     };
   };
@@ -230,132 +273,71 @@ export default function PurchaseOrderDetailPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* PO Header Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-          {/* Row 1: PO Number, Status, Order Date */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-xs font-medium text-gray-600">PO Number</p>
-                <p className="text-sm font-semibold text-gray-900">{purchaseOrder.PDDOCO}</p>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            <div className="flex items-center space-x-2">
+              <ShoppingCart className="w-4 h-4 text-blue-600" />
+              <div>
+                <p className="text-xs text-gray-500">PO {purchaseOrder.PDDOCO}</p>
+                <p className="text-sm font-semibold text-gray-900">{purchaseOrder.PDBUY}</p>
               </div>
             </div>
-
-
-
-            <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Calendar className="w-6 h-6 text-orange-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-xs font-medium text-gray-600">Order Date</p>
-                <p className="text-sm font-semibold text-gray-900">{formatDate(purchaseOrder.PDRQDC)}</p>
+            
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-orange-600" />
+              <div>
+                <p className="text-xs text-gray-500">Order Date: {formatDate(purchaseOrder.PDRQDC)}</p>
+                <p className="text-xs text-gray-500">Request Date: {formatDate(purchaseOrder.PHDRQJ)}</p>
                 {purchaseOrder.PDPDDJ && (
-                  <p className="text-xs text-gray-500">Due: {formatDate(purchaseOrder.PDPDDJ)}</p>
+                  <p className="text-xs text-gray-500">Promise Date: {formatDate(purchaseOrder.PDPDDJ)}</p>
                 )}
               </div>
             </div>
-
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <User className="w-5 h-5 text-red-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-xs font-medium text-gray-600">Status</p>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(purchaseOrder.PDSTS)}`}>
-                  {purchaseOrder.PDSTS}
-                </span>
-                <p className="text-xs text-gray-500 mt-1">Buyer: {purchaseOrder.PDBUY}</p>
+            
+            <div className="flex items-center space-x-2">
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(purchaseOrder.PDSTS)}`}>
+                {purchaseOrder.PDSTS}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <div>
+                <p className="text-xs text-gray-500">{purchaseOrder.PDCNDC}</p>
+                <p className="text-sm font-semibold text-gray-900">{purchaseOrder.PDTOA.toLocaleString()}</p>
               </div>
             </div>
           </div>
-
-          {/* Row 2: Supplier (full width) */}
-          <div className="mb-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <User className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-xs font-medium text-gray-600">Supplier</p>
-                <p className="text-sm font-semibold text-gray-900 break-words" title={purchaseOrder.PDALPH}>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <User className="w-4 h-4 text-green-600" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900 truncate max-w-xs" title={purchaseOrder.PDALPH}>
                   {purchaseOrder.PDALPH}
                 </p>
                 <p className="text-xs text-gray-500">ID: {purchaseOrder.PDAN8}</p>
               </div>
             </div>
-          </div>
-
-          {/* Row 2.5: Approval Information */}
-          {purchaseOrder.DB_NAME && (
-            <div className="mb-4">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-blue-600" />
+            
+            {purchaseOrder.DB_NAME && (
+              <div className="flex items-center space-x-2 text-right">
+                <div>
+                  <p className="text-xs text-gray-500">Approved by</p>
+                  <p className="text-sm font-semibold text-gray-900">{purchaseOrder.DB_NAME}</p>
                 </div>
-                <div className="ml-3 flex-1">
-                  <p className="text-xs font-medium text-gray-600">Approval Information</p>
-                  <div className="mt-1">
-                    <p className="text-xs text-gray-500">Approver:</p>
-                    <p className="text-sm font-semibold text-gray-900">{purchaseOrder.DB_NAME}</p>
-                    <p className="text-xs text-gray-500">ID: {purchaseOrder.HORPER}</p>
-                  </div>
-                  {purchaseOrder.HOARTG && (
-                    <p className="text-xs text-gray-500 mt-1">Routing: {purchaseOrder.HOARTG}</p>
-                  )}
-                </div>
+                <CheckCircle className="w-4 h-4 text-blue-600" />
               </div>
-            </div>
-          )}
-
-          {/* Row 3: Amounts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <User className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-xs font-medium text-gray-600">Base Amount</p>
-                <p className="text-sm font-semibold text-gray-900">{purchaseOrder.PDTOA.toLocaleString()}</p>
-                <p className="text-xs text-gray-500">{purchaseOrder.PDCNDC}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <User className="w-5 h-5 text-purple-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-xs font-medium text-gray-600">Foreign Amount</p>
-                <p className="text-sm font-semibold text-gray-900">{purchaseOrder.PDFAP.toLocaleString()}</p>
-                <p className="text-xs text-gray-500">{purchaseOrder.PDCNDJ}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Info */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-medium text-gray-600">Supplier Address</p>
-                <p className="text-xs text-gray-900 flex items-center">
-                  <MapPin className="w-3 h-3 mr-1" />
-                  {purchaseOrder.supplierAddress || 'Not available'}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
         {/* Line Items Summary */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-          <h2 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
+          <h2 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
             <Package className="w-4 h-4 mr-2" />
             Line Items Summary
           </h2>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
             <div className="text-center">
               <p className="text-lg font-bold text-blue-600">{summary.totalLines}</p>
               <p className="text-xs text-gray-600">Lines</p>
@@ -402,6 +384,9 @@ export default function PurchaseOrderDetailPage() {
                     Description
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    UOM
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Qty
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -438,11 +423,14 @@ export default function PurchaseOrderDetailPage() {
                         {line.PDDSC1}
                       </div>
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
-                      {line.PDQTOR.toLocaleString()}
+                    <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">
+                      {line.IMUOM1 || 'EA'}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
-                      {line.PDRQTOR.toLocaleString()}
+                      {formatQuantityForTable(line.PDQTOR * 100, line.IMUOM1 || 'EA')}
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
+                      {formatQuantityForTable(line.PDRQTOR * 100, line.IMUOM1 || 'EA')}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
                       {formatCurrency(line.PDUPRC)}

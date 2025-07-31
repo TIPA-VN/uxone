@@ -91,8 +91,9 @@ export async function GET(
       PDDOCO: String(headerRow.PHDOCO || '').trim(),
       PDAN8: String(headerRow.PHAN8 || '').trim(),
       PDALPH: '', // Will be enhanced with supplier info
-      PDRQDC: headerRow.PHTRDJ ? new Date(headerRow.PHTRDJ) : new Date(),
-      PDPDDJ: headerRow.PHPDDJ ? new Date(headerRow.PHPDDJ) : undefined,
+      PDRQDC: parseInt(headerRow.PHTRDJ) || 0,  // Order Date
+      PHDRQJ: parseInt(headerRow.PHDRQJ) || 0,  // Request Date
+      PDPDDJ: headerRow.PHPDDJ ? parseInt(headerRow.PHPDDJ) : undefined,  // Promise Date
       PDSTS: status,
       PDTOA: parseFloat(headerRow.PHOTOT || 0) / 100,
       PDFAP: parseFloat(headerRow.PHFAP || 0) / 100,

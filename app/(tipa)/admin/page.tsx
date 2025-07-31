@@ -24,8 +24,6 @@ import { useActivities } from "@/hooks/useActivities";
 
 // Define the permission structure
 type Permission = 'C' | 'R' | 'U' | 'D';
-type Function = 'Users' | 'Projects' | 'Tasks' | 'Team' | 'Reports' | 'Settings' | 'Security' | 'Database' | 'Helpdesk';
-type Role = keyof typeof APP_CONFIG.roles;
 
 interface RolePermissions {
   [role: string]: {
@@ -41,7 +39,6 @@ interface RolePermissions {
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState("overview");
-  const [searchTerm, setSearchTerm] = useState("");
   
   // User management hook
   const {
@@ -65,7 +62,6 @@ export default function AdminDashboard() {
     error: departmentsError,
     totalDepartments,
     totalUsers,
-    refreshDepartments,
   } = useDepartments();
 
   // Activities hook
@@ -73,8 +69,6 @@ export default function AdminDashboard() {
     activities,
     loading: activitiesLoading,
     error: activitiesError,
-    totalActivities,
-    refreshActivities,
   } = useActivities(10);
 
   // Initialize permissions for all roles from APP_CONFIG
@@ -265,7 +259,7 @@ export default function AdminDashboard() {
         <div className="text-center">
           <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to access the admin panel.</p>
+          <p className="text-gray-600">You don&apos;t have permission to access the admin panel.</p>
         </div>
       </div>
     );
@@ -293,11 +287,7 @@ export default function AdminDashboard() {
     { id: "settings", label: "System Settings", icon: Settings },
   ];
 
-  const filteredUsers = mockUsers.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
 
   // Handle permission change
   const handlePermissionChange = (role: string, func: string, permission: Permission, value: boolean) => {
@@ -306,7 +296,7 @@ export default function AdminDashboard() {
       [role]: {
         ...prev[role],
         [func]: {
-          ...(prev[role] as any)[func],
+          ...(prev[role] as RolePermissions[string])[func],
           [permission]: value
         }
       }
@@ -327,7 +317,7 @@ export default function AdminDashboard() {
       
       setSaveMessage("Permissions saved successfully!");
       setTimeout(() => setSaveMessage(""), 3000);
-    } catch (error) {
+    } catch {
       setSaveMessage("Failed to save permissions. Please try again.");
       setTimeout(() => setSaveMessage(""), 3000);
     } finally {
@@ -846,7 +836,7 @@ export default function AdminDashboard() {
                                       <input
                                         key={perm}
                                         type="checkbox"
-                                        checked={(perms as any)[perm]}
+                                        checked={(perms as RolePermissions[string][string])[perm]}
                                         onChange={(e) => handlePermissionChange(role, func, perm, e.target.checked)}
                                         className={`w-3 h-3 text-${style.color}-600 border-gray-300 rounded focus:ring-${style.color}-500`}
                                       />

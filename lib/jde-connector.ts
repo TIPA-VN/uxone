@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import oracledb from 'oracledb';
 import { prisma } from './prisma';
+import { jdeJulianToDate } from './jde-date-utils';
 
 // JDE Connection Configuration
 export interface JDEConfig {
@@ -52,8 +53,8 @@ export interface JDEPurchaseOrderHeader {
   PDDOCO: string;   // PO Number
   PDAN8: string;    // Supplier ID
   PDALPH: string;   // Supplier Name
-  PDRQDC: Date;     // Order Date (PHTRDJ - when PO was created)
-  PDPDDJ?: Date;    // Promise Date (PHPDDJ - when supplier promises to deliver)
+  PDRQDC: number;   // Order Date (PHTRDJ - JDE Julian date)
+  PDPDDJ?: number;  // Promise Date (PHPDDJ - JDE Julian date)
   PDSTS: string;    // Status
   PDTOA: number;    // Base Currency Amount (USD) - PHOTOT
   PDFAP: number;    // Foreign Amount Total (Transaction Currency) - PHFAP
@@ -81,10 +82,12 @@ export interface JDEPurchaseOrderDetail {
   PDEXRC: number;   // Extended Price
   PDFRRC: number;   // Foreign Unit Cost (Transaction Currency, no division)
   PDFEA: number;    // Foreign Extended Cost (Transaction Currency, no division)
-  PDPDDJ?: Date;    // Promise Date
+  PDPDDJ?: number;  // Promise Date (JDE Julian date)
   PDSTS: string;    // Current Status
   PDNSTS: string;   // Next Status
   PDLSTS: string;   // Last Status
+  IMUOM1?: string;  // Primary UOM (from F4101)
+  IMUOM3?: string;  // Purchasing UOM (from F4101)
 }
 
 export interface JDEReceiptDetail {
@@ -400,8 +403,8 @@ export class JDEService {
           PDDOCO: String(row.PHDOCO || '').trim(),
           PDAN8: String(row.PHAN8 || '').trim(),
                   PDALPH: `Supplier ${row.PHAN8 || 'Unknown'}`, // Generate supplier name from ID
-        PDRQDC: this.parseJDEDate(row.PHTRDJ), // Order Date (when PO was created)
-        PDPDDJ: row.PHPDDJ ? this.parseJDEDate(row.PHPDDJ) : undefined, // Promise Date
+        PDRQDC: parseInt(row.PHTRDJ) || 0, // Order Date (JDE Julian date)
+        PDPDDJ: row.PHPDDJ ? parseInt(row.PHPDDJ) : undefined, // Promise Date (JDE Julian date)
         PDSTS: this.getPOStatus(row.PHDCTO), // Map order type to status
         PDTOA: (parseFloat(row.PHOTOT) || 0) / 100, // Base currency amount (USD)
         PDFAP: parseFloat(row.PHFAP) || 0, // Foreign amount (transaction currency, NO division)
@@ -476,8 +479,8 @@ export class JDEService {
         PDDOCO: 'PO001',
         PDAN8: 'SUP001',
         PDALPH: 'Supplier A',
-        PDRQDC: new Date(),
-        PDPDDJ: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125212, // July 31, 2025 (JDE Julian)
+        PDPDDJ: 125226, // August 14, 2025 (JDE Julian)
         PDSTS: 'A',
         PDTOA: 5000.00,
         PDFAP: 250.00,
@@ -492,8 +495,8 @@ export class JDEService {
         PDDOCO: 'PO002',
         PDAN8: 'SUP002',
         PDALPH: 'Supplier B',
-        PDRQDC: new Date(),
-        PDPDDJ: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125212, // July 31, 2025 (JDE Julian)
+        PDPDDJ: 125233, // August 21, 2025 (JDE Julian)
         PDSTS: 'A',
         PDTOA: 7500.00,
         PDFAP: 300.00,
@@ -508,8 +511,8 @@ export class JDEService {
         PDDOCO: 'PO003',
         PDAN8: 'SUP003',
         PDALPH: 'Supplier C',
-        PDRQDC: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125205, // July 24, 2025 (JDE Julian)
+        PDPDDJ: 125219, // August 7, 2025 (JDE Julian)
         PDSTS: 'C',
         PDTOA: 12000.00,
         PDFAP: 600.00,
@@ -524,8 +527,8 @@ export class JDEService {
         PDDOCO: 'PO004',
         PDAN8: 'SUP004',
         PDALPH: 'Supplier D',
-        PDRQDC: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125198, // July 17, 2025 (JDE Julian)
+        PDPDDJ: 125240, // August 28, 2025 (JDE Julian)
         PDSTS: 'A',
         PDTOA: 8500.00,
         PDFAP: 425.00,
@@ -540,8 +543,8 @@ export class JDEService {
         PDDOCO: 'PO005',
         PDAN8: 'SUP005',
         PDALPH: 'Supplier E',
-        PDRQDC: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125191, // July 10, 2025 (JDE Julian)
+        PDPDDJ: 125247, // September 4, 2025 (JDE Julian)
         PDSTS: 'A',
         PDTOA: 15000.00,
         PDFAP: 750.00,
@@ -556,8 +559,8 @@ export class JDEService {
         PDDOCO: 'PO006',
         PDAN8: 'SUP006',
         PDALPH: 'Supplier F',
-        PDRQDC: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 42 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125184, // July 3, 2025 (JDE Julian)
+        PDPDDJ: 125254, // September 11, 2025 (JDE Julian)
         PDSTS: 'C',
         PDTOA: 9500.00,
         PDFAP: 475.00,
@@ -572,8 +575,8 @@ export class JDEService {
         PDDOCO: 'PO007',
         PDAN8: 'SUP007',
         PDALPH: 'Supplier G',
-        PDRQDC: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 49 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125177, // June 26, 2025 (JDE Julian)
+        PDPDDJ: 125261, // September 18, 2025 (JDE Julian)
         PDSTS: 'A',
         PDTOA: 22000.00,
         PDFAP: 1100.00,
@@ -588,8 +591,8 @@ export class JDEService {
         PDDOCO: 'PO008',
         PDAN8: 'SUP008',
         PDALPH: 'Supplier H',
-        PDRQDC: new Date(Date.now() - 42 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 56 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125170, // June 19, 2025 (JDE Julian)
+        PDPDDJ: 125268, // September 25, 2025 (JDE Julian)
         PDSTS: 'A',
         PDTOA: 18000.00,
         PDFAP: 900.00,
@@ -604,8 +607,8 @@ export class JDEService {
         PDDOCO: 'PO009',
         PDAN8: 'SUP009',
         PDALPH: 'Supplier I',
-        PDRQDC: new Date(Date.now() - 49 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 63 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125163, // June 12, 2025 (JDE Julian)
+        PDPDDJ: 125275, // October 2, 2025 (JDE Julian)
         PDSTS: 'C',
         PDTOA: 11000.00,
         PDFAP: 550.00,
@@ -620,8 +623,8 @@ export class JDEService {
         PDDOCO: 'PO010',
         PDAN8: 'SUP010',
         PDALPH: 'Supplier J',
-        PDRQDC: new Date(Date.now() - 56 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 70 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125156, // June 5, 2025 (JDE Julian)
+        PDPDDJ: 125282, // October 9, 2025 (JDE Julian)
         PDSTS: 'A',
         PDTOA: 25000.00,
         PDFAP: 1250.00,
@@ -636,8 +639,8 @@ export class JDEService {
         PDDOCO: 'PO011',
         PDAN8: 'SUP011',
         PDALPH: 'Supplier K',
-        PDRQDC: new Date(Date.now() - 63 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 77 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125149, // May 29, 2025 (JDE Julian)
+        PDPDDJ: 125289, // October 16, 2025 (JDE Julian)
         PDSTS: 'A',
         PDTOA: 16000.00,
         PDFAP: 800.00,
@@ -652,8 +655,8 @@ export class JDEService {
         PDDOCO: 'PO012',
         PDAN8: 'SUP012',
         PDALPH: 'Supplier L',
-        PDRQDC: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000),
-        PDPDDJ: new Date(Date.now() + 84 * 24 * 60 * 60 * 1000),
+        PDRQDC: 125142, // May 22, 2025 (JDE Julian)
+        PDPDDJ: 125296, // October 23, 2025 (JDE Julian)
         PDSTS: 'C',
         PDTOA: 13000.00,
         PDFAP: 650.00,
@@ -741,15 +744,18 @@ export class JDEService {
       
       const companyCode = (headerResult.rows?.[0] as any)?.PHKCOO || '00001'; // Default company code
       
-      // Now query F4311 with correct column names based on actual JDE structure
+      // Now query F4311 with UOM information from F4101
       let query = `
         SELECT 
-          PDDOCO, PDLNID, PDITM, PDDSC1, PDUORG, PDUREC, 
-          PDPRRC, PDAEXP, PDPDDJ, PDLTTR, PDNXTR, PDFRRC, PDFEA
-        FROM F4311 
-        WHERE PDDOCO = :poNumber 
-        AND PDKCOO = :companyCode
-        ORDER BY PDLNID
+          p.PDDOCO, p.PDLNID, p.PDITM, p.PDDSC1, p.PDUORG, p.PDUREC, 
+          p.PDPRRC, p.PDAEXP, p.PDPDDJ, p.PDLTTR, p.PDNXTR, p.PDFRRC, p.PDFEA,
+          i.IMUOM1, i.IMUOM3
+        FROM F4311 p
+        LEFT JOIN F4101 i ON p.PDITM = i.IMITM
+        WHERE p.PDDOCO = :poNumber 
+        AND p.PDKCOO = :companyCode
+        AND p.PDLTTR != '999'
+        ORDER BY p.PDLNID
       `;
       
       let result = await connection.execute(query, [poNumber, companyCode], {
@@ -760,11 +766,14 @@ export class JDEService {
       if (!result.rows || result.rows.length === 0) {
         query = `
           SELECT 
-            PDDOCO, PDLNID, PDITM, PDDSC1, PDUORG, PDUREC, 
-            PDPRRC, PDAEXP, PDPDDJ, PDLTTR, PDNXTR, PDFRRC, PDFEA
-          FROM F4311 
-          WHERE PDDOCO = :poNumber
-          ORDER BY PDLNID
+            p.PDDOCO, p.PDLNID, p.PDITM, p.PDDSC1, p.PDUORG, p.PDUREC, 
+            p.PDPRRC, p.PDAEXP, p.PDPDDJ, p.PDLTTR, p.PDNXTR, p.PDFRRC, p.PDFEA,
+            i.IMUOM1, i.IMUOM3
+          FROM F4311 p
+          LEFT JOIN F4101 i ON p.PDITM = i.IMITM
+          WHERE p.PDDOCO = :poNumber
+          AND p.PDLTTR != '999'
+          ORDER BY p.PDLNID
         `;
         
         result = await connection.execute(query, [poNumber], {
@@ -778,6 +787,7 @@ export class JDEService {
           SELECT PDDOCO, PDLNID, PDITM
           FROM F4311 
           WHERE PDDOCO = :poNumber
+          AND PDLTTR != '999'
           ORDER BY PDLNID
         `;
         
@@ -801,10 +811,12 @@ export class JDEService {
         PDEXRC: (parseFloat(row.PDAEXP) || 0) / 100, // Extended price divided by 100
         PDFRRC: (parseFloat(row.PDFRRC) || 0) / 10000, // Foreign unit cost divided by 10000
         PDFEA: parseFloat(row.PDFEA) || 0, // Foreign extended cost (no division)
-        PDPDDJ: row.PDPDDJ ? this.parseJDEDate(row.PDPDDJ) : undefined,
+        PDPDDJ: row.PDPDDJ ? parseInt(row.PDPDDJ) : undefined,
         PDSTS: this.getDetailStatus(row.PDLTTR || 'A'), // Current status
         PDNSTS: this.getDetailStatus(row.PDNXTR || 'A'), // Next status
-        PDLSTS: this.getDetailStatus(row.PDLTTR || 'A') // Last status (same as current for now)
+        PDLSTS: this.getDetailStatus(row.PDLTTR || 'A'), // Last status (same as current for now)
+        IMUOM1: String(row.IMUOM1 || '').trim(), // Primary UOM
+        IMUOM3: String(row.IMUOM3 || '').trim()  // Purchasing UOM
       }));
     } catch (error) {
       console.error('Error fetching Purchase Order Details from JDE:', error);
@@ -885,7 +897,7 @@ export class JDEService {
         PDEXRC: 2500.00, // Already in correct format
         PDFRRC: 250.00, // Foreign unit cost (divided by 10000)
         PDFEA: 25000.00, // Foreign extended cost
-        PDPDDJ: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        PDPDDJ: 125212, // July 31, 2025 (JDE Julian)
         PDSTS: 'A',
         PDNSTS: 'A',
         PDLSTS: 'A'
@@ -901,7 +913,7 @@ export class JDEService {
         PDEXRC: 2500.00, // Already in correct format
         PDFRRC: 50.00, // Foreign unit cost (divided by 10000)
         PDFEA: 2500.00, // Foreign extended cost
-        PDPDDJ: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+        PDPDDJ: 125212, // July 31, 2025 (JDE Julian)
         PDSTS: 'A',
         PDNSTS: 'A',
         PDLSTS: 'A'
@@ -947,7 +959,7 @@ export class JDEService {
   }
 
   // Get real inventory levels with calculations
-  async getInventoryLevels(itemNumber?: string, page: number = 1, pageSize: number = 50): Promise<JDEInventoryLevel[]> {
+  async getInventoryLevels(itemNumber?: string, page: number = 1, pageSize: number = 50, glClass?: string): Promise<JDEInventoryLevel[]> {
     try {
       const connection = await this.getConnection();
       
@@ -956,7 +968,7 @@ export class JDEService {
       let offset = (page - 1) * pageSize;
       
       if (itemNumber) {
-        // Query specific item with real inventory data from F41021
+        // Query specific item with real inventory data
         query = `
           SELECT 
             i.IMITM,                    -- Item Number
@@ -967,12 +979,12 @@ export class JDEService {
             COALESCE(TRIM(CAST(i.IMUOM1 AS VARCHAR2(4))), 'EA') as IMUM,  -- Primary UOM (fallback to EA)
             CAST(i.IMUOM1 AS VARCHAR2(4)) as IMUOM1,                   -- Primary UOM
             CAST(i.IMUOM3 AS VARCHAR2(4)) as IMUOM3,                   -- Purchasing UOM
-            0 as IMSLD,                 -- Safety Stock (default)
-            0 as IMANPL,                -- Min Order Qty (default)
-            0 as IMLOTS,                -- Lot Size (default)
-            '' as IMBUYR,               -- Buyer (default)
-            '' as IMPDGR,               -- Product Group (default)
-            '' as IMDSGP,               -- Dispatch Group (default)
+            i.IMSLD,                    -- Safety Stock
+            i.IMANPL,                   -- Min Order Qty
+            i.IMLOTS,                   -- Lot Size
+            i.IMBUYR,                   -- Buyer
+            i.IMPDGR,                   -- Product Group
+            i.IMDSGP,                   -- Dispatch Group
             i.IMGLPT,                   -- General Ledger Posting Type
             MAX(l.LIMCU) as LIMCU,      -- Business Unit (from F41021)
             
@@ -982,8 +994,6 @@ export class JDEService {
             COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0) as TotalQC,  -- Total Committed (Hard + Soft)
             COALESCE(SUM(l.LIHCOM), 0) as TotalHardCommit,    -- Total Hard Committed
             COALESCE(SUM(l.LISWSC), 0) as TotalSoftCommit,    -- Total Soft Committed
-            
-            -- Additional F41021 fields
             COALESCE(SUM(l.LIQTIN), 0) as TotalInTransit,     -- Total Quantity In Transit
             COALESCE(SUM(l.LIPBCK), 0) as TotalBackorder,     -- Total Quantity on Backorder
             
@@ -1001,9 +1011,11 @@ export class JDEService {
           FROM F4101 i
           LEFT JOIN F41021 l ON i.IMITM = l.LIITM
           WHERE i.IMITM = :itemNumber
-          GROUP BY i.IMITM, i.IMLITM, i.IMDSC1, i.IMDSC2, i.IMGLPT, i.IMUOM1, i.IMUOM3
+          ${glClass ? 'AND i.IMGLPT = :glClass' : ''}
+          GROUP BY i.IMITM, i.IMLITM, i.IMDSC1, i.IMDSC2, i.IMGLPT, i.IMUOM1, i.IMUOM3, 
+                   i.IMSLD, i.IMANPL, i.IMLOTS, i.IMBUYR, i.IMPDGR, i.IMDSGP
         `;
-        bindVars = [itemNumber];
+        bindVars = glClass ? [itemNumber, glClass] : [itemNumber];
       } else {
         // Query all items with pagination and real inventory data
         query = `
@@ -1016,12 +1028,12 @@ export class JDEService {
             COALESCE(TRIM(CAST(i.IMUOM1 AS VARCHAR2(4))), 'EA') as IMUM,  -- Primary UOM (fallback to EA)
             CAST(i.IMUOM1 AS VARCHAR2(4)) as IMUOM1,                   -- Primary UOM
             CAST(i.IMUOM3 AS VARCHAR2(4)) as IMUOM3,                   -- Purchasing UOM
-            0 as IMSLD,                 -- Safety Stock (default)
-            0 as IMANPL,                -- Min Order Qty (default)
-            0 as IMLOTS,                -- Lot Size (default)
-            '' as IMBUYR,               -- Buyer (default)
-            '' as IMPDGR,               -- Product Group (default)
-            '' as IMDSGP,               -- Dispatch Group (default)
+            i.IMSLD,                    -- Safety Stock
+            i.IMANPL,                   -- Min Order Qty
+            i.IMLOTS,                   -- Lot Size
+            i.IMBUYR,                   -- Buyer
+            i.IMPDGR,                   -- Product Group
+            i.IMDSGP,                   -- Dispatch Group
             i.IMGLPT,                   -- General Ledger Posting Type
             MAX(l.LIMCU) as LIMCU,      -- Business Unit (from F41021)
             
@@ -1031,8 +1043,6 @@ export class JDEService {
             COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0) as TotalQC,  -- Total Committed (Hard + Soft)
             COALESCE(SUM(l.LIHCOM), 0) as TotalHardCommit,    -- Total Hard Committed
             COALESCE(SUM(l.LISWSC), 0) as TotalSoftCommit,    -- Total Soft Committed
-            
-            -- Additional F41021 fields
             COALESCE(SUM(l.LIQTIN), 0) as TotalInTransit,     -- Total Quantity In Transit
             COALESCE(SUM(l.LIPBCK), 0) as TotalBackorder,     -- Total Quantity on Backorder
             
@@ -1049,7 +1059,8 @@ export class JDEService {
             
           FROM F4101 i
           LEFT JOIN F41021 l ON i.IMITM = l.LIITM
-          GROUP BY i.IMITM, i.IMLITM, i.IMDSC1, i.IMDSC2, i.IMGLPT, i.IMUOM1, i.IMUOM3
+          GROUP BY i.IMITM, i.IMLITM, i.IMDSC1, i.IMDSC2, i.IMGLPT, i.IMUOM1, i.IMUOM3, 
+                   i.IMSLD, i.IMANPL, i.IMLOTS, i.IMBUYR, i.IMPDGR, i.IMDSGP
           ORDER BY i.IMITM
           OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY
         `;
@@ -1081,7 +1092,7 @@ export class JDEService {
         IMGLPT: String(row.IMGLPT || '').trim(),
         LIMCU: String(row.LIMCU || '').trim(),
         
-        // Real inventory calculations from F41021
+        // Simplified inventory calculations
         TotalQOH: parseInt(row.TOTALQOH) || 0,
         TotalQOO: parseInt(row.TOTALQOO) || 0,
         TotalQC: parseInt(row.TOTALQC) || 0,
@@ -1100,15 +1111,108 @@ export class JDEService {
     }
   }
 
+  // Get all inventory items (for caching)
+  async getAllInventoryItems(): Promise<JDEInventoryLevel[]> {
+    try {
+      const connection = await this.getConnection();
+      
+      const query = `
+        SELECT 
+          i.IMITM,                    -- Item Number
+          i.IMLITM,                   -- Item Description
+          i.IMDSC1,                   -- Item Description 1
+          i.IMDSC2,                   -- Item Description 2
+          'P' as IMTYP,               -- Item Type (default to Product)
+          COALESCE(TRIM(CAST(i.IMUOM1 AS VARCHAR2(4))), 'EA') as IMUM,  -- Primary UOM (fallback to EA)
+          CAST(i.IMUOM1 AS VARCHAR2(4)) as IMUOM1,                   -- Primary UOM
+          CAST(i.IMUOM3 AS VARCHAR2(4)) as IMUOM3,                   -- Purchasing UOM
+          i.IMSLD,                    -- Safety Stock
+          i.IMANPL,                   -- Min Order Qty
+          i.IMLOTS,                   -- Lot Size
+          i.IMBUYR,                   -- Buyer
+          i.IMPDGR,                   -- Product Group
+          i.IMDSGP,                   -- Dispatch Group
+          i.IMGLPT,                   -- General Ledger Posting Type
+          MAX(l.LIMCU) as LIMCU,      -- Business Unit (from F41021)
+          
+          -- Real inventory data from F41021
+          COALESCE(SUM(l.LIPQOH), 0) as TotalQOH,           -- Total Quantity On Hand
+          COALESCE(SUM(l.LIPREQ), 0) as TotalQOO,           -- Total Quantity On Order
+          COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0) as TotalQC,  -- Total Committed (Hard + Soft)
+          COALESCE(SUM(l.LIHCOM), 0) as TotalHardCommit,    -- Total Hard Committed
+          COALESCE(SUM(l.LISWSC), 0) as TotalSoftCommit,    -- Total Soft Committed
+          COALESCE(SUM(l.LIQTIN), 0) as TotalInTransit,     -- Total Quantity In Transit
+          COALESCE(SUM(l.LIPBCK), 0) as TotalBackorder,     -- Total Quantity on Backorder
+          
+          -- Calculated Values
+          COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) as AvailableStock,
+          COALESCE(SUM(l.LIPQOH), 0) + COALESCE(SUM(l.LIPREQ), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) as NetStock,
+          
+          -- Status Logic
+          CASE 
+            WHEN COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) = 0 THEN 'OUT'
+            WHEN COALESCE(SUM(l.LIPQOH), 0) - (COALESCE(SUM(l.LIHCOM), 0) + COALESCE(SUM(l.LISWSC), 0)) < 10 THEN 'LOW'
+            ELSE 'OK'
+          END as StockStatus
+          
+        FROM F4101 i
+        LEFT JOIN F41021 l ON i.IMITM = l.LIITM
+                  GROUP BY i.IMITM, i.IMLITM, i.IMDSC1, i.IMDSC2, i.IMGLPT, i.IMUOM1, i.IMUOM3, 
+                   i.IMSLD, i.IMANPL, i.IMLOTS, i.IMBUYR, i.IMPDGR, i.IMDSGP
+        ORDER BY i.IMITM
+      `;
+      
+      const result = await connection.execute(query, [], {
+        outFormat: oracledb.OUT_FORMAT_OBJECT
+      });
+      
+      if (!result.rows) {
+        return [];
+      }
+      
+      return result.rows.map((row: any) => ({
+        IMITM: String(row.IMITM || '').trim(),
+        IMLITM: String(row.IMLITM || '').trim(),
+        IMTYP: String(row.IMTYP || 'P').trim(),
+        IMUM: String(row.IMUM || 'EA').trim(),
+        IMUOM1: String(row.IMUOM1 || '').trim(),
+        IMUOM3: String(row.IMUOM3 || '').trim(),
+        IMSSQ: parseInt(row.IMSLD) || 0,
+        IMMOQ: parseInt(row.IMANPL) || 0,
+        IMMXQ: parseInt(row.IMLOTS) || 0,
+        IMLOTS: parseInt(row.IMLOTS) || 0,
+        IMCC: String(row.IMPDGR || '').trim(),
+        IMPL: String(row.IMDSGP || '').trim(),
+        IMBUY: String(row.IMBUYR || '').trim(),
+        IMGLPT: String(row.IMGLPT || '').trim(),
+        LIMCU: String(row.LIMCU || '').trim(),
+        
+        // Simplified inventory calculations
+        TotalQOH: parseInt(row.TOTALQOH) || 0,
+        TotalQOO: parseInt(row.TOTALQOO) || 0,
+        TotalQC: parseInt(row.TOTALQC) || 0,
+        TotalHardCommit: parseInt(row.TOTALHARDCOMMIT) || 0,
+        TotalSoftCommit: parseInt(row.TOTALSOFTCOMMIT) || 0,
+        TotalInTransit: parseInt(row.TOTALINTRANSIT) || 0,
+        TotalBackorder: parseInt(row.TOTALBACKORDER) || 0,
+        AvailableStock: parseInt(row.AVAILABLESTOCK) || 0,
+        NetStock: parseInt(row.NETSTOCK) || 0,
+        StockStatus: String(row.STOCKSTATUS || 'OK').trim()
+      }));
+    } catch (error) {
+      console.error('Error fetching all inventory items from JDE:', error);
+      return [];
+    }
+  }
+
   // Get total count of inventory items for pagination
   async getInventoryCount(): Promise<number> {
     try {
       const connection = await this.getConnection();
       
       const query = `
-        SELECT COUNT(DISTINCT i.IMITM) as total_count
+        SELECT COUNT(*) as total_count
         FROM F4101 i
-        LEFT JOIN F41021 l ON i.IMITM = l.LIITM
       `;
       
       const result = await connection.execute(query, [], {

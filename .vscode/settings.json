@@ -1,0 +1,5 @@
+{
+    "jupytext-sync.pythonExecutable": "${workspaceFolder}/venv/bin/python",
+    "jupytext-sync.enabled": true,
+    "jupytext-sync.autoSync": true
+} 

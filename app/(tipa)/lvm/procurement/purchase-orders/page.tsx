@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
+import { formatJDEDate } from "@/lib/jde-date-utils";
 import {
   Search,
   Filter,
@@ -27,8 +28,8 @@ interface PurchaseOrder {
     | "COMPLETED"
     | "CANCELLED";
   totalAmount: number;
-  orderDate: string;
-  expectedDelivery: string;
+  orderDate: number | string;  // JDE Julian date or string
+  expectedDelivery: number | string;  // JDE Julian date or string
   items: number;
   createdBy: string;
   approvedBy?: string;
@@ -139,6 +140,45 @@ export default function PurchaseOrdersPage() {
       style: "currency",
       currency: "USD",
     }).format(amount);
+  };
+
+  const formatDate = (date: Date | string | number) => {
+    if (!date) return 'N/A';
+    
+    // Handle JDE Julian dates (numbers)
+    if (typeof date === 'number') {
+      return formatJDEDate(date);
+    }
+    
+    // Handle strings (could be JDE Julian dates or other formats)
+    if (typeof date === 'string') {
+      // Try to parse as JDE Julian date first
+      const jdeDate = parseInt(date);
+      if (!isNaN(jdeDate) && jdeDate > 0) {
+        return formatJDEDate(jdeDate);
+      }
+      
+      // Fall back to regular date parsing
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    }
+    
+    // Handle Date objects
+    if (date instanceof Date) {
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+    
+    return 'N/A';
   };
 
   const handlePageChange = (newPage: number) => {
@@ -428,10 +468,10 @@ export default function PurchaseOrdersPage() {
                       {formatCurrency(po.totalAmount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {po.orderDate}
+                      {formatDate(po.orderDate)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {po.expectedDelivery}
+                      {formatDate(po.expectedDelivery)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {po.items}

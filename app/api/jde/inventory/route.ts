@@ -24,14 +24,19 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
     
+    console.log(`[Inventory API] Fetching inventory for page ${page}, pageSize ${pageSize}, glClass: ${glClass}`);
+    
     // Get real inventory levels with calculations
     const inventoryLevels = await jdeService.getInventoryLevels(itemNumber || undefined, page, pageSize);
+    console.log(`[Inventory API] Retrieved ${inventoryLevels.length} inventory items`);
     
     // Get total count for proper pagination
     const totalCount = await jdeService.getInventoryCount();
+    console.log(`[Inventory API] Total count: ${totalCount}`);
     
     // Apply search and status filters
     let filteredItems = inventoryLevels;
+    console.log(`[Inventory API] Initial items: ${filteredItems.length}`);
     
     if (search) {
       filteredItems = filteredItems.filter(item => 
@@ -39,18 +44,22 @@ export async function GET(request: NextRequest) {
         item.IMLITM.toLowerCase().includes(search.toLowerCase()) ||
         item.IMBUY.toLowerCase().includes(search.toLowerCase())
       );
+      console.log(`[Inventory API] After search filter: ${filteredItems.length}`);
     }
     
     if (status && status !== 'all') {
       filteredItems = filteredItems.filter(item => item.StockStatus === status);
+      console.log(`[Inventory API] After status filter: ${filteredItems.length}`);
     }
     
     if (businessUnit && businessUnit !== 'all') {
       filteredItems = filteredItems.filter(item => item.LIMCU?.trim() === businessUnit);
+      console.log(`[Inventory API] After business unit filter: ${filteredItems.length}`);
     }
     
     if (glClass && glClass !== 'all') {
       filteredItems = filteredItems.filter(item => item.IMGLPT?.trim() === glClass);
+      console.log(`[Inventory API] After GL class filter: ${filteredItems.length}`);
     }
     
     // Calculate summary statistics

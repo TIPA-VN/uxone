@@ -15,8 +15,9 @@ interface JDEPurchaseOrderHeader {
   PDDOCO: string;
   PDAN8: string;
   PDALPH: string;
-  PDRQDC: Date;
-  PDPDDJ?: Date;
+  PDRQDC: number;   // Order Date (JDE Julian date)
+  PHDRQJ: number;   // Request Date (JDE Julian date)
+  PDPDDJ?: number;  // Promise Date (JDE Julian date)
   PDSTS: string;
   PDTOA: number;
   PDFAP: number;
@@ -37,8 +38,8 @@ interface PurchaseOrder {
   supplier: string;
   status: "PENDING" | "PENDING_APPROVAL" | "PARTIALLY_APPROVED" | "APPROVED" | "ACTIVE" | "COMPLETED" | "CANCELLED";
   totalAmount: number;
-  orderDate: string;
-  expectedDelivery: string;
+  orderDate: number;  // JDE Julian date
+  expectedDelivery: number | string;  // JDE Julian date or "TBD"
   items: number;
   createdBy: string;
   approvedBy?: string;
@@ -106,15 +107,8 @@ const fetchPurchaseOrders = async (params: PurchaseOrdersParams): Promise<{
       supplier: po.PDALPH,
       status: po.PDSTS as any,
       totalAmount: po.PDTOA,
-      orderDate:
-        po.PDRQDC instanceof Date
-          ? po.PDRQDC.toISOString().split("T")[0]
-          : new Date(po.PDRQDC).toISOString().split("T")[0],
-      expectedDelivery: po.PDPDDJ
-        ? po.PDPDDJ instanceof Date
-          ? po.PDPDDJ.toISOString().split("T")[0]
-          : new Date(po.PDPDDJ).toISOString().split("T")[0]
-        : "TBD",
+      orderDate: po.PDRQDC, // Pass through JDE Julian date
+      expectedDelivery: po.PDPDDJ || "TBD", // Pass through JDE Julian date or "TBD"
       items: po.lineItemCount || 0,
       createdBy: po.PDBUY,
       approvedBy: po.PDBUY !== "BUYER1" ? "Manager" : undefined,

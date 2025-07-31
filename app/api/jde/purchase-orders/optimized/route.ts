@@ -299,8 +299,9 @@ export async function GET(request: NextRequest) {
         PDDOCO: String(row.PHDOCO || '').trim(),
         PDAN8: String(row.PHAN8 || '').trim(),
         PDALPH: `Supplier ${row.PHAN8 || 'Unknown'}`,
-        PDRQDC: row.PHTRDJ ? new Date(row.PHTRDJ) : new Date(),
-        PDPDDJ: row.PHPDDJ ? new Date(row.PHPDDJ) : undefined,
+        PDRQDC: parseInt(row.PHTRDJ) || 0,  // Order Date
+        PHDRQJ: parseInt(row.PHDRQJ) || 0,  // Request Date
+        PDPDDJ: row.PHPDDJ ? parseInt(row.PHPDDJ) : undefined,  // Promise Date
         PDSTS: status,
         PDTOA: parseFloat(row.PHOTOT || 0) / 100,
         PDFAP: parseFloat(row.PHFAP || 0) / 100,
