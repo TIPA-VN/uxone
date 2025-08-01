@@ -32,6 +32,7 @@ model User {
   notes          Note[]
   ownedTasks     Task[]         @relation("TaskOwner")
   assignedTasks  Task[]         @relation("TaskAssignee")
+  demands        Demand[]       @relation("UserDemands")
   createdTasks   Task[]         @relation("TaskCreator")
   comments       Comment[]      @relation("CommentAuthor")
   projectMembers ProjectMember[]
@@ -674,4 +675,78 @@ model DataSyncLog {
   createdAt   DateTime @default(now())
 
   @@map("data_sync_log")
+}
+
+// Department Account Mapping
+model DepartmentAccount {
+  id            Int      @id @default(autoincrement())
+  bu            String   // Business Unit (e.g., "LVM", "TRD")
+  department    String   // Department name (e.g., "Manufacturing Engineering", "HRA")
+  account       Int      // Account number (e.g., 1110, 5110)
+  approvalRoute String?  // Approval route for the department (e.g., "MANAGER", "DIRECTOR", "VP")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([bu, department])  // Ensures unique combination of BU and department
+  @@map("department_accounts")
+}
+
+// Expense Account Mapping
+model ExpenseAccount {
+  id            Int      @id @default(autoincrement())
+  account       Int      // Account number (e.g., 64118, 64119)
+  description   String   // Account description in Vietnamese
+  glClass       String   // GL Class (e.g., "NS01", "NS02")
+  businessName  String   // Business Name (e.g., "TRD", "HEV", "LVM")
+  orderType     String   // Order Type (e.g., "OP", "OR", "O7", "HR", "O2", "LR")
+  bu            Int      // Business Unit number (e.g., 3000, 1000, 5000)
+  stockType     String   // Stock Type (e.g., "Non-Stock")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([account, businessName, orderType, bu]) // Ensures unique combination
+  @@map("expense_accounts")
+}
+
+// Demand Management
+model Demand {
+  id                    String   @id @default(cuid())
+  
+  // BU and Department information
+  bu                    String   // Business Unit (e.g., "LVM", "TRD")
+  department            String   // Department name
+  account               Int      // Account number from DepartmentAccount
+  approvalRoute         String?  // Approval route from DepartmentAccount
+  
+  // Expense Account information
+  expenseAccount        Int      // Account number from ExpenseAccount
+  expenseDescription    String   // Description from ExpenseAccount
+  expenseGLClass        String   // GL Class from ExpenseAccount
+  expenseStockType      String   // Stock Type from ExpenseAccount
+  expenseOrderType      String   // Order Type from ExpenseAccount
+  
+  itemDescription       String   // Description of the item/service
+  quantity              Int      // Quantity requested
+  estimatedCost         Float    // Estimated cost in VND
+  justification         String   // Justification for the demand
+  priorityLevel         String   // LOW, MEDIUM, HIGH, URGENT
+  expectedDeliveryDate  DateTime // Expected delivery date
+  departmentSpecific    Json?    // Department-specific fields as JSON
+  attachments           String[] // Array of file attachment names
+  status                String   @default("PENDING") // PENDING, APPROVED, REJECTED, IN_PROGRESS, COMPLETED
+  submittedAt           DateTime @default(now())
+  approvedAt            DateTime?
+  completedAt           DateTime?
+  
+  // User and department information
+  userId                String
+  userDepartment        String
+  
+  // Relations
+  user                  User     @relation("UserDemands", fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("demands")
 }

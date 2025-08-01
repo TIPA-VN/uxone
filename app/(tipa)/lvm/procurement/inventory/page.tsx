@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Package, Plus, Search, Filter, RefreshCw, Trash2, Database, Clock, Calendar } from 'lucide-react';
 import { useInventory } from '@/hooks/useInventory';
+import { useGLClasses } from '@/hooks/useGLClasses';
 import { formatQuantityForTable } from '@/lib/quantity-formatter';
 
 import { InventoryExport } from '@/components/InventoryExport';
@@ -65,11 +66,15 @@ export default function InventoryPage() {
     glClass: selectedGLClass !== 'all' ? selectedGLClass : undefined,
   });
 
+  // Fetch GL classes for filter dropdown
+  const { data: glClassesData, isLoading: glClassesLoading } = useGLClasses();
+
   const inventoryItems = data?.data?.inventoryLevels || [];
   const summary = data?.data?.summary;
   const pagination = data?.data?.pagination;
 
   const statuses = ['all', 'OK', 'LOW', 'OUT'];
+  const glClasses = glClassesData || [];
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -282,12 +287,17 @@ export default function InventoryPage() {
               <select
                 value={selectedGLClass}
                 onChange={(e) => setSelectedGLClass(e.target.value)}
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white"
+                disabled={glClassesLoading}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="all">All GL-Classes</option>
-                <option value="LN10">LN10</option>
-                <option value="IN50">IN50</option>
-                <option value="EX20">EX20</option>
+                <option value="all">
+                  {glClassesLoading ? 'Loading GL-Classes...' : `All GL-Classes (${glClasses.length})`}
+                </option>
+                {glClasses.map(glClass => (
+                  <option key={glClass} value={glClass}>
+                    {glClass}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

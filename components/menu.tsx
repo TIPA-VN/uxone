@@ -16,8 +16,8 @@ import { ImCalendar } from "react-icons/im";
 import { RiCustomerService2Fill } from "react-icons/ri";
 import { FaRegChartBar } from "react-icons/fa";
 import { MdTask } from "react-icons/md";
-import { Settings, Users } from "lucide-react";
-import { canAccessPage } from "@/config/app";
+import { Settings, Users, FileText } from "lucide-react";
+import { canAccessPage, mapRoleToConfigKey } from "@/config/app";
 
 const menuItems = [
   {
@@ -50,6 +50,11 @@ const menuItems = [
     route: "/lvm/procurement",
     label: "Procurement",
     icon: <BsCart4 size={22} />,
+  },
+  {
+    route: "/lvm/demands/create",
+    label: "Create Demands",
+    icon: <FileText size={22} />,
   }
 ];
 
@@ -64,11 +69,47 @@ export default function Menu() {
                                session?.user?.centralDepartment === 'PROC' ||
                                session?.user?.role === 'ADMIN';
 
+  // Check if user has access to demands
+  const hasDemandsAccess = () => {
+    if (!session?.user?.role) return false;
+    
+    // Direct role check first
+    const userRole = session.user.role;
+    const roleUpper = userRole.toUpperCase();
+    const hasManagerRole = roleUpper.includes("SENIOR_MANAGER") || 
+                          roleUpper.includes("SENIOR MANAGER") ||
+                          roleUpper.includes("MANAGER") ||
+                          roleUpper.includes("SUPERVISOR") ||
+                          roleUpper.includes("DIRECTOR") ||
+                          roleUpper.includes("ADMIN");
+    
+    // Also try the mapped role
+    const mappedRole = mapRoleToConfigKey(userRole);
+    const supervisorRoles = [
+      "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
+      "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
+      "ASSISTANT_SENIOR_MANAGER", "SENIOR_MANAGER", "SENIOR_MANAGER_2",
+      "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
+      "GENERAL_MANAGER", "GENERAL_DIRECTOR", "ADMIN"
+    ];
+    
+    const hasMappedRole = supervisorRoles.includes(mappedRole);
+    const isPRTeam = session?.user?.department === 'PROC' || 
+                     session?.user?.centralDepartment === 'PROC';
+    
+    return hasManagerRole || hasMappedRole || isPRTeam;
+  };
+
   return (
     <nav className="space-y-2">
       {menuItems.map((item) => {
         // Skip procurement menu item if user doesn't have access
         if (item.route === "/lvm/procurement" && !hasProcurementAccess) {
+          return null;
+        }
+        
+        // Skip demands menu item if user doesn't have access
+        if (item.route === "/lvm/demands/create" && !hasDemandsAccess()) {
           return null;
         }
         

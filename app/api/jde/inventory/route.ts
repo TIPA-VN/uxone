@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     console.log(`[Inventory API] Fetching inventory for page ${page}, pageSize ${pageSize}, glClass: ${glClass}`);
     
     // Get real inventory levels with calculations
-    const inventoryLevels = await jdeService.getInventoryLevels(itemNumber || undefined, page, pageSize);
+    const inventoryLevels = await jdeService.getInventoryLevels(itemNumber || undefined, page, pageSize, glClass || undefined);
     console.log(`[Inventory API] Retrieved ${inventoryLevels.length} inventory items`);
     
     // Get total count for proper pagination
@@ -57,10 +57,7 @@ export async function GET(request: NextRequest) {
       console.log(`[Inventory API] After business unit filter: ${filteredItems.length}`);
     }
     
-    if (glClass && glClass !== 'all') {
-      filteredItems = filteredItems.filter(item => item.IMGLPT?.trim() === glClass);
-      console.log(`[Inventory API] After GL class filter: ${filteredItems.length}`);
-    }
+    // GL class filtering is now done at the database level in getInventoryLevels
     
     // Calculate summary statistics
     const summary = {

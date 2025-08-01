@@ -1059,12 +1059,13 @@ export class JDEService {
             
           FROM F4101 i
           LEFT JOIN F41021 l ON i.IMITM = l.LIITM
+          ${glClass ? 'WHERE i.IMGLPT = :glClass' : ''}
           GROUP BY i.IMITM, i.IMLITM, i.IMDSC1, i.IMDSC2, i.IMGLPT, i.IMUOM1, i.IMUOM3, 
                    i.IMSLD, i.IMANPL, i.IMLOTS, i.IMBUYR, i.IMPDGR, i.IMDSGP
           ORDER BY i.IMITM
           OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY
         `;
-        bindVars = [offset, pageSize];
+        bindVars = glClass ? [glClass, offset, pageSize] : [offset, pageSize];
       }
       
       const result = await connection.execute(query, bindVars, {
@@ -1228,6 +1229,36 @@ export class JDEService {
     } catch (error) {
       console.error('Error fetching inventory count from JDE:', error);
       return 0;
+    }
+  }
+
+  // Get distinct GL classes for inventory filtering
+  async getInventoryGLClasses(): Promise<string[]> {
+    try {
+      const connection = await this.getConnection();
+      
+      const query = `
+        SELECT DISTINCT TRIM(i.IMGLPT) as GL_CLASS
+        FROM F4101 i
+        WHERE i.IMGLPT IS NOT NULL 
+          AND LENGTH(TRIM(i.IMGLPT)) > 0
+        ORDER BY TRIM(i.IMGLPT)
+      `;
+      
+      const result = await connection.execute(query, [], {
+        outFormat: oracledb.OUT_FORMAT_OBJECT
+      });
+      
+      if (!result.rows) {
+        return [];
+      }
+      
+      return result.rows
+        .map((row: any) => String(row.GL_CLASS || '').trim())
+        .filter(glClass => glClass !== '');
+    } catch (error) {
+      console.error('Error getting inventory GL classes:', error);
+      return [];
     }
   }
 
