@@ -12,6 +12,7 @@
 - **Real-time Collaboration**: Comments, notifications, and team coordination
 - **JDE Integration**: Direct connection to JD Edwards EnterpriseOne 9.2
 - **AI-Powered Procurement**: Intelligent purchase recommendations and inventory optimization
+- **Demand Management**: Multi-line demand creation with custom auto-incrementing IDs
 
 ## 🏗️ **System Architecture**
 
@@ -202,6 +203,89 @@ FROM F4311
 - **Line numbers divided by 1,000** for display
 - **Status codes mapped** to human-readable statuses
 
+## 📋 **Demand Management System**
+
+### **Multi-Line Demand Creation**
+- **Dynamic Form**: React Hook Form with useFieldArray for multiple demand lines
+- **Custom ID Generation**: Auto-incrementing demand IDs in `LR-YYYYMMDD-XXX` format
+- **Database Transactions**: Atomic creation of main demand and associated lines
+- **ERP Integration**: Data transformation for external ERP system API calls
+
+### **Demand ID System**
+```typescript
+// Custom ID Format: LR-YYYYMMDD-XXX
+// Example: LR-20250802-001, LR-20250802-002, etc.
+
+interface DemandSequence {
+  id: number;
+  date: string;        // YYYYMMDD format
+  sequence: number;    // Daily sequence (1, 2, 3...)
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Demand {
+  id: string;          // Custom ID (LR-YYYYMMDD-XXX)
+  bu: string;
+  department: string;
+  account: number;
+  approvalRoute: string | null;
+  expenseAccount: number;
+  expenseDescription: string;
+  expenseGLClass: string;
+  expenseStockType: string;
+  expenseOrderType: string;
+  justification: string;
+  priorityLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  expectedDeliveryDate: Date;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedAt: Date;
+  userId: string;
+  demandLines: DemandLine[];
+}
+
+interface DemandLine {
+  id: string;
+  demandId: string;
+  itemDescription: string;
+  quantity: number;
+  estimatedCost: number;
+  unitOfMeasure: string;
+  specifications: string;
+  supplierPreference: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+```
+
+### **ERP Data Transformation**
+```typescript
+// Local Demand → ERP JSON Format
+interface ERPRequest {
+  Supplier_code: string;
+  Requested: string;           // MM/DD/YYYY format
+  GridIn_1_3: ERPLineItem[];
+  P4310_Version: string;
+}
+
+interface ERPLineItem {
+  Item_Number: string;
+  Quantity_Ordered: string;
+  Tr_UoM: string;
+  G_L_Offset: string;
+  Cost_Center: string;
+  Obj_Acct: string;
+}
+```
+
+### **Key Features**
+- **Multi-line Support**: Add/remove demand lines dynamically
+- **Real-time Validation**: Zod schema validation with error handling
+- **Cost Calculation**: Automatic total cost calculation
+- **Department Integration**: BU/Department selector with account mapping
+- **Expense Account Mapping**: Automatic GL class and account assignment
+- **Approval Workflow**: Status tracking and notification system
+- **ERP Integration**: Ready for external ERP system API calls
+
 ## 🤖 **Procurement AI Agent**
 
 ### **Core AI Components**
@@ -295,6 +379,11 @@ const procurementAgent = {
 - **DocumentTemplate**: Reusable templates
 - **DocumentNumber**: Auto-generated document numbering
 
+### **Demand Management Models**
+- **Demand**: Main demand records with custom IDs
+- **DemandLine**: Individual line items within demands
+- **DemandSequence**: Auto-incrementing sequence tracking for custom IDs
+
 ### **JDE Models**
 - **JDEPurchaseOrderHeader**: F4301 data with transformations
 - **JDEPurchaseOrderDetail**: F4311 data with UOM information
@@ -307,6 +396,7 @@ const procurementAgent = {
 - Tasks can have dependencies and attachments
 - Tickets are assigned to users and teams
 - Documents can be annotated and versioned
+- Demands have multiple demand lines
 - JDE data is cached and synchronized locally
 
 ## 🚀 **Performance Optimizations**
@@ -339,20 +429,32 @@ uxone/
 │   │   └── lvm/           # Main application routes
 │   │       ├── procurement/  # Procurement AI module
 │   │       ├── inventory/    # Inventory management
+│   │       ├── demands/      # Demand management system
+│   │       │   ├── create/   # Demand creation forms
+│   │       │   ├── [id]/     # Individual demand views
+│   │       │   └── page.tsx  # Demands list page
 │   │       └── purchase-orders/ # PO management
 │   ├── api/               # API routes
 │   │   ├── jde/           # JDE integration endpoints
 │   │   ├── ai-agent/      # AI agent endpoints
+│   │   ├── demands/       # Demand management endpoints
+│   │   │   ├── route.ts   # Main demands API
+│   │   │   ├── [id]/      # Individual demand endpoints
+│   │   │   └── erp-integration/ # ERP integration
 │   │   └── auth/          # Authentication endpoints
 │   └── auth/              # Authentication pages
 ├── components/            # Reusable UI components
 │   ├── ui/               # Base UI components
+│   ├── MultiLineDemandForm.tsx # Multi-line demand form
+│   ├── ERPIntegrationTest.tsx  # ERP integration testing
 │   └── Navbar/           # Navigation components
 ├── config/               # Application configuration
 ├── hooks/                # Custom React hooks
 ├── lib/                  # Utility libraries
 │   ├── jde-connector.ts  # JDE database connector
 │   ├── quantity-formatter.ts # Quantity formatting utilities
+│   ├── demand-id-generator.ts # Custom demand ID generation
+│   ├── erp-data-transformer.ts # ERP data transformation
 │   └── auth.ts           # Authentication utilities
 ├── prisma/               # Database schema and migrations
 ├── public/               # Static assets
@@ -383,6 +485,12 @@ The system uses a centralized configuration file that defines:
 - **Inventory Testing**: `/api/jde/inventory`
 - **Purchase Order Testing**: `/api/jde/purchase-orders`
 - **Data Synchronization**: Real-time sync with local database
+
+### **Demand Management Testing**
+- **Form Validation**: Multi-line demand form testing
+- **ID Generation**: Custom demand ID generation testing
+- **ERP Integration**: Data transformation testing
+- **Approval Workflow**: Status tracking and notification testing
 
 ### **API Testing**
 - **Endpoint Validation**: All endpoints tested
@@ -518,8 +626,15 @@ npm start
 - [x] **Caching System**: 12x performance improvement with 5-minute cache duration
 - [x] **Authentication System**: Dual authentication with admin fallback
 - [x] **Role-Based Access Control**: 11-level hierarchy with department routing
+- [x] **Multi-Line Demand Form**: Dynamic form with React Hook Form and useFieldArray
+- [x] **Custom Demand ID System**: Auto-incrementing IDs in LR-YYYYMMDD-XXX format
+- [x] **Database Schema**: Demand and DemandLine models with proper relationships
+- [x] **ERP Integration**: Data transformation for external ERP system API calls
+- [x] **Demand Management UI**: List view, detail view, and approval workflow
+- [x] **Navigation Integration**: Direct demands link in main menu
 
 ### **🔄 In Progress**
+- [ ] **User Creation Fix**: Resolving unique constraint violation for test users
 - [ ] **AI Agent Development**: Phase 2 of procurement AI implementation
 - [ ] **Real-time Synchronization**: Live data sync with JDE
 - [ ] **Advanced Analytics**: Machine learning insights and forecasting
@@ -539,6 +654,31 @@ npm start
 5. **Integration**: Successful real JDE 9.2 database connection
 6. **Security**: Robust authentication with fallback capabilities
 7. **Reliability**: 99.9% uptime with graceful error handling
+8. **Demand Management**: Multi-line demand creation with custom IDs
+9. **ERP Integration**: Ready for external ERP system integration
+
+## 🐛 **Current Issues & Resolutions**
+
+### **Issue: Unique Constraint Violation for Test Users**
+- **Problem**: When creating test users during demand submission, username unique constraint fails
+- **Root Cause**: Test user creation logic doesn't handle existing usernames
+- **Status**: In progress - need to implement upsert logic or better user management
+- **Impact**: Prevents demand creation for test accounts
+
+### **Issue: Date Handling in Multi-Line Form**
+- **Problem**: Type mismatch between form input (string) and Zod schema expectations
+- **Resolution**: Implemented proper date string handling with ISO conversion
+- **Status**: Resolved
+
+### **Issue: Navigation to Demands Page**
+- **Problem**: Menu link not working properly
+- **Resolution**: Removed submenu complexity, implemented direct link
+- **Status**: Resolved
+
+### **Issue: Null Reference Errors in Demands List**
+- **Problem**: Runtime errors when accessing undefined properties
+- **Resolution**: Added comprehensive null checks and optional chaining
+- **Status**: Resolved
 
 ---
 
@@ -559,8 +699,8 @@ npm start
 
 ---
 
-**Last Updated**: January 2025  
-**Version**: 1.0.0  
+**Last Updated**: January 2, 2025  
+**Version**: 1.1.0  
 **Maintainer**: Eric Nguyen  
 **Organization**: TIPA (Thai Industrial Promotion Agency)  
-**Status**: Production Ready with Active Development 
+**Status**: Production Ready with Active Development - Demand Management System Added 
