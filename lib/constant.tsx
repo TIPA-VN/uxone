@@ -9,6 +9,7 @@ import { MdEngineering } from "react-icons/md";
 import { VscSettingsGear } from "react-icons/vsc";
 import { RiCustomerService2Fill } from "react-icons/ri";
 import { FaServer } from "react-icons/fa";
+import { FileText } from "lucide-react";
 
 
 export const SidebarLinks = [
@@ -51,7 +52,12 @@ export const SidebarLinks = [
         label: "Purchasing",
         icon: <BsCart4 />,
       },
-            {
+      {
+        route: "/lvm/demands",
+        label: "Demands",
+        icon: <FileText />,
+      },
+      {
         route: "/lvm/pc",
         label: "Planning",
         icon: <ImCalendar />,

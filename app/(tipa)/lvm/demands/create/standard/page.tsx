@@ -21,7 +21,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import Link from "next/link";
-import DemandCreationForm from "@/components/DemandCreationForm";
+import MultiLineDemandForm from "@/components/MultiLineDemandForm";
 import type { DemandCreationInput } from "@/lib/zod";
 
 export default function StandardDemandPage() {
@@ -109,7 +109,7 @@ export default function StandardDemandPage() {
           <h1 className="text-3xl font-bold text-gray-900">Standard Demand Form</h1>
         </div>
         <p className="text-gray-600">
-          Create a standard purchase demand for regular business operations.
+          Create a standard purchase demand with multiple items for regular business operations.
         </p>
       </div>
 
@@ -132,8 +132,8 @@ export default function StandardDemandPage() {
         </Alert>
       )}
 
-      {/* Demand Creation Form */}
-      <DemandCreationForm
+      {/* Multi-Line Demand Creation Form */}
+      <MultiLineDemandForm
         onSuccess={handleSuccess}
         onError={handleError}
         isSubmitting={isSubmitting}

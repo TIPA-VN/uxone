@@ -13,6 +13,18 @@ export const signInSchema = z.object({
 
 export type SignInInput = z.infer<typeof signInSchema>;
 
+// Demand Line Schema
+export const demandLineSchema = z.object({
+  itemDescription: z.string().min(1, "Item description is required").max(500, "Description must be less than 500 characters"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  estimatedCost: z.number().min(0, "Estimated cost must be non-negative"),
+  unitOfMeasure: z.string().optional(),
+  specifications: z.string().optional(),
+  supplierPreference: z.string().optional(),
+});
+
+export type DemandLineInput = z.infer<typeof demandLineSchema>;
+
 // Demand Creation Schema
 export const demandCreationSchema = z.object({
   // BU and Department selection
@@ -28,16 +40,14 @@ export const demandCreationSchema = z.object({
   expenseStockType: z.string().min(1, "Expense stock type is required"),
   expenseOrderType: z.string().min(1, "Expense order type is required"),
   
-  itemDescription: z.string().min(1, "Item description is required").max(500, "Description must be less than 500 characters"),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
-  estimatedCost: z.number().min(0, "Estimated cost must be non-negative"),
+  // Multiple demand lines
+  demandLines: z.array(demandLineSchema).min(1, "At least one demand line is required").max(50, "Maximum 50 demand lines allowed"),
+  
   justification: z.string().min(10, "Justification must be at least 10 characters").max(1000, "Justification must be less than 1000 characters"),
   priorityLevel: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
     required_error: "Priority level is required",
   }),
-  expectedDeliveryDate: z.date({
-    required_error: "Expected delivery date is required",
-  }),
+  expectedDeliveryDate: z.string().min(1, "Expected delivery date is required"),
   // Department-specific fields
   departmentSpecific: z.object({
     technicalSpecs: z.string().optional(),

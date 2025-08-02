@@ -708,9 +708,21 @@ model ExpenseAccount {
   @@map("expense_accounts")
 }
 
+// Demand ID Sequence Tracking
+model DemandSequence {
+  id        Int      @id @default(autoincrement())
+  date      String   // Date in YYYYMMDD format
+  sequence  Int      @default(1) // Daily sequence number
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+  @@map("demand_sequences")
+}
+
 // Demand Management
 model Demand {
-  id                    String   @id @default(cuid())
+  id                    String   @id // Custom ID format: LR-YYYYMMDD-XXX
   
   // BU and Department information
   bu                    String   // Business Unit (e.g., "LVM", "TRD")
@@ -725,9 +737,6 @@ model Demand {
   expenseStockType      String   // Stock Type from ExpenseAccount
   expenseOrderType      String   // Order Type from ExpenseAccount
   
-  itemDescription       String   // Description of the item/service
-  quantity              Int      // Quantity requested
-  estimatedCost         Float    // Estimated cost in VND
   justification         String   // Justification for the demand
   priorityLevel         String   // LOW, MEDIUM, HIGH, URGENT
   expectedDeliveryDate  DateTime // Expected delivery date
@@ -744,9 +753,33 @@ model Demand {
   
   // Relations
   user                  User     @relation("UserDemands", fields: [userId], references: [id], onDelete: Cascade)
+  demandLines           DemandLine[] // Multiple demand lines
   
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   @@map("demands")
+}
+
+// Demand Line Items
+model DemandLine {
+  id                String   @id @default(cuid())
+  demandId          String
+  demand            Demand   @relation(fields: [demandId], references: [id], onDelete: Cascade)
+  
+  // Line item details
+  itemDescription   String   // Description of the item/service
+  quantity          Int      // Quantity requested
+  estimatedCost     Float    // Estimated cost in VND
+  unitOfMeasure     String?  // Unit of measure (EA, KG, L, etc.)
+  specifications    String?  // Technical specifications
+  supplierPreference String? // Preferred supplier
+  
+  // Line status
+  status            String   @default("PENDING") // PENDING, APPROVED, REJECTED, IN_PROGRESS, COMPLETED
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("demand_lines")
 }

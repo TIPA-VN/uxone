@@ -52,8 +52,8 @@ const menuItems = [
     icon: <BsCart4 size={22} />,
   },
   {
-    route: "/lvm/demands/create",
-    label: "Create Demands",
+    route: "/lvm/demands",
+    label: "Demands",
     icon: <FileText size={22} />,
   }
 ];
@@ -109,11 +109,15 @@ export default function Menu() {
         }
         
         // Skip demands menu item if user doesn't have access
-        if (item.route === "/lvm/demands/create" && !hasDemandsAccess()) {
+        if (item.label === "Demands" && !hasDemandsAccess()) {
           return null;
         }
         
         const isActive = pathname === item.route;
+        
+        // Regular menu item
+        if (!item.route) return null;
+        
         return (
           <Link
             key={item.route}
