@@ -49,6 +49,10 @@ model User {
   // Document template relations
   createdTemplates DocumentTemplate[] @relation("DocumentTemplateCreator")
   createdDocumentNumbers DocumentNumber[] @relation("DocumentNumberCreator")
+  
+  // Service approval relations
+  serviceApprovalsAsApprover ServiceApproval[] @relation("ServiceApprovalApprover")
+  serviceApprovalsAsRequester ServiceApproval[] @relation("ServiceApprovalRequester")
 
   @@map("users")
 }
@@ -175,6 +179,9 @@ model Notification {
   read      Boolean  @default(false)
   hidden    Boolean  @default(false) // User has hidden this notification
   createdAt DateTime @default(now())
+  
+  // Service relations
+  serviceNotification ServiceNotification?
 
   @@map("notifications")
 }
@@ -342,6 +349,9 @@ model Task {
   subtasks        Task[]        @relation("SubtaskParent")
   parentTaskId    String?
   parentTask      Task?         @relation("SubtaskParent", fields: [parentTaskId], references: [id])
+  
+  // Service relations
+  serviceTask     ServiceTask?
 
   @@map("tasks")
 }
@@ -782,4 +792,87 @@ model DemandLine {
   updatedAt         DateTime @updatedAt
 
   @@map("demand_lines")
+}
+
+// Service App Management System
+model ServiceApp {
+  id          String   @id @default(cuid())
+  name        String
+  serviceKey  String   @unique
+  permissions String[]
+  isActive    Boolean  @default(true)
+  rateLimit   Int      @default(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  tasks       ServiceTask[]
+  notifications ServiceNotification[]
+  approvals   ServiceApproval[]
+  
+  @@map("service_apps")
+}
+
+// Service-specific task extension
+model ServiceTask {
+  id              String   @id @default(cuid())
+  taskId          String   @unique
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  serviceId       String
+  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceType     String
+  externalReference String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("service_tasks")
+}
+
+// Service-specific notification extension
+model ServiceNotification {
+  id              String   @id @default(cuid())
+  notificationId  String   @unique
+  notification    Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  serviceId       String
+  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceType     String
+  priority        String   @default("NORMAL") // HIGH, NORMAL, LOW
+  expiresAt       DateTime?
+  metadata        Json?    // Service-specific metadata
+  createdAt       DateTime @default(now())
+  
+  @@index([serviceId, serviceType])
+  @@index([notificationId])
+  
+  @@map("service_notifications")
+}
+
+// Service-specific approval system
+model ServiceApproval {
+  id                    String   @id @default(cuid())
+  serviceId             String
+  service               ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  requestId             String
+  requestType           String
+  status                String   @default("PENDING")
+  approverId            String?
+  requesterId           String
+  department            String
+  priority              String   @default("MEDIUM")
+  dueDate               DateTime?
+  approvedAt            DateTime?
+  rejectedAt            DateTime?
+  comments              String?
+  approvalLevel         Int      @default(1)
+  requiresMultipleApprovers Boolean @default(false)
+  approvalChain         Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relations
+  approver              User?    @relation("ServiceApprovalApprover", fields: [approverId], references: [id])
+  requester             User     @relation("ServiceApprovalRequester", fields: [requesterId], references: [id])
+  
+  @@map("service_approvals")
 }
