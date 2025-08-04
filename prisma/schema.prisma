@@ -51,8 +51,10 @@ model User {
   createdDocumentNumbers DocumentNumber[] @relation("DocumentNumberCreator")
   
   // Service approval relations
-  serviceApprovalsAsApprover ServiceApproval[] @relation("ServiceApprovalApprover")
-  serviceApprovalsAsRequester ServiceApproval[] @relation("ServiceApprovalRequester")
+  serviceApprovalDecisions ServiceApprovalDecision[]
+  
+  // Webhook event relations (for events triggered by users)
+  triggeredEvents WebhookEvent[]
 
   @@map("users")
 }
@@ -809,6 +811,8 @@ model ServiceApp {
   tasks       ServiceTask[]
   notifications ServiceNotification[]
   approvals   ServiceApproval[]
+  webhooks    ServiceWebhook[]
+  events      WebhookEvent[]
   
   @@map("service_apps")
 }
@@ -850,29 +854,116 @@ model ServiceNotification {
 
 // Service-specific approval system
 model ServiceApproval {
-  id                    String   @id @default(cuid())
-  serviceId             String
-  service               ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  requestId             String
-  requestType           String
-  status                String   @default("PENDING")
-  approverId            String?
-  requesterId           String
-  department            String
-  priority              String   @default("MEDIUM")
-  dueDate               DateTime?
-  approvedAt            DateTime?
-  rejectedAt            DateTime?
-  comments              String?
-  approvalLevel         Int      @default(1)
-  requiresMultipleApprovers Boolean @default(false)
-  approvalChain         Json?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id              String   @id @default(cuid())
+  serviceId       String
+  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceType     String
+  approvalType    String   // TASK, DOCUMENT, PROJECT, CUSTOM
+  externalId      String?  // External reference ID from service
+  title           String
+  description     String?
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  priority        String   @default("NORMAL") // HIGH, NORMAL, LOW
+  urgency         String   @default("NORMAL") // URGENT, NORMAL, LOW
+  dueDate         DateTime?
+  metadata        Json?    // Service-specific metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
-  // Relations
-  approver              User?    @relation("ServiceApprovalApprover", fields: [approverId], references: [id])
-  requester             User     @relation("ServiceApprovalRequester", fields: [requesterId], references: [id])
+  // Approval workflow
+  currentLevel    Int      @default(1)
+  totalLevels     Int      @default(1)
+  approvers       Json     // Array of approver IDs and levels
+  decisions       ServiceApprovalDecision[]
+  events          WebhookEvent[]
+  
+  @@index([serviceId, serviceType])
+  @@index([status, priority])
+  @@index([externalId])
   
   @@map("service_approvals")
+}
+
+// Service approval decisions
+model ServiceApprovalDecision {
+  id              String   @id @default(cuid())
+  approvalId      String
+  approval        ServiceApproval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  approverId      String
+  approver        User @relation(fields: [approverId], references: [id])
+  level           Int      // Approval level (1, 2, 3, etc.)
+  decision        String   // APPROVED, REJECTED, PENDING
+  comments        String?
+  decisionDate    DateTime @default(now())
+  
+  @@unique([approvalId, approverId, level])
+  @@index([approvalId])
+  @@index([approverId])
+  
+  @@map("service_approval_decisions")
+}
+
+// Webhook registration
+model ServiceWebhook {
+  id              String   @id @default(cuid())
+  serviceId       String
+  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  name            String
+  url             String
+  events          String[] // Array of event types
+  secret          String   // Webhook secret for signing
+  isActive        Boolean  @default(true)
+  retryCount      Int      @default(3)
+  timeout         Int      @default(30) // seconds
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  deliveries      WebhookDelivery[]
+  
+  @@index([serviceId])
+  @@index([isActive])
+  
+  @@map("service_webhooks")
+}
+
+// Webhook event tracking
+model WebhookEvent {
+  id              String   @id @default(cuid())
+  eventType       String   // approval.created, approval.updated, etc.
+  serviceId       String
+  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  approvalId      String?
+  approval        ServiceApproval? @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  triggeredById   String?  // User who triggered the event
+  triggeredBy     User?    @relation(fields: [triggeredById], references: [id])
+  payload         Json     // Event payload
+  createdAt       DateTime @default(now())
+  
+  deliveries      WebhookDelivery[]
+  
+  @@index([serviceId, eventType])
+  @@index([createdAt])
+  
+  @@map("webhook_events")
+}
+
+// Webhook delivery tracking
+model WebhookDelivery {
+  id              String   @id @default(cuid())
+  webhookId       String
+  webhook         ServiceWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  eventId         String
+  event           WebhookEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status          String   // PENDING, SUCCESS, FAILED
+  responseCode    Int?
+  responseBody    String?
+  attemptCount    Int      @default(0)
+  nextRetryAt     DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime @default(now())
+  
+  @@index([webhookId, status])
+  @@index([nextRetryAt])
+  
+  @@map("webhook_deliveries")
 }

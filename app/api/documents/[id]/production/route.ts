@@ -19,14 +19,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Document ID required" }, { status: 400 });
     }
 
-    // Debug logging
-    console.log('Production endpoint called for document:', id);
-    console.log('Session user:', {
-      id: session.user.id,
-      username: session.user.username,
-      department: session.user.department,
-      role: session.user.role
-    });
+    // Production endpoint processing
 
     // Fetch document with project info
     const document = await prisma.document.findUnique({
@@ -38,18 +31,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
-    console.log('Document found:', {
-      id: document.id,
-      department: document.department,
-      ownerId: document.ownerId,
-      workflowState: document.workflowState,
-      metadata: document.metadata
-    });
+    // Document found
 
     // Check if document is approved
     const metadata = typeof document.metadata === 'object' ? document.metadata : {};
     if (!metadata || typeof metadata !== 'object' || !('approved' in metadata) || !metadata.approved) {
-      console.log('Document not approved:', metadata);
+      // Document not approved
       return NextResponse.json({ error: "Document must be approved before sending to production" }, { status: 400 });
     }
 
@@ -57,14 +44,10 @@ export async function PATCH(
     const userDept = (session.user.department || '').toUpperCase();
     const docDept = (document.department || '').toUpperCase();
     
-    console.log('Department comparison:', {
-      userDepartment: userDept,
-      documentDepartment: docDept,
-      match: userDept === docDept
-    });
+    // Department comparison
 
     if (userDept !== docDept) {
-      console.log('Department mismatch - 403 error');
+      // Department mismatch
       return NextResponse.json({ error: "Not authorized for this department" }, { status: 403 });
     }
 
@@ -73,18 +56,14 @@ export async function PATCH(
     const isSeniorManager = session.user.role?.toUpperCase() === "SENIOR MANAGER" || 
                            session.user.role?.toUpperCase() === "SENIOR_MANAGER";
     
-    console.log('Permission check:', {
-      isAdmin,
-      isSeniorManager,
-      userRole: session.user.role
-    });
+    // Permission check
 
     if (!isAdmin && !isSeniorManager) {
-      console.log('Insufficient permissions - 403 error');
+      // Insufficient permissions
       return NextResponse.json({ error: "Insufficient permissions to promote documents to production" }, { status: 403 });
     }
 
-    console.log('All checks passed - proceeding with production update');
+    // All checks passed - proceeding with production update
 
     // Update document to mark as production
     const updatedMetadata = {

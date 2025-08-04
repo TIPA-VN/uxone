@@ -52,7 +52,7 @@ class VNPTInvoiceClient {
         forceSoap12Headers: true
       } as any);
 
-      console.log('SOAP client created successfully');
+      // SOAP client created successfully
       return this.client;
     } catch (error: any) {
       console.error('Error creating SOAP client:', error);
@@ -90,7 +90,7 @@ class VNPTInvoiceClient {
         fkeys: fkeys
       };
 
-      console.log('Calling SOAP method with args:', { ...args, ACpass: '***', password: '***' });
+      // Calling SOAP method
 
       // Call SOAP method
       const [result] = await client.GetMCCQThueByFkeysAsync(args);

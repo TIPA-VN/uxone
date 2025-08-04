@@ -118,7 +118,7 @@ class VNPTInvoiceClientHTTP {
         fkeys: fkeys
       };
 
-      console.log('Calling SOAP method with params:', { ...soapParams, ACpass: '***', password: '***' });
+      // Calling SOAP method
 
       const result = await this.makeSOAPRequest('GetMCCQThueByFkeys', soapParams);
       

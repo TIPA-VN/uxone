@@ -5,19 +5,19 @@ const prisma = new PrismaClient();
 
 async function migrateDemandIds() {
   try {
-    console.log('Starting demand ID migration...');
+    // Starting demand ID migration
     
     // Get all existing demands
     const demands = await prisma.demand.findMany({
       orderBy: { createdAt: 'asc' }
     });
     
-    console.log(`Found ${demands.length} demands to migrate`);
+    // Found demands to migrate
     
     for (const demand of demands) {
       // Skip if already has the new format
       if (demand.id.startsWith('LR-')) {
-        console.log(`Demand ${demand.id} already has new format, skipping`);
+        // Demand already has new format, skipping
         continue;
       }
       
@@ -30,10 +30,10 @@ async function migrateDemandIds() {
         data: { id: newId }
       });
       
-      console.log(`Migrated demand ${demand.id} to ${newId}`);
+      // Migrated demand
     }
     
-    console.log('Migration completed successfully!');
+    // Migration completed successfully
   } catch (error) {
     console.error('Migration failed:', error);
   } finally {

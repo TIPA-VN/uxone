@@ -112,26 +112,11 @@ export default function MultiLineDemandForm({
 
   // Console logging for debugging
   useEffect(() => {
-    console.log("=== FORM STATE DEBUG ===");
-    console.log("Current form values:", watchedValues);
-    console.log("Form errors:", errors);
-    console.log("Is form valid:", isValid);
-    console.log("Is form dirty:", isDirty);
-    console.log("Total estimated cost:", totalEstimatedCost);
-    console.log("Number of demand lines:", fields.length);
-    console.log("User department:", userDepartment);
-    console.log("Selected BU:", selectedBU);
-    console.log("=========================");
+    // Form state monitoring
   }, [watchedValues, errors, isValid, isDirty, totalEstimatedCost, fields.length, userDepartment, selectedBU]);
 
   const onSubmit = async (data: DemandCreationInput) => {
-    console.log("=== FORM SUBMISSION DEBUG ===");
-    console.log("Submitting form data:", data);
-    console.log("Form data type:", typeof data);
-    console.log("Demand lines count:", data.demandLines?.length);
-    console.log("Total cost:", data.demandLines?.reduce((sum, line) => sum + (line.estimatedCost || 0), 0));
-    console.log("Session user:", session?.user);
-    console.log("=============================");
+    // Form submission processing
 
     try {
       const response = await fetch('/api/demands', {
@@ -144,10 +129,7 @@ export default function MultiLineDemandForm({
 
       const result = await response.json();
 
-      console.log("=== API RESPONSE DEBUG ===");
-      console.log("Response status:", response.status);
-      console.log("Response data:", result);
-      console.log("==========================");
+              // API response processing
 
       if (!response.ok) {
         throw new Error(result.error || 'Không thể gửi yêu cầu');
@@ -160,17 +142,10 @@ export default function MultiLineDemandForm({
       setHasUnsavedChanges(false);
       onSuccess?.(data);
       
-      console.log("=== SUCCESS DEBUG ===");
-      console.log("Demand created successfully!");
-      console.log("Demand ID:", result.data?.demand?.id);
-      console.log("Demand lines created:", result.data?.demandLines?.length);
-      console.log("=====================");
+              // Success processing
       
     } catch (error) {
-      console.error("=== ERROR DEBUG ===");
-      console.error("Error submitting demand:", error);
-      console.error("Error details:", error instanceof Error ? error.message : "Unknown error");
-      console.error("===================");
+              // Error handling
       onError?.(error instanceof Error ? error.message : "Không thể gửi yêu cầu");
     }
   };
@@ -181,9 +156,7 @@ export default function MultiLineDemandForm({
     account: number;
     approvalRoute: string | null;
   }) => {
-    console.log("=== BU/DEPARTMENT SELECTION DEBUG ===");
-    console.log("Selected BU/Department data:", data);
-    console.log("=====================================");
+    // BU/Department selection processing
     
     setValue("bu", data.bu);
     setValue("department", data.department);
@@ -198,9 +171,7 @@ export default function MultiLineDemandForm({
     stockType: string;
     orderType: string;
   }) => {
-    console.log("=== EXPENSE ACCOUNT SELECTION DEBUG ===");
-    console.log("Selected expense account data:", data);
-    console.log("=======================================");
+    // Expense account selection processing
     
     setValue("expenseAccount", data.account);
     setValue("expenseDescription", data.description);
@@ -210,10 +181,7 @@ export default function MultiLineDemandForm({
   };
 
   const addDemandLine = () => {
-    console.log("=== ADD DEMAND LINE DEBUG ===");
-    console.log("Adding new demand line");
-    console.log("Current lines count:", fields.length);
-    console.log("============================");
+    // Adding new demand line
     
     append({
       itemDescription: "",
@@ -226,10 +194,7 @@ export default function MultiLineDemandForm({
   };
 
   const removeDemandLine = (index: number) => {
-    console.log("=== REMOVE DEMAND LINE DEBUG ===");
-    console.log("Removing demand line at index:", index);
-    console.log("Current lines count:", fields.length);
-    console.log("================================");
+    // Removing demand line
     
     if (fields.length > 1) {
       remove(index);
