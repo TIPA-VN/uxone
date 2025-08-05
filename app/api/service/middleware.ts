@@ -66,6 +66,11 @@ export function checkRateLimit(serviceId: string, rateLimit: number): boolean {
 // Main service middleware
 export async function serviceMiddleware(request: NextRequest): Promise<NextResponse | null> {
   try {
+    // Skip service authentication for OPTIONS requests (CORS preflight)
+    if (request.method === 'OPTIONS') {
+      return null; // Allow the request to continue without authentication
+    }
+
     // Validate service token
     const authContext = await validateServiceToken(request);
     if (!authContext) {

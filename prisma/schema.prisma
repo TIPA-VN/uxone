@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,135 +8,777 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  name           String?
-  email          String?        @unique
-  username       String         @unique
-  department     String?        // Local department (defaults to "Operations")
-  centralDepartment String?     // Department from central API (emp_dept)
-  departmentName String?
-  role           String?
-  hashedPassword String?        // Optional since we use central auth
-  image          String?
-  isActive       Boolean        @default(true) // User account status
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  // Relations
-  notifications  Notification[]
-  documents      Document[]     @relation("UserDocuments")
-  projects       Project[]
-  notes          Note[]
-  ownedTasks     Task[]         @relation("TaskOwner")
-  assignedTasks  Task[]         @relation("TaskAssignee")
-  demands        Demand[]       @relation("UserDemands")
-  createdTasks   Task[]         @relation("TaskCreator")
-  comments       Comment[]      @relation("CommentAuthor")
-  projectMembers ProjectMember[]
-
-  // Helpdesk relations
-  assignedTickets Ticket[]      @relation("TicketAssignee")
-  createdTickets  Ticket[]      @relation("TicketCreator")
-  ticketComments  TicketComment[] @relation("TicketCommentAuthor")
-  ticketAttachments TicketAttachment[] @relation("TicketAttachmentUploader")
-  taskAttachments TaskAttachment[] @relation("TaskAttachmentUploader")
-  taskComments   TaskComment[]  @relation("TaskCommentAuthor")
-  projectComments ProjectComment[] @relation("ProjectCommentAuthor")
-  
-  // Document template relations
-  createdTemplates DocumentTemplate[] @relation("DocumentTemplateCreator")
-  createdDocumentNumbers DocumentNumber[] @relation("DocumentNumberCreator")
-  
-  // Service approval relations
+  id                       String                    @id @default(cuid())
+  username                 String                    @unique
+  name                     String?
+  hashedPassword           String?
+  email                    String?                   @unique
+  image                    String?
+  department               String?
+  departmentName           String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  role                     String?
+  isActive                 Boolean                   @default(true)
+  centralDepartment        String?
+  comments                 Comment[]                 @relation("CommentAuthor")
+  demands                  Demand[]                  @relation("UserDemands")
+  createdDocumentNumbers   DocumentNumber[]          @relation("DocumentNumberCreator")
+  createdTemplates         DocumentTemplate[]        @relation("DocumentTemplateCreator")
+  documents                Document[]                @relation("UserDocuments")
+  notes                    Note[]
+  notifications            Notification[]
+  projectComments          ProjectComment[]          @relation("ProjectCommentAuthor")
+  projectMembers           ProjectMember[]
+  projects                 Project[]
   serviceApprovalDecisions ServiceApprovalDecision[]
-  
-  // Webhook event relations (for events triggered by users)
-  triggeredEvents WebhookEvent[]
+  taskAttachments          TaskAttachment[]          @relation("TaskAttachmentUploader")
+  taskComments             TaskComment[]             @relation("TaskCommentAuthor")
+  assignedTasks            Task[]                    @relation("TaskAssignee")
+  createdTasks             Task[]                    @relation("TaskCreator")
+  ownedTasks               Task[]                    @relation("TaskOwner")
+  ticketAttachments        TicketAttachment[]        @relation("TicketAttachmentUploader")
+  ticketComments           TicketComment[]           @relation("TicketCommentAuthor")
+  assignedTickets          Ticket[]                  @relation("TicketAssignee")
+  createdTickets           Ticket[]                  @relation("TicketCreator")
+  triggeredEvents          WebhookEvent[]
 
   @@map("users")
 }
 
-// Helpdesk Ticket System
 model Ticket {
-  id              String           @id @default(cuid())
-  ticketNumber    String           @unique // auto-generated (e.g., "HD-2024-001")
-  title           String
-  description     String
-  
-  // Helpdesk specific fields
-  status          TicketStatus     @default(OPEN)
-  priority        TicketPriority   @default(MEDIUM)
-  category        TicketCategory   @default(SUPPORT)
-  
-  // Customer info
-  customerId      String?
-  customerEmail   String
-  customerName    String
-  
-  // Assignment
-  assignedToId    String?
-  assignedTo      User?            @relation("TicketAssignee", fields: [assignedToId], references: [id])
-  assignedTeam    String?
-  
-  // Integration fields
-  relatedTasks    String[]         // Task IDs created from this ticket
+  id               String             @id @default(cuid())
+  ticketNumber     String             @unique
+  title            String
+  description      String
+  status           TicketStatus       @default(OPEN)
+  priority         TicketPriority     @default(MEDIUM)
+  category         TicketCategory     @default(SUPPORT)
+  customerId       String?
+  customerEmail    String
+  customerName     String
+  assignedToId     String?
+  assignedTeam     String?
+  relatedTasks     String[]
   relatedProjectId String?
-  
-  // Tracking
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  resolvedAt      DateTime?
-  closedAt        DateTime?
-  firstResponseAt DateTime?
-  
-  // SLA tracking
-  slaBreached     Boolean          @default(false)
-  responseTime    Int?             // minutes
-  resolutionTime  Int?             // minutes
-  
-  // Communication
-  comments        TicketComment[]
-  attachments     TicketAttachment[]
-  tags            String[]
-  
-  // Creator
-  createdById     String
-  createdBy       User             @relation("TicketCreator", fields: [createdById], references: [id])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+  firstResponseAt  DateTime?
+  slaBreached      Boolean            @default(false)
+  responseTime     Int?
+  resolutionTime   Int?
+  tags             String[]
+  createdById      String
+  attachments      TicketAttachment[]
+  comments         TicketComment[]
+  assignedTo       User?              @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  createdBy        User               @relation("TicketCreator", fields: [createdById], references: [id])
 
   @@map("tickets")
 }
 
 model TicketComment {
-  id          String   @id @default(cuid())
-  content     String
-  authorId    String
-  author      User     @relation("TicketCommentAuthor", fields: [authorId], references: [id])
-  authorType  CommentAuthorType @default(AGENT)
-  ticketId    String
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  isInternal  Boolean  @default(false) // internal notes vs customer-visible
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String            @id @default(cuid())
+  content    String
+  authorId   String
+  authorType CommentAuthorType @default(AGENT)
+  ticketId   String
+  isInternal Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  author     User              @relation("TicketCommentAuthor", fields: [authorId], references: [id])
+  ticket     Ticket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@map("ticket_comments")
 }
 
 model TicketAttachment {
-  id          String   @id @default(cuid())
-  fileName    String
-  filePath    String
-  fileType    String
-  fileSize    Int
-  ticketId    String
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  fileName     String
+  filePath     String
+  fileType     String
+  fileSize     Int
+  ticketId     String
   uploadedById String
-  uploadedBy  User     @relation("TicketAttachmentUploader", fields: [uploadedById], references: [id])
-  createdAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("TicketAttachmentUploader", fields: [uploadedById], references: [id])
 
   @@map("ticket_attachments")
 }
 
-// Enums for Ticket System
+model Notification {
+  id                  String               @id @default(cuid())
+  userId              String
+  title               String
+  message             String
+  link                String?
+  type                String?
+  read                Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  hidden              Boolean              @default(false)
+  user                User                 @relation(fields: [userId], references: [id])
+  serviceNotification ServiceNotification?
+
+  @@map("notifications")
+}
+
+model Document {
+  id            String     @id @default(cuid())
+  fileName      String
+  filePath      String
+  fileType      String
+  size          Int
+  version       Int        @default(1)
+  metadata      Json
+  ownerId       String
+  department    String?
+  accessRoles   String[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  parentId      String?
+  workflowState String?
+  workflowMeta  Json?
+  projectId     String?
+  annotations   Json?
+  owner         User       @relation("UserDocuments", fields: [ownerId], references: [id])
+  parent        Document?  @relation("DocumentVersion", fields: [parentId], references: [id])
+  versions      Document[] @relation("DocumentVersion")
+  project       Project?   @relation(fields: [projectId], references: [id])
+
+  @@map("documents")
+}
+
+model Project {
+  id                 String           @id @default(cuid())
+  name               String
+  description        String?
+  ownerId            String
+  departments        String[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  status             ProjectStatus    @default(PLANNING)
+  budget             Float?
+  endDate            DateTime?
+  startDate          DateTime         @default(now())
+  documentNumber     String?
+  documentTemplate   String?
+  approvalState      Json?
+  departmentDueDates Json?
+  requestDate        DateTime?
+  documentNumbers    DocumentNumber[] @relation("ProjectDocuments")
+  documents          Document[]
+  notes              Note[]
+  comments           ProjectComment[]
+  members            ProjectMember[]
+  owner              User             @relation(fields: [ownerId], references: [id])
+  tasks              Task[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  projectId String?
+  content   String
+  createdAt DateTime @default(now())
+  title     String
+  updatedAt DateTime @updatedAt
+  userId    String
+  project   Project? @relation(fields: [projectId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("notes")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  taskId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation("CommentAuthor", fields: [authorId], references: [id])
+  task      Task?    @relation(fields: [taskId], references: [id])
+
+  @@map("comments")
+}
+
+model Task {
+  id                String           @id @default(cuid())
+  title             String
+  description       String?
+  ownerId           String?
+  assigneeId        String?
+  status            TaskStatus       @default(TODO)
+  priority          TaskPriority     @default(MEDIUM)
+  dueDate           DateTime?
+  projectId         String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  parentTaskId      String?
+  completedAt       DateTime?
+  creatorId         String?
+  sourceTicketId    String?
+  startDate         DateTime?
+  ticketIntegration Json?
+  legacyComments    Comment[]
+  serviceTask       ServiceTask?
+  attachments       TaskAttachment[]
+  comments          TaskComment[]
+  dependents        TaskDependency[] @relation("DependencyTask")
+  dependencies      TaskDependency[] @relation("DependentTask")
+  assignee          User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator           User?            @relation("TaskCreator", fields: [creatorId], references: [id])
+  owner             User?            @relation("TaskOwner", fields: [ownerId], references: [id])
+  parentTask        Task?            @relation("SubtaskParent", fields: [parentTaskId], references: [id])
+  subtasks          Task[]           @relation("SubtaskParent")
+  project           Project?         @relation(fields: [projectId], references: [id])
+
+  @@map("tasks")
+}
+
+model TaskDependency {
+  id               String   @id @default(cuid())
+  dependentTaskId  String
+  createdAt        DateTime @default(now())
+  dependencyTaskId String
+  dependencyTask   Task     @relation("DependencyTask", fields: [dependencyTaskId], references: [id])
+  dependentTask    Task     @relation("DependentTask", fields: [dependentTaskId], references: [id])
+
+  @@unique([dependentTaskId, dependencyTaskId])
+  @@map("task_dependencies")
+}
+
+model TaskAttachment {
+  id           String   @id @default(cuid())
+  taskId       String
+  fileName     String
+  filePath     String
+  fileType     String
+  createdAt    DateTime @default(now())
+  fileSize     Int
+  uploadedById String
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("TaskAttachmentUploader", fields: [uploadedById], references: [id])
+
+  @@map("task_attachments")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation("TaskCommentAuthor", fields: [authorId], references: [id])
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_comments")
+}
+
+model ProjectComment {
+  id        String   @id @default(cuid())
+  projectId String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation("ProjectCommentAuthor", fields: [authorId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_comments")
+}
+
+model DocumentTemplate {
+  id                 String           @id @default(cuid())
+  templateName       String
+  templateCode       String           @unique
+  description        String?
+  isActive           Boolean          @default(true)
+  effectiveDate      DateTime         @default(now())
+  revisionNumber     Int              @default(1)
+  currentSequence    Int              @default(0)
+  prefix             String
+  year               Int              @default(2025)
+  createdById        String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  generatedDocuments DocumentNumber[] @relation("TemplateDocuments")
+  createdBy          User             @relation("DocumentTemplateCreator", fields: [createdById], references: [id])
+
+  @@map("document_templates")
+}
+
+model DocumentNumber {
+  id             String               @id @default(cuid())
+  documentNumber String               @unique
+  templateId     String
+  projectId      String?
+  sequenceNumber Int
+  year           Int
+  status         DocumentNumberStatus @default(ACTIVE)
+  createdById    String
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  createdBy      User                 @relation("DocumentNumberCreator", fields: [createdById], references: [id])
+  project        Project?             @relation("ProjectDocuments", fields: [projectId], references: [id])
+  template       DocumentTemplate     @relation("TemplateDocuments", fields: [templateId], references: [id])
+
+  @@map("document_numbers")
+}
+
+model ItemMaster {
+  id             String                @id @default(cuid())
+  itemNumber     String                @unique
+  description    String
+  itemType       String
+  unitOfMeasure  String
+  leadTime       Int
+  safetyStock    Int
+  minOrderQty    Int
+  maxOrderQty    Int
+  lotSize        Int
+  costCenter     String
+  planner        String
+  buyer          String
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  locations      ItemLocation[]
+  mrpMessages    MrpMessage[]
+  purchaseOrders PurchaseOrderDetail[]
+  receipts       ReceiptDetail[]
+  demands        SalesOrderDetail[]
+
+  @@map("item_master")
+}
+
+model ItemLocation {
+  id                String     @id @default(cuid())
+  itemNumber        String
+  branch            String
+  location          String
+  quantityOnHand    Int
+  quantityOnOrder   Int
+  quantityCommitted Int
+  lastCountDate     DateTime?
+  lastCountQuantity Int?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  item              ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
+
+  @@unique([itemNumber, branch, location])
+  @@map("item_location")
+}
+
+model PurchaseOrderHeader {
+  id           String                @id @default(cuid())
+  poNumber     String                @unique
+  supplierId   String
+  supplierName String
+  orderDate    DateTime
+  promiseDate  DateTime?
+  status       String
+  totalAmount  Decimal
+  currency     String
+  buyer        String
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  details      PurchaseOrderDetail[]
+
+  @@map("purchase_order_header")
+}
+
+model PurchaseOrderDetail {
+  id               String              @id @default(cuid())
+  poNumber         String
+  lineNumber       Int
+  itemNumber       String
+  description      String
+  quantity         Int
+  quantityReceived Int
+  unitPrice        Decimal
+  extendedPrice    Decimal
+  promiseDate      DateTime?
+  status           String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  item             ItemMaster          @relation(fields: [itemNumber], references: [itemNumber])
+  header           PurchaseOrderHeader @relation(fields: [poNumber], references: [poNumber])
+  receipts         ReceiptDetail[]
+
+  @@unique([poNumber, lineNumber])
+  @@map("purchase_order_detail")
+}
+
+model ReceiptDetail {
+  id               String              @id @default(cuid())
+  poNumber         String
+  lineNumber       Int
+  itemNumber       String
+  receiptNumber    String
+  receiptDate      DateTime
+  quantityReceived Int
+  unitCost         Decimal
+  lotNumber        String?
+  location         String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  item             ItemMaster          @relation(fields: [itemNumber], references: [itemNumber])
+  poDetail         PurchaseOrderDetail @relation(fields: [poNumber, lineNumber], references: [poNumber, lineNumber])
+
+  @@unique([receiptNumber, lineNumber])
+  @@map("receipt_detail")
+}
+
+model MrpMessage {
+  id          String     @id @default(cuid())
+  itemNumber  String
+  messageType String
+  messageText String
+  quantity    Int
+  date        DateTime
+  priority    Int
+  status      String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
+
+  @@map("mrp_message")
+}
+
+model SalesOrderDetail {
+  id              String     @id @default(cuid())
+  orderNumber     String
+  lineNumber      Int
+  itemNumber      String
+  customerId      String
+  quantity        Int
+  quantityShipped Int
+  unitPrice       Decimal
+  promiseDate     DateTime?
+  status          String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  item            ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
+
+  @@unique([orderNumber, lineNumber])
+  @@map("sales_order_detail")
+}
+
+model AiRecommendation {
+  id                 String   @id @default(cuid())
+  itemNumber         String
+  recommendationType String
+  title              String
+  description        String
+  priority           String
+  confidence         Float
+  data               Json
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("ai_recommendation")
+}
+
+model DemandForecast {
+  id           String   @id @default(cuid())
+  itemNumber   String
+  forecastDate DateTime
+  period       String
+  quantity     Int
+  confidence   Float
+  model        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([itemNumber, forecastDate, period])
+  @@map("demand_forecast")
+}
+
+model RiskAssessment {
+  id          String   @id @default(cuid())
+  itemNumber  String
+  riskType    String
+  riskLevel   String
+  probability Float
+  impact      String
+  description String
+  mitigation  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("risk_assessment")
+}
+
+model DataSyncLog {
+  id               String    @id @default(cuid())
+  syncType         String
+  status           String
+  recordsProcessed Int
+  recordsFailed    Int
+  startTime        DateTime
+  endTime          DateTime?
+  errorMessage     String?
+  createdAt        DateTime  @default(now())
+
+  @@map("data_sync_log")
+}
+
+model DepartmentAccount {
+  id            Int      @id @default(autoincrement())
+  bu            String
+  department    String
+  account       Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  approvalRoute String?
+
+  @@unique([bu, department])
+  @@map("department_accounts")
+}
+
+model ExpenseAccount {
+  id           Int      @id @default(autoincrement())
+  account      Int
+  description  String
+  glClass      String
+  businessName String
+  orderType    String
+  bu           Int
+  stockType    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([account, businessName, orderType, bu])
+  @@map("expense_accounts")
+}
+
+model DemandSequence {
+  id        Int      @id @default(autoincrement())
+  date      String   @unique
+  sequence  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("demand_sequences")
+}
+
+model Demand {
+  id                   String       @id
+  justification        String
+  priorityLevel        String
+  expectedDeliveryDate DateTime
+  departmentSpecific   Json?
+  attachments          String[]
+  status               String       @default("PENDING")
+  submittedAt          DateTime     @default(now())
+  approvedAt           DateTime?
+  completedAt          DateTime?
+  userId               String
+  userDepartment       String
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  account              Int
+  approvalRoute        String?
+  bu                   String
+  department           String
+  expenseAccount       Int
+  expenseDescription   String
+  expenseGLClass       String
+  expenseOrderType     String
+  expenseStockType     String
+  demandLines          DemandLine[]
+  user                 User         @relation("UserDemands", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("demands")
+}
+
+model DemandLine {
+  id                 String   @id @default(cuid())
+  demandId           String
+  itemDescription    String
+  quantity           Int
+  estimatedCost      Float
+  unitOfMeasure      String?
+  specifications     String?
+  supplierPreference String?
+  status             String   @default("PENDING")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  demand             Demand   @relation(fields: [demandId], references: [id], onDelete: Cascade)
+
+  @@map("demand_lines")
+}
+
+model ServiceApp {
+  id            String                @id @default(cuid())
+  name          String
+  serviceKey    String                @unique
+  permissions   String[]
+  isActive      Boolean               @default(true)
+  rateLimit     Int                   @default(100)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  approvals     ServiceApproval[]
+  notifications ServiceNotification[]
+  tasks         ServiceTask[]
+  webhooks      ServiceWebhook[]
+  events        WebhookEvent[]
+
+  @@map("service_apps")
+}
+
+model ServiceTask {
+  id                String     @id @default(cuid())
+  taskId            String     @unique
+  serviceId         String
+  serviceType       String
+  externalReference String?
+  metadata          Json?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  service           ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  task              Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("service_tasks")
+}
+
+model ServiceNotification {
+  id             String       @id @default(cuid())
+  notificationId String       @unique
+  serviceId      String
+  serviceType    String
+  priority       String       @default("NORMAL")
+  expiresAt      DateTime?
+  createdAt      DateTime     @default(now())
+  metadata       Json?
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  service        ServiceApp   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, serviceType])
+  @@index([notificationId])
+  @@map("service_notifications")
+}
+
+model ServiceApproval {
+  id           String                    @id @default(cuid())
+  serviceId    String
+  status       String                    @default("PENDING")
+  priority     String                    @default("NORMAL")
+  dueDate      DateTime?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  approvalType String
+  approvers    Json
+  currentLevel Int                       @default(1)
+  description  String?
+  externalId   String?
+  metadata     Json?
+  serviceType  String
+  title        String
+  totalLevels  Int                       @default(1)
+  urgency      String                    @default("NORMAL")
+  decisions    ServiceApprovalDecision[]
+  service      ServiceApp                @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  events       WebhookEvent[]
+
+  @@index([serviceId, serviceType])
+  @@index([status, priority])
+  @@index([externalId])
+  @@map("service_approvals")
+}
+
+model ServiceApprovalDecision {
+  id           String          @id @default(cuid())
+  approvalId   String
+  approverId   String
+  level        Int
+  decision     String
+  comments     String?
+  decisionDate DateTime        @default(now())
+  approval     ServiceApproval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  approver     User            @relation(fields: [approverId], references: [id])
+
+  @@unique([approvalId, approverId, level])
+  @@index([approvalId])
+  @@index([approverId])
+  @@map("service_approval_decisions")
+}
+
+model ServiceWebhook {
+  id         String            @id @default(cuid())
+  serviceId  String
+  name       String
+  url        String
+  events     String[]
+  secret     String
+  isActive   Boolean           @default(true)
+  retryCount Int               @default(3)
+  timeout    Int               @default(30)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  service    ServiceApp        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([serviceId])
+  @@index([isActive])
+  @@map("service_webhooks")
+}
+
+model WebhookEvent {
+  id            String            @id @default(cuid())
+  eventType     String
+  serviceId     String
+  approvalId    String?
+  triggeredById String?
+  payload       Json
+  createdAt     DateTime          @default(now())
+  deliveries    WebhookDelivery[]
+  approval      ServiceApproval?  @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  service       ServiceApp        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  triggeredBy   User?             @relation(fields: [triggeredById], references: [id])
+
+  @@index([serviceId, eventType])
+  @@index([createdAt])
+  @@map("webhook_events")
+}
+
+model WebhookDelivery {
+  id           String         @id @default(cuid())
+  webhookId    String
+  eventId      String
+  status       String
+  responseCode Int?
+  responseBody String?
+  attemptCount Int            @default(0)
+  nextRetryAt  DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime       @default(now())
+  event        WebhookEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  webhook      ServiceWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, status])
+  @@index([nextRetryAt])
+  @@map("webhook_deliveries")
+}
+
 enum TicketStatus {
   OPEN
   IN_PROGRESS
@@ -169,134 +808,12 @@ enum CommentAuthorType {
   SYSTEM
 }
 
-// Keep existing models unchanged
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  title     String
-  message   String
-  link      String?  // Optional: link to related resource
-  type      String?  // Optional: type of notification (info, warning, etc.)
-  read      Boolean  @default(false)
-  hidden    Boolean  @default(false) // User has hidden this notification
-  createdAt DateTime @default(now())
-  
-  // Service relations
-  serviceNotification ServiceNotification?
-
-  @@map("notifications")
-}
-
-model Document {
-  id            String   @id @default(cuid())
-  fileName      String
-  filePath      String // local path or S3 key
-  fileType      String // e.g. pdf, docx, dwg
-  size          Int
-  version       Int      @default(1)
-  metadata      Json     // type, project, part, etc.
-  annotations   Json?    // Store Fabric.js canvas data
-  ownerId       String
-  owner         User     @relation("UserDocuments", fields: [ownerId], references: [id])
-  department    String?
-  accessRoles   String[] // roles allowed to view/edit
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  // Versioning
-  parentId      String?  // for version history (null for latest)
-  parent        Document? @relation("DocumentVersion", fields: [parentId], references: [id])
-  versions      Document[] @relation("DocumentVersion")
-  // Workflow hooks (future)
-  workflowState String?  // e.g. draft, review, approved
-  workflowMeta  Json?
-  projectId     String?
-  project       Project? @relation(fields: [projectId], references: [id])
-
-  @@map("documents")
-}
-
 enum ProjectStatus {
   PLANNING
   ACTIVE
   ON_HOLD
   COMPLETED
   CANCELLED
-}
-
-model Project {
-  id            String   @id @default(cuid())
-  name          String
-  description   String?
-  status        ProjectStatus @default(PLANNING)
-  startDate     DateTime @default(now())
-  endDate       DateTime?
-  budget        Float?
-  ownerId       String
-  owner         User     @relation(fields: [ownerId], references: [id])
-  departments   String[]
-  
-  // Document template fields
-  documentTemplate String? // LLNV, ECO, INSP, etc.
-  documentNumber   String? // Auto-generated (e.g., TIPA-LLNV-250727-001)
-  
-  // Due dates and approval
-  requestDate       DateTime? // Request date for the project
-  departmentDueDates Json?    // JSON object for department-specific due dates
-  approvalState     Json?     // JSON object for department approval states
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  tasks         Task[]
-  documents     Document[]
-  members       ProjectMember[]
-  comments      ProjectComment[]
-  notes         Note[] // Notes related to this project
-  documentNumbers DocumentNumber[] @relation("ProjectDocuments")
-
-  @@map("projects")
-}
-
-model ProjectMember {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  role      String   @default("member") // owner, member, viewer
-  joinedAt  DateTime @default(now())
-
-  @@unique([projectId, userId])
-  @@map("project_members")
-}
-
-model Note {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  projectId String?
-  project   Project? @relation(fields: [projectId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("notes")
-}
-
-model Comment {
-  id        String   @id @default(cuid())
-  content   String
-  authorId  String
-  author    User     @relation("CommentAuthor", fields: [authorId], references: [id])
-  taskId    String?
-  task      Task?    @relation(fields: [taskId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("comments")
 }
 
 enum TaskStatus {
@@ -314,656 +831,9 @@ enum TaskPriority {
   URGENT
 }
 
-model Task {
-  id              String       @id @default(cuid())
-  title           String
-  description     String?
-  status          TaskStatus   @default(TODO)
-  priority        TaskPriority @default(MEDIUM)
-  
-  // Project and assignment
-  projectId       String?
-  project         Project?     @relation(fields: [projectId], references: [id])
-  assigneeId      String?
-  assignee        User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  ownerId         String?
-  owner           User?        @relation("TaskOwner", fields: [ownerId], references: [id])
-  creatorId       String?
-  creator         User?        @relation("TaskCreator", fields: [creatorId], references: [id])
-  
-  // Ticket integration
-  sourceTicketId  String?      // tracks origin ticket
-  ticketIntegration Json?       // stores TaskFromTicket data
-  
-  // Dates
-  dueDate         DateTime?
-  startDate       DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  
-  // Relations
-  dependencies    TaskDependency[] @relation("DependentTask")
-  dependents      TaskDependency[] @relation("DependencyTask")
-  attachments     TaskAttachment[]
-  comments        TaskComment[]
-  legacyComments  Comment[] // Legacy comments relation
-  subtasks        Task[]        @relation("SubtaskParent")
-  parentTaskId    String?
-  parentTask      Task?         @relation("SubtaskParent", fields: [parentTaskId], references: [id])
-  
-  // Service relations
-  serviceTask     ServiceTask?
-
-  @@map("tasks")
-}
-
-model TaskDependency {
-  id              String @id @default(cuid())
-  dependentTaskId String
-  dependentTask   Task   @relation("DependentTask", fields: [dependentTaskId], references: [id])
-  dependencyTaskId String
-  dependencyTask  Task   @relation("DependencyTask", fields: [dependencyTaskId], references: [id])
-  createdAt       DateTime @default(now())
-
-  @@unique([dependentTaskId, dependencyTaskId])
-  @@map("task_dependencies")
-}
-
-model TaskAttachment {
-  id          String   @id @default(cuid())
-  fileName    String
-  filePath    String
-  fileType    String
-  fileSize    Int
-  taskId      String
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  uploadedById String
-  uploadedBy  User     @relation("TaskAttachmentUploader", fields: [uploadedById], references: [id])
-  createdAt   DateTime @default(now())
-
-  @@map("task_attachments")
-}
-
-model TaskComment {
-  id        String   @id @default(cuid())
-  content   String
-  authorId  String
-  author    User     @relation("TaskCommentAuthor", fields: [authorId], references: [id])
-  taskId    String
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("task_comments")
-}
-
-model ProjectComment {
-  id        String   @id @default(cuid())
-  content   String
-  authorId  String
-  author    User     @relation("ProjectCommentAuthor", fields: [authorId], references: [id])
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("project_comments")
-}
-
-// Document Template Management System
-model DocumentTemplate {
-  id              String   @id @default(cuid())
-  templateName    String   // e.g., "Liên Lạc Nghiệp Vụ"
-  templateCode    String   @unique // e.g., "LLNV"
-  description     String?
-  isActive        Boolean  @default(true)
-  effectiveDate   DateTime @default(now())
-  revisionNumber  Int      @default(1)
-  currentSequence Int      @default(0) // For auto-generating document numbers
-  prefix          String   // e.g., "TIPA-LLNV"
-  year            Int      @default(2025)
-  
-  // Metadata
-  createdById     String
-  createdBy       User     @relation("DocumentTemplateCreator", fields: [createdById], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  generatedDocuments DocumentNumber[] @relation("TemplateDocuments")
-
-  @@map("document_templates")
-}
-
-model DocumentNumber {
-  id                String   @id @default(cuid())
-  documentNumber    String   @unique // e.g., "TIPA-LLNV-2025-001"
-  templateId        String
-  template          DocumentTemplate @relation("TemplateDocuments", fields: [templateId], references: [id])
-  projectId         String?  // Optional - if linked to a project
-  project           Project? @relation("ProjectDocuments", fields: [projectId], references: [id])
-  sequenceNumber    Int      // e.g., 1, 2, 3...
-  year              Int      // e.g., 2025
-  status            DocumentNumberStatus @default(ACTIVE)
-  
-  // Metadata
-  createdById       String
-  createdBy         User     @relation("DocumentNumberCreator", fields: [createdById], references: [id])
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@map("document_numbers")
-}
-
 enum DocumentNumberStatus {
   ACTIVE
   USED
   CANCELLED
   EXPIRED
-}
-
-// ========================================
-// JDE 9.2 Integration Models
-// ========================================
-
-// JDE Item Master (F4101 equivalent)
-model ItemMaster {
-  id          String   @id @default(cuid())
-  itemNumber  String   @unique // IMITM
-  description String   // IMLITM
-  itemType    String   // IMTYP
-  unitOfMeasure String // IMUM
-  leadTime    Int      // IMLT
-  safetyStock Int      // IMSSQ
-  minOrderQty Int      // IMMOQ
-  maxOrderQty Int      // IMMXQ
-  lotSize     Int      // IMLOTS
-  costCenter  String   // IMCC
-  planner     String   // IMPL
-  buyer       String   // IMBUY
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  locations   ItemLocation[]
-  purchaseOrders PurchaseOrderDetail[]
-  receipts    ReceiptDetail[]
-  mrpMessages MrpMessage[]
-  demands     SalesOrderDetail[]
-
-  @@map("item_master")
-}
-
-// JDE Item Location (F4102 equivalent)
-model ItemLocation {
-  id          String   @id @default(cuid())
-  itemNumber  String   // IMITM
-  branch      String   // IMBR
-  location    String   // IMLOC
-  quantityOnHand Int   // IMQOH
-  quantityOnOrder Int  // IMQOO
-  quantityCommitted Int // IMQC
-  lastCountDate DateTime? // IMCDT
-  lastCountQuantity Int? // IMCQ
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
-
-  @@unique([itemNumber, branch, location])
-  @@map("item_location")
-}
-
-// JDE Purchase Order Header (F4301 equivalent)
-model PurchaseOrderHeader {
-  id          String   @id @default(cuid())
-  poNumber    String   @unique // PDDOCO
-  supplierId  String   // PDAN8
-  supplierName String  // PDALPH
-  orderDate   DateTime // PDRQDC
-  promiseDate DateTime? // PDPDDJ
-  status      String   // PDSTS
-  totalAmount Decimal  // PDTOA
-  currency    String   // PDCNDJ
-  buyer       String   // PDBUY
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  details     PurchaseOrderDetail[]
-
-  @@map("purchase_order_header")
-}
-
-// JDE Purchase Order Detail (F4311 equivalent)
-model PurchaseOrderDetail {
-  id          String   @id @default(cuid())
-  poNumber    String   // PDDOCO
-  lineNumber  Int      // PDLINE
-  itemNumber  String   // PDITM
-  description String   // PDDSC1
-  quantity    Int      // PDQTOR
-  quantityReceived Int // PDRQTOR
-  unitPrice   Decimal  // PDUPRC
-  extendedPrice Decimal // PDEXRC
-  promiseDate DateTime? // PDPDDJ
-  status      String   // PDSTS
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  header      PurchaseOrderHeader @relation(fields: [poNumber], references: [poNumber])
-  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
-  receipts    ReceiptDetail[]
-
-  @@unique([poNumber, lineNumber])
-  @@map("purchase_order_detail")
-}
-
-// JDE Receipts Detail (F4312 equivalent)
-model ReceiptDetail {
-  id          String   @id @default(cuid())
-  poNumber    String   // PDDOCO
-  lineNumber  Int      // PDLINE
-  itemNumber  String   // PDITM
-  receiptNumber String // RCRORN
-  receiptDate DateTime // RCRCDJ
-  quantityReceived Int // RCQTOR
-  unitCost    Decimal  // RCUPRC
-  lotNumber   String?  // RCLOTN
-  location    String   // RCLOCN
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  poDetail    PurchaseOrderDetail @relation(fields: [poNumber, lineNumber], references: [poNumber, lineNumber])
-  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
-
-  @@unique([receiptNumber, lineNumber])
-  @@map("receipt_detail")
-}
-
-// JDE MRP Messages (F3411 equivalent)
-model MrpMessage {
-  id          String   @id @default(cuid())
-  itemNumber  String   // MMITM
-  messageType String   // MMMSG
-  messageText String   // MMTEXT
-  quantity    Int      // MMQTY
-  date        DateTime // MMDATE
-  priority    Int      // MMPRI
-  status      String   // MMSTS
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
-
-  @@map("mrp_message")
-}
-
-// JDE Sales Order Detail (F4211 equivalent)
-model SalesOrderDetail {
-  id          String   @id @default(cuid())
-  orderNumber String   // SDDOCO
-  lineNumber  Int      // SDLINE
-  itemNumber  String   // SDITM
-  customerId  String   // SDAN8
-  quantity    Int      // SDQTOR
-  quantityShipped Int  // SDSOQS
-  unitPrice   Decimal  // SDUPRC
-  promiseDate DateTime? // SDPDDJ
-  status      String   // SDSTS
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  item        ItemMaster @relation(fields: [itemNumber], references: [itemNumber])
-
-  @@unique([orderNumber, lineNumber])
-  @@map("sales_order_detail")
-}
-
-// AI Analytics and Recommendations
-model AiRecommendation {
-  id          String   @id @default(cuid())
-  itemNumber  String
-  recommendationType String // 'purchase', 'inventory', 'supplier'
-  title       String
-  description String
-  priority    String   // 'low', 'medium', 'high', 'critical'
-  confidence  Float    // 0-1
-  data        Json     // Additional recommendation data
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("ai_recommendation")
-}
-
-// Demand Forecast
-model DemandForecast {
-  id          String   @id @default(cuid())
-  itemNumber  String
-  forecastDate DateTime
-  period      String   // 'monthly', 'weekly', 'daily'
-  quantity    Int
-  confidence  Float    // 0-1
-  model       String   // 'lstm', 'arima', 'ensemble'
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([itemNumber, forecastDate, period])
-  @@map("demand_forecast")
-}
-
-// Risk Assessment
-model RiskAssessment {
-  id          String   @id @default(cuid())
-  itemNumber  String
-  riskType    String   // 'over_purchase', 'stockout', 'supplier'
-  riskLevel   String   // 'low', 'medium', 'high', 'critical'
-  probability Float    // 0-1
-  impact      String   // 'low', 'medium', 'high'
-  description String
-  mitigation  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("risk_assessment")
-}
-
-// Data Sync Log
-model DataSyncLog {
-  id          String   @id @default(cuid())
-  syncType    String   // 'inventory', 'purchase_orders', 'receipts', 'mrp'
-  status      String   // 'success', 'failed', 'partial'
-  recordsProcessed Int
-  recordsFailed Int
-  startTime   DateTime
-  endTime     DateTime?
-  errorMessage String?
-  createdAt   DateTime @default(now())
-
-  @@map("data_sync_log")
-}
-
-// Department Account Mapping
-model DepartmentAccount {
-  id            Int      @id @default(autoincrement())
-  bu            String   // Business Unit (e.g., "LVM", "TRD")
-  department    String   // Department name (e.g., "Manufacturing Engineering", "HRA")
-  account       Int      // Account number (e.g., 1110, 5110)
-  approvalRoute String?  // Approval route for the department (e.g., "MANAGER", "DIRECTOR", "VP")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([bu, department])  // Ensures unique combination of BU and department
-  @@map("department_accounts")
-}
-
-// Expense Account Mapping
-model ExpenseAccount {
-  id            Int      @id @default(autoincrement())
-  account       Int      // Account number (e.g., 64118, 64119)
-  description   String   // Account description in Vietnamese
-  glClass       String   // GL Class (e.g., "NS01", "NS02")
-  businessName  String   // Business Name (e.g., "TRD", "HEV", "LVM")
-  orderType     String   // Order Type (e.g., "OP", "OR", "O7", "HR", "O2", "LR")
-  bu            Int      // Business Unit number (e.g., 3000, 1000, 5000)
-  stockType     String   // Stock Type (e.g., "Non-Stock")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([account, businessName, orderType, bu]) // Ensures unique combination
-  @@map("expense_accounts")
-}
-
-// Demand ID Sequence Tracking
-model DemandSequence {
-  id        Int      @id @default(autoincrement())
-  date      String   // Date in YYYYMMDD format
-  sequence  Int      @default(1) // Daily sequence number
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([date])
-  @@map("demand_sequences")
-}
-
-// Demand Management
-model Demand {
-  id                    String   @id // Custom ID format: LR-YYYYMMDD-XXX
-  
-  // BU and Department information
-  bu                    String   // Business Unit (e.g., "LVM", "TRD")
-  department            String   // Department name
-  account               Int      // Account number from DepartmentAccount
-  approvalRoute         String?  // Approval route from DepartmentAccount
-  
-  // Expense Account information
-  expenseAccount        Int      // Account number from ExpenseAccount
-  expenseDescription    String   // Description from ExpenseAccount
-  expenseGLClass        String   // GL Class from ExpenseAccount
-  expenseStockType      String   // Stock Type from ExpenseAccount
-  expenseOrderType      String   // Order Type from ExpenseAccount
-  
-  justification         String   // Justification for the demand
-  priorityLevel         String   // LOW, MEDIUM, HIGH, URGENT
-  expectedDeliveryDate  DateTime // Expected delivery date
-  departmentSpecific    Json?    // Department-specific fields as JSON
-  attachments           String[] // Array of file attachment names
-  status                String   @default("PENDING") // PENDING, APPROVED, REJECTED, IN_PROGRESS, COMPLETED
-  submittedAt           DateTime @default(now())
-  approvedAt            DateTime?
-  completedAt           DateTime?
-  
-  // User and department information
-  userId                String
-  userDepartment        String
-  
-  // Relations
-  user                  User     @relation("UserDemands", fields: [userId], references: [id], onDelete: Cascade)
-  demandLines           DemandLine[] // Multiple demand lines
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@map("demands")
-}
-
-// Demand Line Items
-model DemandLine {
-  id                String   @id @default(cuid())
-  demandId          String
-  demand            Demand   @relation(fields: [demandId], references: [id], onDelete: Cascade)
-  
-  // Line item details
-  itemDescription   String   // Description of the item/service
-  quantity          Int      // Quantity requested
-  estimatedCost     Float    // Estimated cost in VND
-  unitOfMeasure     String?  // Unit of measure (EA, KG, L, etc.)
-  specifications    String?  // Technical specifications
-  supplierPreference String? // Preferred supplier
-  
-  // Line status
-  status            String   @default("PENDING") // PENDING, APPROVED, REJECTED, IN_PROGRESS, COMPLETED
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@map("demand_lines")
-}
-
-// Service App Management System
-model ServiceApp {
-  id          String   @id @default(cuid())
-  name        String
-  serviceKey  String   @unique
-  permissions String[]
-  isActive    Boolean  @default(true)
-  rateLimit   Int      @default(100)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  tasks       ServiceTask[]
-  notifications ServiceNotification[]
-  approvals   ServiceApproval[]
-  webhooks    ServiceWebhook[]
-  events      WebhookEvent[]
-  
-  @@map("service_apps")
-}
-
-// Service-specific task extension
-model ServiceTask {
-  id              String   @id @default(cuid())
-  taskId          String   @unique
-  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  serviceId       String
-  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  serviceType     String
-  externalReference String?
-  metadata        Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@map("service_tasks")
-}
-
-// Service-specific notification extension
-model ServiceNotification {
-  id              String   @id @default(cuid())
-  notificationId  String   @unique
-  notification    Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-  serviceId       String
-  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  serviceType     String
-  priority        String   @default("NORMAL") // HIGH, NORMAL, LOW
-  expiresAt       DateTime?
-  metadata        Json?    // Service-specific metadata
-  createdAt       DateTime @default(now())
-  
-  @@index([serviceId, serviceType])
-  @@index([notificationId])
-  
-  @@map("service_notifications")
-}
-
-// Service-specific approval system
-model ServiceApproval {
-  id              String   @id @default(cuid())
-  serviceId       String
-  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  serviceType     String
-  approvalType    String   // TASK, DOCUMENT, PROJECT, CUSTOM
-  externalId      String?  // External reference ID from service
-  title           String
-  description     String?
-  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
-  priority        String   @default("NORMAL") // HIGH, NORMAL, LOW
-  urgency         String   @default("NORMAL") // URGENT, NORMAL, LOW
-  dueDate         DateTime?
-  metadata        Json?    // Service-specific metadata
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Approval workflow
-  currentLevel    Int      @default(1)
-  totalLevels     Int      @default(1)
-  approvers       Json     // Array of approver IDs and levels
-  decisions       ServiceApprovalDecision[]
-  events          WebhookEvent[]
-  
-  @@index([serviceId, serviceType])
-  @@index([status, priority])
-  @@index([externalId])
-  
-  @@map("service_approvals")
-}
-
-// Service approval decisions
-model ServiceApprovalDecision {
-  id              String   @id @default(cuid())
-  approvalId      String
-  approval        ServiceApproval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
-  approverId      String
-  approver        User @relation(fields: [approverId], references: [id])
-  level           Int      // Approval level (1, 2, 3, etc.)
-  decision        String   // APPROVED, REJECTED, PENDING
-  comments        String?
-  decisionDate    DateTime @default(now())
-  
-  @@unique([approvalId, approverId, level])
-  @@index([approvalId])
-  @@index([approverId])
-  
-  @@map("service_approval_decisions")
-}
-
-// Webhook registration
-model ServiceWebhook {
-  id              String   @id @default(cuid())
-  serviceId       String
-  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  name            String
-  url             String
-  events          String[] // Array of event types
-  secret          String   // Webhook secret for signing
-  isActive        Boolean  @default(true)
-  retryCount      Int      @default(3)
-  timeout         Int      @default(30) // seconds
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  deliveries      WebhookDelivery[]
-  
-  @@index([serviceId])
-  @@index([isActive])
-  
-  @@map("service_webhooks")
-}
-
-// Webhook event tracking
-model WebhookEvent {
-  id              String   @id @default(cuid())
-  eventType       String   // approval.created, approval.updated, etc.
-  serviceId       String
-  service         ServiceApp @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  approvalId      String?
-  approval        ServiceApproval? @relation(fields: [approvalId], references: [id], onDelete: Cascade)
-  triggeredById   String?  // User who triggered the event
-  triggeredBy     User?    @relation(fields: [triggeredById], references: [id])
-  payload         Json     // Event payload
-  createdAt       DateTime @default(now())
-  
-  deliveries      WebhookDelivery[]
-  
-  @@index([serviceId, eventType])
-  @@index([createdAt])
-  
-  @@map("webhook_events")
-}
-
-// Webhook delivery tracking
-model WebhookDelivery {
-  id              String   @id @default(cuid())
-  webhookId       String
-  webhook         ServiceWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-  eventId         String
-  event           WebhookEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  status          String   // PENDING, SUCCESS, FAILED
-  responseCode    Int?
-  responseBody    String?
-  attemptCount    Int      @default(0)
-  nextRetryAt     DateTime?
-  deliveredAt     DateTime?
-  createdAt       DateTime @default(now())
-  
-  @@index([webhookId, status])
-  @@index([nextRetryAt])
-  
-  @@map("webhook_deliveries")
 }

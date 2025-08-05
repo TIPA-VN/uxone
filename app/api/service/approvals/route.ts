@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateServiceToken, hasPermission, logServiceRequest } from '../middleware';
+import { withCORS } from '@/lib/cors';
 
 export const runtime = 'nodejs';
 
 // GET - List approvals with filtering and pagination
-export async function GET(request: NextRequest) {
+export const GET = withCORS(async (request: NextRequest) => {
   const startTime = Date.now();
   
   try {
@@ -163,10 +164,10 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Create new approval request
-export async function POST(request: NextRequest) {
+export const POST = withCORS(async (request: NextRequest) => {
   const startTime = Date.now();
   
   try {
@@ -389,7 +390,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PATCH - Bulk update approvals
 export async function PATCH(request: NextRequest) {

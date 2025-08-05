@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateServiceToken, hasPermission, logServiceRequest } from '../../middleware';
+import { withCORS } from '@/lib/cors';
 
 export const runtime = 'nodejs';
 
 // GET - Get approval statistics
-export async function GET(request: NextRequest) {
+export const GET = withCORS(async (request: NextRequest) => {
   const startTime = Date.now();
   
   try {
@@ -261,4 +262,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+});

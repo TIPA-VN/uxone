@@ -4,6 +4,30 @@ import type { NextRequest } from 'next/server'
 import { getUserHomePage } from '@/config/app'
 
 export async function middleware(request: NextRequest) {
+  // Handle CORS for service API routes
+  if (request.nextUrl.pathname.startsWith('/api/service/')) {
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+          'Access-Control-Max-Age': '86400', // 24 hours
+        },
+      });
+    }
+
+    // Add CORS headers to all service API responses
+    const response = NextResponse.next();
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+    
+    return response;
+  }
+
   // Protect all routes under /lvm
   if (request.nextUrl.pathname.startsWith('/lvm')) {
     const session = await auth()

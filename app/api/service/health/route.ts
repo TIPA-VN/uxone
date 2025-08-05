@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withCORS } from '@/lib/cors';
 
 export const runtime = 'nodejs';
 
 // GET /api/service/health - Health check endpoint
-export async function GET(request: NextRequest) {
+export const GET = withCORS(async (request: NextRequest) => {
   try {
     const startTime = Date.now();
     
@@ -43,4 +44,4 @@ export async function GET(request: NextRequest) {
       { status: 503 }
     );
   }
-} 
+});
