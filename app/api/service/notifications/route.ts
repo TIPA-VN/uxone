@@ -121,7 +121,17 @@ export async function GET(request: NextRequest) {
     ]);
 
     const responseTime = Date.now() - startTime;
-    logServiceRequest(authContext.serviceId, 'GET', '/api/service/notifications', 200, responseTime);
+    logServiceRequest(
+      authContext.serviceId, 
+      'GET', 
+      '/api/service/notifications', 
+      200, 
+      responseTime,
+      {
+        userAgent: request.headers.get('user-agent') || undefined,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+      }
+    );
 
     return NextResponse.json({
       notifications,
@@ -136,10 +146,25 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching service notifications:', error);
     const responseTime = Date.now() - startTime;
-    logServiceRequest('unknown', 'GET', '/api/service/notifications', 500, responseTime);
+    logServiceRequest(
+      'unknown', 
+      'GET', 
+      '/api/service/notifications', 
+      500, 
+      responseTime,
+      {
+        error: error instanceof Error ? error.message : String(error),
+        userAgent: request.headers.get('user-agent') || undefined,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+      }
+    );
     
     return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
+      { 
+        error: 'Failed to fetch notifications',
+        timestamp: new Date().toISOString(),
+        requestId: Math.random().toString(36).substring(7)
+      },
       { status: 500 }
     );
   }

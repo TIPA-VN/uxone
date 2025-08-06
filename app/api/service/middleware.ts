@@ -12,7 +12,11 @@ export interface ServiceAuthContext {
 // Rate limiting store (in production, use Redis)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
-// Service token validation using service key directly
+// Service authentication cache (5 minute TTL)
+const authCache = new Map<string, { context: ServiceAuthContext; expires: number }>();
+const AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Service token validation with caching
 export async function validateServiceToken(request: NextRequest): Promise<ServiceAuthContext | null> {
   try {
     const authHeader = request.headers.get('authorization');
@@ -21,6 +25,12 @@ export async function validateServiceToken(request: NextRequest): Promise<Servic
     }
 
     const serviceKey = authHeader.substring(7);
+    
+    // Check cache first
+    const cached = authCache.get(serviceKey);
+    if (cached && cached.expires > Date.now()) {
+      return cached.context;
+    }
 
     // Find service by service key
     const service = await prisma.serviceApp.findFirst({
@@ -31,12 +41,20 @@ export async function validateServiceToken(request: NextRequest): Promise<Servic
       return null;
     }
 
-    return {
+    const context: ServiceAuthContext = {
       serviceId: service.id,
       serviceName: service.name,
       permissions: service.permissions,
       rateLimit: service.rateLimit,
     };
+
+    // Cache the result
+    authCache.set(serviceKey, {
+      context,
+      expires: Date.now() + AUTH_CACHE_TTL
+    });
+
+    return context;
   } catch (error) {
     console.error('Service token validation error:', error);
     return null;
@@ -115,13 +133,26 @@ export function hasPermission(permissions: string[], requiredPermission: string)
   return permissions.includes(requiredPermission) || permissions.includes('*');
 }
 
-// Log service request
+// Enhanced service request logging with performance metrics
 export function logServiceRequest(
   serviceId: string,
   method: string,
   path: string,
   statusCode: number,
-  responseTime: number
+  responseTime: number,
+  details?: { userAgent?: string; ip?: string; error?: string }
 ) {
-  console.log(`[SERVICE] ${serviceId} ${method} ${path} ${statusCode} ${responseTime}ms`);
+  const timestamp = new Date().toISOString();
+  const logLevel = statusCode >= 500 ? 'ERROR' : statusCode >= 400 ? 'WARN' : 'INFO';
+  
+  console.log(
+    `[${logLevel}][SERVICE] ${timestamp} | ${serviceId} | ${method} ${path} | ${statusCode} | ${responseTime}ms${
+      details?.error ? ` | Error: ${details.error}` : ''
+    }${details?.ip ? ` | IP: ${details.ip}` : ''}`
+  );
+
+  // Performance monitoring
+  if (responseTime > 1000) {
+    console.warn(`[PERFORMANCE] Slow service request: ${serviceId} ${method} ${path} took ${responseTime}ms`);
+  }
 } 

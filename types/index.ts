@@ -66,6 +66,26 @@ export type User = {
   updatedAt: Date;
 };
 
+export type Notification = {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  link?: string;
+  type?: string;
+  read: boolean;
+  createdAt: string;
+  hidden: boolean;
+  user?: User;
+  serviceNotification?: {
+    serviceType: string;
+    priority: string;
+    expiresAt?: string;
+    metadata: Record<string, any>;
+    createdAt: string;
+  };
+};
+
 export type Document = {
   id: string;
   fileName: string;

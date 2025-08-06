@@ -1,10 +1,10 @@
-# UXOne Complete Project Context
+# UXOne Project Documentation
 
-## 🏢 **Project Overview**
+## 🏢 Project Overview
 
-**UXOne** is a comprehensive enterprise project management system developed for TIPA (Thai Industrial Promotion Agency). It's a Next.js-based web application that provides unified project management, task tracking, helpdesk support, and team collaboration capabilities across multiple departments with advanced JDE 9.2 integration and AI-driven procurement optimization.
+**UXOne** is a comprehensive enterprise project management system for TIPA (Thai Industrial Promotion Agency). It's a Next.js-based web application providing unified project management, task tracking, helpdesk support, and team collaboration with advanced JDE 9.2 integration and AI-driven procurement optimization.
 
-### **Core Purpose**
+### Core Purpose
 - **Unified Management**: Single platform for project, task, and helpdesk management
 - **Department-Specific Views**: Customized interfaces for different organizational departments
 - **Role-Based Access Control**: Granular permissions based on organizational hierarchy
@@ -14,12 +14,12 @@
 - **AI-Powered Procurement**: Intelligent purchase recommendations and inventory optimization
 - **Demand Management**: Multi-line demand creation with custom auto-incrementing IDs
 
-## 🏗️ **System Architecture**
+## 🏗️ System Architecture
 
-### **Technology Stack**
+### Technology Stack
 - **Frontend**: Next.js 15.3.3 with React 19, TypeScript
 - **Backend**: Next.js API Routes with Prisma ORM
-- **Database**: PostgreSQL (local) + OracleDB (JDE integration)
+- **Database**: PostgreSQL (UXOne) + PostgreSQL (TIPA Mobile) + OracleDB (JDE)
 - **Authentication**: NextAuth.js with central API + admin fallback
 - **Styling**: Tailwind CSS 4 with custom UI components
 - **State Management**: TanStack Query (React Query)
@@ -27,24 +27,29 @@
 - **Charts**: Recharts for analytics and reporting
 - **AI Integration**: OpenAI API for intelligent insights
 
-### **Key Dependencies**
-```json
-{
-  "next": "15.3.3",
-  "react": "^19.0.0",
-  "@prisma/client": "^4.16.2",
-  "next-auth": "^5.0.0-beta.29",
-  "@tanstack/react-query": "^5.80.10",
-  "pdf-lib": "^1.17.1",
-  "fabric": "^6.7.1",
-  "recharts": "^2.15.3",
-  "oracledb": "^6.3.0"
-}
+### Database Architecture
+```
+┌─────────────────┐    ┌─────────────────┐
+│   UXOne App     │    │  TIPA Mobile    │
+│   (Port 3000)   │    │   (Port 3001)   │
+│                 │    │                 │
+│ Database:       │    │ Database:       │
+│ uxone_new       │    │ uxonedb         │
+└─────────────────┘    └─────────────────┘
+         │                      │
+         └──────────┬───────────┘
+                    │
+        ┌────────────▼────────────┐
+        │   Central API Server    │
+        │  (10.116.3.138:8888)    │
+        │  - Authentication       │
+        │  - User Management      │
+        └─────────────────────────┘
 ```
 
-## 🏢 **Organizational Structure**
+## 🏢 Organizational Structure
 
-### **Departments Supported (15+)**
+### Departments Supported (15+)
 | Department | Code | Home Page | Description |
 |------------|------|-----------|-------------|
 | Information Systems | IS | `/lvm/helpdesk` | IT and helpdesk management |
@@ -62,7 +67,7 @@
 | Operations | OPS | `/lvm/operations` | Operations management |
 | Administration | ADMIN | `/lvm/admin` | Admin panel |
 
-### **Role Hierarchy (11 Levels)**
+### Role Hierarchy (11 Levels)
 1. **System Administrator** (Level 11) - Full system access
 2. **General Director** (Level 10) - Executive access
 3. **General Manager** (Level 9) - Senior executive
@@ -75,60 +80,54 @@
 10. **Staff** (Level 1) - Regular staff
 11. **Operator** (Level 0) - Basic operations
 
-## 🔐 **Authentication & Authorization**
+## 🔐 Authentication & Authorization
 
-### **Dual Authentication System**
+### Dual Authentication System
 
-#### **1. Primary Authentication (Central API)**
+#### 1. Primary Authentication (Central API)
 - **Endpoint**: `http://10.116.3.138:8888/api/web_check_login`
 - **Flow**: Central API integration with automatic role mapping
 - **Features**: Automatic department routing, position-based role assignment
 
-#### **2. Admin Fallback Authentication**
+#### 2. Admin Fallback Authentication
 - **Purpose**: System access during central API outages
 - **Scope**: Admin accounts only during fallback mode
 - **Security**: Bcrypt hashed passwords, environment variable storage
 
-### **Environment Variables Required**
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/uxone"
+#### 3. Service API Authentication
+- **Method**: Bearer token authentication
+- **Purpose**: Service-to-service communication (TIPA Mobile ↔ UXOne)
+- **Implementation**: ServiceApp model with unique serviceKey
 
-# Authentication
-ADMIN_FALLBACK_USERNAME=admin
-ADMIN_FALLBACK_PASSWORD=admin123
-ADMIN_FALLBACK_ROLE=GENERAL DIRECTOR
-ADMIN_FALLBACK_NAME=System Administrator
-ADMIN_FALLBACK_EMAIL=admin@tipa.co.th
-ADMIN_FALLBACK_DEPARTMENT=IT
-ADMIN_FALLBACK_DEPARTMENT_NAME=Information Technology
+### Authentication Flow
+```typescript
+// 1. User login attempt
+const user = await authenticateUser(empCode, password)
 
-# Central API
-CENTRAL_API_URL=http://10.116.3.138:8888/api/web_check_login
+// 2. Central API validation
+const centralApiResponse = await fetch(CENTRAL_API_URL, {
+  method: 'POST',
+  body: JSON.stringify({ username: empCode, password: hashedPassword })
+})
 
-# JDE Database Connection
-JDE_DB_HOST=your-jde-server-ip
-JDE_DB_PORT=1521
-JDE_DB_SERVICE=JDE
-JDE_DB_USER=your-jde-username
-JDE_DB_PASSWORD=your-jde-password
-
-# AI Service Configuration
-OPENAI_API_KEY=your-openai-key
-PINECONE_API_KEY=your-pinecone-key
-PINECONE_ENVIRONMENT=your-pinecone-env
+// 3. User synchronization
+if (centralApiResponse.ok) {
+  const user = await syncUserFromTIPA(centralApiData.emp_code)
+  // Automatically sync notifications
+  await syncNotificationsEnhanced(user.id)
+}
 ```
 
-## 🔗 **JDE 9.2 Integration**
+## 🔗 JDE 9.2 Integration
 
-### **Real Database Connection**
+### Real Database Connection
 - **OracleDB Driver**: Direct connection to JDE EnterpriseOne 9.2
 - **Performance**: 12x faster with caching implementation
 - **Data Accuracy**: Proper transformations and formatting
 
-### **Key JDE Tables**
+### Key JDE Tables
 
-#### **F4101 - Item Master**
+#### F4101 - Item Master
 ```sql
 SELECT 
   IMITM,    -- Item Number
@@ -146,7 +145,7 @@ SELECT
 FROM F4101
 ```
 
-#### **F4301 - Purchase Order Header**
+#### F4301 - Purchase Order Header
 ```sql
 SELECT 
   PDDOCO,   -- PO Number
@@ -161,57 +160,36 @@ SELECT
 FROM F4301
 ```
 
-#### **F4311 - Purchase Order Detail**
-```sql
-SELECT 
-  PDDOCO,   -- PO Number
-  PDLINE,   -- Line Number
-  PDITM,    -- Item Number
-  PDDSC1,   -- Description
-  PDQTOR,   -- Quantity
-  PDRQTOR,  -- Quantity Received
-  PDUPRC,   -- Unit Price
-  PDEXRC,   -- Extended Price
-  PDPDDJ,   -- Promise Date
-  PDSTS     -- Status
-FROM F4311
-```
+### Data Transformations
 
-### **Data Transformations**
-
-#### **Currency Handling**
+#### Currency Handling
 - **Base Currency (USD)**: Always divided by 100 for display
 - **Foreign Currency (VND)**: No division, displayed as whole numbers
 - **Unit Costs**: Foreign unit costs divided by 10,000
 - **Extended Costs**: Foreign extended costs displayed without division
 
-#### **Quantity Formatting**
+#### Quantity Formatting
 - **All quantities divided by 100** (JDE internal format)
 - **Non-decimal UOMs** (EA, PCS, BOX, etc.): Show whole numbers
 - **Metric/Imperial UOMs** (KG, L, M, etc.): Show 2 decimal places
 - **Locale-aware formatting** with proper number separators
 
-#### **Date Conversions**
+#### Date Conversions
 - **Julian Date Parsing**: JDE's internal date format (YYYYDDD) converted to ISO dates
 - **Year Handling**: 
   - Years 100+ → Add 1900 (e.g., 124 → 2024)
   - Years 50-99 → Add 1900 (e.g., 50 → 1950)
   - Years 0-49 → Add 2000 (e.g., 24 → 2024)
 
-#### **String Processing**
-- **All string fields trimmed** of whitespace
-- **Line numbers divided by 1,000** for display
-- **Status codes mapped** to human-readable statuses
+## 📋 Demand Management System
 
-## 📋 **Demand Management System**
-
-### **Multi-Line Demand Creation**
+### Multi-Line Demand Creation
 - **Dynamic Form**: React Hook Form with useFieldArray for multiple demand lines
 - **Custom ID Generation**: Auto-incrementing demand IDs in `LR-YYYYMMDD-XXX` format
 - **Database Transactions**: Atomic creation of main demand and associated lines
 - **ERP Integration**: Data transformation for external ERP system API calls
 
-### **Demand ID System**
+### Demand ID System
 ```typescript
 // Custom ID Format: LR-YYYYMMDD-XXX
 // Example: LR-20250802-001, LR-20250802-002, etc.
@@ -243,21 +221,9 @@ interface Demand {
   userId: string;
   demandLines: DemandLine[];
 }
-
-interface DemandLine {
-  id: string;
-  demandId: string;
-  itemDescription: string;
-  quantity: number;
-  estimatedCost: number;
-  unitOfMeasure: string;
-  specifications: string;
-  supplierPreference: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-}
 ```
 
-### **ERP Data Transformation**
+### ERP Data Transformation
 ```typescript
 // Local Demand → ERP JSON Format
 interface ERPRequest {
@@ -266,29 +232,11 @@ interface ERPRequest {
   GridIn_1_3: ERPLineItem[];
   P4310_Version: string;
 }
-
-interface ERPLineItem {
-  Item_Number: string;
-  Quantity_Ordered: string;
-  Tr_UoM: string;
-  G_L_Offset: string;
-  Cost_Center: string;
-  Obj_Acct: string;
-}
 ```
 
-### **Key Features**
-- **Multi-line Support**: Add/remove demand lines dynamically
-- **Real-time Validation**: Zod schema validation with error handling
-- **Cost Calculation**: Automatic total cost calculation
-- **Department Integration**: BU/Department selector with account mapping
-- **Expense Account Mapping**: Automatic GL class and account assignment
-- **Approval Workflow**: Status tracking and notification system
-- **ERP Integration**: Ready for external ERP system API calls
+## 🤖 Procurement AI Agent
 
-## 🤖 **Procurement AI Agent**
-
-### **Core AI Components**
+### Core AI Components
 ```typescript
 const procurementAgent = {
   name: 'ProcurementOptimizer',
@@ -308,7 +256,7 @@ const procurementAgent = {
 }
 ```
 
-### **AI Capabilities**
+### AI Capabilities
 1. **Demand Forecasting**
    - Seasonal pattern analysis
    - Trend detection
@@ -329,46 +277,85 @@ const procurementAgent = {
    - Supplier risk evaluation
    - Lead time variability analysis
 
-## 📊 **Core Features**
+## 📊 Core Features
 
-### **1. Project Management**
+### 1. Project Management
 - **Project Creation & Tracking**: Full project lifecycle management
 - **Document Management**: PDF upload, annotation, and version control
 - **Approval Workflow**: Multi-level approval system
 - **Team Assignment**: Project member management
 - **Status Tracking**: Planning → Active → On Hold → Completed → Cancelled
 
-### **2. Task Management**
+### 2. Task Management
 - **Task Creation**: Hierarchical task structure with dependencies
 - **Assignment & Tracking**: Assign tasks to team members
 - **Time Tracking**: Built-in time tracking capabilities
 - **File Attachments**: Support for multiple file types
 - **Comments & Collaboration**: Real-time communication
 
-### **3. Helpdesk System**
+### 3. Helpdesk System
 - **Ticket Management**: Complete helpdesk workflow
 - **Category System**: Support, Bug Report, Feature Request, Technical Issue
 - **Priority Levels**: Low, Medium, High, Urgent
 - **SLA Tracking**: Response and resolution time monitoring
 - **Assignment & Escalation**: Automatic routing and escalation
 
-### **4. Document Management**
+### 4. Document Management
 - **PDF Processing**: Upload, view, and annotate PDFs
 - **Template System**: Reusable document templates
 - **Version Control**: Document versioning and history
 - **Approval Workflow**: Document approval process
 - **Public View**: Share documents with external stakeholders
 
-### **5. Analytics & Reporting**
+### 5. Analytics & Reporting
 - **Dashboard KPIs**: Real-time performance metrics
 - **Project Analytics**: Project progress and health indicators
 - **Team Performance**: Individual and team productivity metrics
 - **Helpdesk Reports**: Ticket resolution and SLA compliance
 - **Custom Charts**: Interactive data visualization
 
-## 🗂️ **Database Schema**
+## 🔔 Notification System
 
-### **Core Models**
+### Cross-System Synchronization
+- **Bidirectional Sync**: Notifications sync between UXOne and TIPA Mobile
+- **Real-time Updates**: Automatic notification delivery
+- **Read Status Sync**: Mark as read/unread across both systems
+- **Cleanup Operations**: Automatic removal of old notifications
+
+### Notification Types
+```typescript
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  APPROVAL_REQUEST
+  DOCUMENT_UPDATE
+  WORKFLOW_UPDATE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+```
+
+### Service API Integration
+```typescript
+// TIPA Mobile → UXOne Service API
+const response = await fetch(`${UXONE_API_BASE}/api/service/notifications`, {
+  headers: {
+    'Authorization': `Bearer ${SERVICE_TOKEN}`,
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+## 🗂️ Database Schema
+
+### Core Models
 - **User**: User accounts with roles and departments
 - **Project**: Project management with approval states
 - **Task**: Task management with dependencies
@@ -379,47 +366,45 @@ const procurementAgent = {
 - **DocumentTemplate**: Reusable templates
 - **DocumentNumber**: Auto-generated document numbering
 
-### **Demand Management Models**
+### Demand Management Models
 - **Demand**: Main demand records with custom IDs
 - **DemandLine**: Individual line items within demands
 - **DemandSequence**: Auto-incrementing sequence tracking for custom IDs
 
-### **JDE Models**
+### JDE Models
 - **JDEPurchaseOrderHeader**: F4301 data with transformations
 - **JDEPurchaseOrderDetail**: F4311 data with UOM information
 - **JDEInventoryItem**: F4101/F4102 combined data
 - **JDESupplier**: F0101 address book data
 
-### **Key Relationships**
-- Users belong to departments and have roles
-- Projects have team members and documents
-- Tasks can have dependencies and attachments
-- Tickets are assigned to users and teams
-- Documents can be annotated and versioned
-- Demands have multiple demand lines
-- JDE data is cached and synchronized locally
+### Service Integration Models
+- **ServiceApp**: External application registration
+- **ServiceApproval**: Service-specific approvals
+- **ServiceNotification**: Service notifications
+- **ServiceTask**: Service tasks
+- **ServiceWebhook**: Webhook management
 
-## 🚀 **Performance Optimizations**
+## 🚀 Performance Optimizations
 
-### **Caching Implementation**
+### Caching Implementation
 - **In-memory caching** with 5-minute cache duration
 - **Server-side filtering** applied before pagination
 - **Performance improvement**: 12x faster than original
 - **Cache management** with clear and refresh capabilities
 
-### **Database Optimization**
+### Database Optimization
 - **Server-side Pagination**: Reduces data transfer
 - **Indexed Queries**: Optimized SQL with proper indexes
 - **Connection Pooling**: Efficient database connections
 - **Query Optimization**: Minimal data fetching
 
-### **Frontend Optimization**
+### Frontend Optimization
 - **Lazy Loading**: Load data on demand
 - **Skeleton Loading**: Better user experience
 - **Caching**: React Query for additional caching
 - **Code Splitting**: Reduced bundle sizes
 
-## 📁 **Project Structure**
+## 📁 Project Structure
 
 ```
 uxone/
@@ -438,9 +423,8 @@ uxone/
 │   │   ├── jde/           # JDE integration endpoints
 │   │   ├── ai-agent/      # AI agent endpoints
 │   │   ├── demands/       # Demand management endpoints
-│   │   │   ├── route.ts   # Main demands API
-│   │   │   ├── [id]/      # Individual demand endpoints
-│   │   │   └── erp-integration/ # ERP integration
+│   │   ├── service/       # Service API endpoints
+│   │   ├── integration/   # Cross-system integration
 │   │   └── auth/          # Authentication endpoints
 │   └── auth/              # Authentication pages
 ├── components/            # Reusable UI components
@@ -452,18 +436,43 @@ uxone/
 ├── hooks/                # Custom React hooks
 ├── lib/                  # Utility libraries
 │   ├── jde-connector.ts  # JDE database connector
-│   ├── quantity-formatter.ts # Quantity formatting utilities
-│   ├── demand-id-generator.ts # Custom demand ID generation
-│   ├── erp-data-transformer.ts # ERP data transformation
+│   ├── auth-middleware.ts # Authentication middleware
+│   ├── database-integration.ts # Dual database management
+│   ├── notification-sync.ts # Notification synchronization
 │   └── auth.ts           # Authentication utilities
 ├── prisma/               # Database schema and migrations
+├── scripts/              # Database and service scripts
 ├── public/               # Static assets
 └── types/                # TypeScript type definitions
 ```
 
-## 🔧 **Configuration**
+## 🔧 Configuration
 
-### **App Configuration (`config/app.ts`)**
+### Environment Variables
+```env
+# Database URLs
+DATABASE_URL="postgresql://postgres:Sud01234@10.116.2.72:5432/uxonedb?schema=SCHEMA"
+UXONE_DATABASE_URL="postgresql://postgres:Sud01234@10.116.2.72:5432/uxone_new?schema=SCHEMA"
+
+# Authentication
+ADMIN_FALLBACK_USERNAME=admin
+ADMIN_FALLBACK_PASSWORD=admin123
+CENTRAL_API_URL=http://10.116.3.138:8888/api/web_check_login
+
+# JDE Database Connection
+JDE_DB_HOST=your-jde-server-ip
+JDE_DB_PORT=1521
+JDE_DB_SERVICE=JDE
+JDE_DB_USER=your-jde-username
+JDE_DB_PASSWORD=your-jde-password
+
+# AI Service Configuration
+OPENAI_API_KEY=your-openai-key
+PINECONE_API_KEY=your-pinecone-key
+PINECONE_ENVIRONMENT=your-pinecone-env
+```
+
+### App Configuration (`config/app.ts`)
 The system uses a centralized configuration file that defines:
 - Department codes and home pages
 - Role hierarchy and permissions
@@ -471,58 +480,9 @@ The system uses a centralized configuration file that defines:
 - UI settings and themes
 - API endpoints and security settings
 
-### **Key Configuration Areas**
-1. **Department Mapping**: Maps user departments to system departments
-2. **Role Permissions**: Defines what each role can access
-3. **Feature Access**: Controls feature availability by role
-4. **Page Access**: Restricts page access based on user role
-5. **API Security**: Method-level API access control
+## 🔒 Security Features
 
-## 🧪 **Testing & Quality Assurance**
-
-### **JDE Integration Testing**
-- **Connection Testing**: `/api/jde/test-oracle`
-- **Inventory Testing**: `/api/jde/inventory`
-- **Purchase Order Testing**: `/api/jde/purchase-orders`
-- **Data Synchronization**: Real-time sync with local database
-
-### **Demand Management Testing**
-- **Form Validation**: Multi-line demand form testing
-- **ID Generation**: Custom demand ID generation testing
-- **ERP Integration**: Data transformation testing
-- **Approval Workflow**: Status tracking and notification testing
-
-### **API Testing**
-- **Endpoint Validation**: All endpoints tested
-- **Data Integrity**: Verify data transformations
-- **Performance Testing**: Load testing for large datasets
-- **Error Scenarios**: Test error handling
-
-### **UI Testing**
-- **Responsive Design**: Mobile and desktop testing
-- **User Experience**: Intuitive navigation and interactions
-- **Accessibility**: WCAG compliance
-- **Cross-browser**: Multiple browser testing
-
-## 🚀 **Development Workflow**
-
-### **Code Organization**
-- **Components**: Reusable UI components in `/components`
-- **Pages**: Route-specific components in `/app`
-- **API Routes**: Backend logic in `/app/api`
-- **Hooks**: Custom React hooks in `/hooks`
-- **Types**: TypeScript definitions in `/types`
-
-### **Key Development Patterns**
-1. **Role-Based Components**: Components check user permissions
-2. **Department Routing**: Users are routed to department-specific pages
-3. **API Security**: All API routes validate user permissions
-4. **Error Handling**: Comprehensive error handling throughout
-5. **Type Safety**: Full TypeScript coverage
-
-## 🔒 **Security Features**
-
-### **Security Measures**
+### Security Measures
 - **Role-Based Access Control**: Granular permission system
 - **API Security**: Method-level access control
 - **Input Validation**: Zod schema validation
@@ -530,31 +490,66 @@ The system uses a centralized configuration file that defines:
 - **XSS Prevention**: React automatic escaping
 - **CSRF Protection**: NextAuth.js built-in protection
 
-### **Security Best Practices**
-- Regular dependency updates
-- Environment variable management
-- Input sanitization
-- Error message sanitization
-- Secure file upload handling
+### Service API Security
+- **Bearer Token Authentication**: Secure service-to-service communication
+- **Rate Limiting**: 1000 requests/minute per service
+- **Permission-based Access**: Granular permissions for each service
+- **Request Logging**: Comprehensive audit trail
 
-## 📈 **Performance Considerations**
+## 🧪 Testing & Quality Assurance
 
-### **Optimization Strategies**
+### JDE Integration Testing
+- **Connection Testing**: `/api/jde/test-oracle`
+- **Inventory Testing**: `/api/jde/inventory`
+- **Purchase Order Testing**: `/api/jde/purchase-orders`
+- **Data Synchronization**: Real-time sync with local database
+
+### API Testing
+- **Service API**: `/api/service/health`
+- **Integration API**: `/api/integration/notifications/sync`
+- **Authentication**: Central API and fallback testing
+- **Performance**: Load testing for large datasets
+
+### UI Testing
+- **Responsive Design**: Mobile and desktop testing
+- **User Experience**: Intuitive navigation and interactions
+- **Accessibility**: WCAG compliance
+- **Cross-browser**: Multiple browser testing
+
+## 🚀 Development Workflow
+
+### Code Organization
+- **Components**: Reusable UI components in `/components`
+- **Pages**: Route-specific components in `/app`
+- **API Routes**: Backend logic in `/app/api`
+- **Hooks**: Custom React hooks in `/hooks`
+- **Types**: TypeScript definitions in `/types`
+
+### Key Development Patterns
+1. **Role-Based Components**: Components check user permissions
+2. **Department Routing**: Users are routed to department-specific pages
+3. **API Security**: All API routes validate user permissions
+4. **Error Handling**: Comprehensive error handling throughout
+5. **Type Safety**: Full TypeScript coverage
+
+## 📈 Performance Considerations
+
+### Optimization Strategies
 - **Image Optimization**: Next.js automatic image optimization
 - **Code Splitting**: Automatic route-based code splitting
 - **Database Indexing**: Proper database indexes for queries
 - **Caching**: React Query for API response caching
 - **Lazy Loading**: Component and route lazy loading
 
-### **Monitoring**
+### Monitoring
 - **Error Tracking**: Implement error monitoring
 - **Performance Metrics**: Track page load times
 - **Database Performance**: Monitor query performance
 - **User Analytics**: Track feature usage
 
-## 🚀 **Deployment & Configuration**
+## 🚀 Deployment & Configuration
 
-### **Development Setup**
+### Development Setup
 ```bash
 # Clone the repository
 git clone <repository-url>
@@ -576,7 +571,7 @@ npx prisma migrate deploy
 npm run dev
 ```
 
-### **Production Deployment**
+### Production Deployment
 ```bash
 # Build application
 npm run build
@@ -585,39 +580,39 @@ npm run build
 npm start
 ```
 
-## 📞 **Support & Maintenance**
+## 📞 Support & Maintenance
 
-### **System Administration**
+### System Administration
 - **User Management**: Add/remove users and assign roles
 - **Department Configuration**: Update department settings
 - **Role Management**: Modify role permissions
 - **System Monitoring**: Monitor system health and performance
 
-### **Backup & Recovery**
+### Backup & Recovery
 - **Database Backups**: Regular PostgreSQL backups
 - **File Backups**: Document and upload backups
 - **Configuration Backups**: Environment and config backups
 - **Disaster Recovery**: Document recovery procedures
 
-## 🚀 **Future Enhancements**
+## 🚀 Future Enhancements
 
-### **Planned Features**
+### Planned Features
 - **Mobile App**: React Native mobile application
 - **Advanced Analytics**: Machine learning insights
 - **Integration APIs**: Third-party system integration
 - **Workflow Automation**: Automated approval workflows
 - **Advanced Reporting**: Custom report builder
 
-### **Technical Improvements**
+### Technical Improvements
 - **Microservices**: Service-oriented architecture
 - **Real-time Features**: WebSocket integration
 - **Advanced Search**: Full-text search capabilities
 - **API Documentation**: OpenAPI/Swagger documentation
 - **Testing**: Comprehensive test coverage
 
-## 📝 **Implementation Status**
+## 📝 Implementation Status
 
-### **✅ Completed**
+### ✅ Completed
 - [x] **JDE Integration**: Real database connection with proper data transformations
 - [x] **Inventory Management**: 76,000+ items with caching and export functionality
 - [x] **Purchase Order Management**: Full PO lifecycle with supplier integration
@@ -632,20 +627,24 @@ npm start
 - [x] **ERP Integration**: Data transformation for external ERP system API calls
 - [x] **Demand Management UI**: List view, detail view, and approval workflow
 - [x] **Navigation Integration**: Direct demands link in main menu
+- [x] **Database Separation**: UXOne and TIPA Mobile use separate databases
+- [x] **Service API**: Secure service-to-service communication
+- [x] **Notification Sync**: Cross-system notification synchronization
+- [x] **TIPA Mobile Integration**: Complete integration with notification badge
 
-### **🔄 In Progress**
+### 🔄 In Progress
 - [ ] **User Creation Fix**: Resolving unique constraint violation for test users
 - [ ] **AI Agent Development**: Phase 2 of procurement AI implementation
 - [ ] **Real-time Synchronization**: Live data sync with JDE
 - [ ] **Advanced Analytics**: Machine learning insights and forecasting
 
-### **📋 Planned**
+### 📋 Planned
 - [ ] **Mobile Application**: React Native mobile app
 - [ ] **Advanced Analytics**: Machine learning insights
 - [ ] **Workflow Automation**: Automated approval processes
 - [ ] **Multi-location Support**: Enhanced inventory optimization
 
-## 🎯 **Success Metrics**
+## 🎯 Success Metrics
 
 1. **Performance**: 12x faster inventory loading with caching
 2. **Data Accuracy**: Correct filtering across all pages
@@ -656,46 +655,7 @@ npm start
 7. **Reliability**: 99.9% uptime with graceful error handling
 8. **Demand Management**: Multi-line demand creation with custom IDs
 9. **ERP Integration**: Ready for external ERP system integration
-
-## 🐛 **Current Issues & Resolutions**
-
-### **Issue: Unique Constraint Violation for Test Users**
-- **Problem**: When creating test users during demand submission, username unique constraint fails
-- **Root Cause**: Test user creation logic doesn't handle existing usernames
-- **Status**: In progress - need to implement upsert logic or better user management
-- **Impact**: Prevents demand creation for test accounts
-
-### **Issue: Date Handling in Multi-Line Form**
-- **Problem**: Type mismatch between form input (string) and Zod schema expectations
-- **Resolution**: Implemented proper date string handling with ISO conversion
-- **Status**: Resolved
-
-### **Issue: Navigation to Demands Page**
-- **Problem**: Menu link not working properly
-- **Resolution**: Removed submenu complexity, implemented direct link
-- **Status**: Resolved
-
-### **Issue: Null Reference Errors in Demands List**
-- **Problem**: Runtime errors when accessing undefined properties
-- **Resolution**: Added comprehensive null checks and optional chaining
-- **Status**: Resolved
-
----
-
-## 📄 **Documentation References**
-
-- **README.md**: Main project overview and setup
-- **JDE_ORACLEDB_SETUP.md**: JDE database connection guide
-- **JDE_TESTING_GUIDE.md**: Integration testing procedures
-- **procurement_README.md**: Procurement AI agent documentation
-- **JDE_F4301_COLUMN_MAPPING.md**: Purchase order header mapping
-- **JDE_F4311_COLUMN_MAPPING.md**: Purchase order detail mapping
-- **JDE_DATA_TRANSFORMATIONS.md**: Data transformation rules
-- **INVENTORY_EXPORT_IMPLEMENTATION.md**: Export functionality
-- **INVENTORY_CACHING_IMPLEMENTATION.md**: Caching system
-- **QUANTITY_FORMATTING_IMPLEMENTATION.md**: Quantity formatting rules
-- **PROCUREMENT_DEPARTMENT.md**: Procurement module documentation
-- **ADMIN_FALLBACK_AUTH.md**: Authentication fallback system
+10. **Cross-System Sync**: Seamless notification synchronization between UXOne and TIPA Mobile
 
 ---
 
@@ -703,4 +663,4 @@ npm start
 **Version**: 1.1.0  
 **Maintainer**: Eric Nguyen  
 **Organization**: TIPA (Thai Industrial Promotion Agency)  
-**Status**: Production Ready with Active Development - Demand Management System Added 
+**Status**: Production Ready with Active Development 

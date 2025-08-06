@@ -1,47 +1,153 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { withCORS } from '@/lib/cors';
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getUXOnePrisma, getTIPAPrisma } from '@/lib/database-integration'
 
-export const runtime = 'nodejs';
+export const runtime = 'nodejs'
 
-// GET /api/service/health - Health check endpoint
-export const GET = withCORS(async (request: NextRequest) => {
+// GET /api/service/health - Comprehensive health check
+export async function GET(request: NextRequest) {
+  const startTime = Date.now()
+  
   try {
-    const startTime = Date.now();
-    
-    // Test database connection
-    let dbStatus = 'healthy';
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-    } catch (error) {
-      dbStatus = 'unhealthy';
-      console.error('Database health check failed:', error);
+    const healthChecks = {
+      timestamp: new Date().toISOString(),
+      status: 'healthy',
+      version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      checks: {
+        database: { status: 'unknown', responseTime: 0 },
+        uxoneDb: { status: 'unknown', responseTime: 0 },
+        tipaDb: { status: 'unknown', responseTime: 0 },
+        serviceApps: { status: 'unknown', count: 0 },
+        memory: { status: 'unknown', usage: 0, limit: 0 }
+      }
     }
 
-    const responseTime = Date.now() - startTime;
+    // Check main database connection
+    try {
+      const dbStart = Date.now()
+      await prisma.$queryRaw`SELECT 1`
+      healthChecks.checks.database = {
+        status: 'healthy',
+        responseTime: Date.now() - dbStart
+      }
+    } catch (error) {
+      healthChecks.checks.database = {
+        status: 'unhealthy',
+        responseTime: Date.now() - dbStart,
+        error: error instanceof Error ? error.message : String(error)
+      }
+      healthChecks.status = 'degraded'
+    }
 
-    return NextResponse.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-      services: {
-        database: dbStatus,
-        api: 'healthy',
-      },
-      responseTime: `${responseTime}ms`,
-      version: '1.0.0',
-    });
+    // Check UXOne database connection
+    try {
+      const uxoneStart = Date.now()
+      const uxonePrisma = await getUXOnePrisma()
+      await uxonePrisma.$queryRaw`SELECT 1`
+      healthChecks.checks.uxoneDb = {
+        status: 'healthy',
+        responseTime: Date.now() - uxoneStart
+      }
+    } catch (error) {
+      healthChecks.checks.uxoneDb = {
+        status: 'unhealthy',
+        responseTime: 0,
+        error: error instanceof Error ? error.message : String(error)
+      }
+      healthChecks.status = 'degraded'
+    }
+
+    // Check TIPA database connection
+    try {
+      const tipaStart = Date.now()
+      const tipaPrisma = await getTIPAPrisma()
+      await tipaPrisma.$queryRaw`SELECT 1`
+      healthChecks.checks.tipaDb = {
+        status: 'healthy',
+        responseTime: Date.now() - tipaStart
+      }
+    } catch (error) {
+      healthChecks.checks.tipaDb = {
+        status: 'unhealthy',
+        responseTime: 0,
+        error: error instanceof Error ? error.message : String(error)
+      }
+      healthChecks.status = 'degraded'
+    }
+
+    // Check service apps
+    try {
+      const serviceCount = await prisma.serviceApp.count({
+        where: { isActive: true }
+      })
+      healthChecks.checks.serviceApps = {
+        status: serviceCount > 0 ? 'healthy' : 'warning',
+        count: serviceCount
+      }
+    } catch (error) {
+      healthChecks.checks.serviceApps = {
+        status: 'unhealthy',
+        count: 0,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    }
+
+    // Check memory usage
+    const memoryUsage = process.memoryUsage()
+    const memoryUsageMB = Math.round(memoryUsage.heapUsed / 1024 / 1024)
+    const memoryLimitMB = Math.round(memoryUsage.heapTotal / 1024 / 1024)
+    
+    healthChecks.checks.memory = {
+      status: memoryUsageMB > 500 ? 'warning' : 'healthy',
+      usage: memoryUsageMB,
+      limit: memoryLimitMB,
+      percentage: Math.round((memoryUsageMB / memoryLimitMB) * 100)
+    }
+
+    // Overall response time
+    const responseTime = Date.now() - startTime
+    healthChecks.responseTime = responseTime
+
+    // Determine final status
+    const hasUnhealthy = Object.values(healthChecks.checks).some(
+      check => (check as any).status === 'unhealthy'
+    )
+    const hasWarning = Object.values(healthChecks.checks).some(
+      check => (check as any).status === 'warning'
+    )
+
+    if (hasUnhealthy) {
+      healthChecks.status = 'unhealthy'
+    } else if (hasWarning) {
+      healthChecks.status = 'warning'
+    }
+
+    const statusCode = healthChecks.status === 'healthy' ? 200 : 
+                      healthChecks.status === 'warning' ? 200 : 503
+
+    return NextResponse.json(healthChecks, { status: statusCode })
 
   } catch (error) {
-    console.error('Health check failed:', error);
-    return NextResponse.json(
-      {
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        error: 'Health check failed',
-      },
-      { status: 503 }
-    );
+    const responseTime = Date.now() - startTime
+    
+    return NextResponse.json({
+      timestamp: new Date().toISOString(),
+      status: 'unhealthy',
+      error: error instanceof Error ? error.message : String(error),
+      responseTime
+    }, { status: 503 })
   }
-});
+}
+
+// GET /api/service/health/ping - Simple ping endpoint
+export async function HEAD() {
+  return new NextResponse(null, { 
+    status: 200,
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  })
+}

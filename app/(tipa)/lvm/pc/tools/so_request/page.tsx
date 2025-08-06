@@ -64,7 +64,7 @@ const SOProcessorPage = () => {
   const [parseWarnings, setParseWarnings] = useState<string[]>([]);
 
   // API Configuration
-  const apiUrl = "http://10.116.2.72:8091/api/process-wo-request-dates";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://10.116.2.72:8091/api/process-wo-request-dates";
   const batchSize = 10;
 
   // Handle file drop

@@ -13,7 +13,13 @@ export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json([], { status: 401 });
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized - Authentication required" }), 
+        { 
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
     // Use raw query to fetch notifications, filter out hidden
     const notifications = await prisma.$queryRawUnsafe(
@@ -32,7 +38,13 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized - Authentication required" }), 
+        { 
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
     const body = await req.json();
     const { broadcast = false, ...notificationData } = body;
@@ -130,7 +142,13 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized - Authentication required" }), 
+        { 
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
     const body = await req.json();
     if (!body.id) {

@@ -1,21 +1,35 @@
-import { useState, useEffect, useMemo } from "react";
-
-// Types
-export type Notification = {
-  id: string;
-  userId: string;
-  title: string;
-  message: string;
-  read: boolean;
-  link?: string;
-  type?: string;
-  createdAt: string;
-}
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Notification as NotificationType } from "@/types";
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+
+  // Check browser notification support and permission
+  const checkNotificationSupport = useCallback(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPermission(Notification.permission);
+      return true;
+    }
+    return false;
+  }, []);
+
+  // Request notification permission safely
+  const requestPermission = useCallback(async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const result = await Notification.requestPermission();
+        setPermission(result);
+        return result;
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        return 'denied';
+      }
+    }
+    return 'denied';
+  }, []);
 
   // Fetch initial notifications
   const fetchNotifications = async () => {
@@ -39,6 +53,11 @@ export function useNotifications() {
   };
 
   useEffect(() => {
+    // Check notification support on mount
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPermission(Notification.permission);
+    }
+    
     fetchNotifications();
 
     // Real-time SSE connection
@@ -77,7 +96,7 @@ export function useNotifications() {
     return () => {
       evtSource.close();
     };
-  }, []);
+  }, []); // Remove checkNotificationSupport from dependencies
 
   const unreadCount = useMemo(() => 
     notifications.filter((n) => !n.read).length,
@@ -89,7 +108,10 @@ export function useNotifications() {
     unreadCount,
     loading,
     error,
+    permission,
     refetch: fetchNotifications,
     setNotifications,
+    requestPermission,
+    checkNotificationSupport,
   };
 } 

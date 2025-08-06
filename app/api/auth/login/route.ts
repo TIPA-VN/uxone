@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import bcrypt from "bcryptjs"
+import { authenticateUser, mapPositionToRole } from "@/lib/auth-middleware"
 
 // Force Node.js runtime for bcrypt
 export const runtime = 'nodejs'
@@ -8,54 +8,43 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { username, password } = body
-  
 
-    // Hash password with salt rounds 12 (as expected by central API)
-    const hashedPassword = await bcrypt.hash(password, 12)
+    // Use enhanced authentication function
+    const user = await authenticateUser(username, password)
 
-    // Call central authentication API
-    const response = await fetch("http://10.116.3.138:8888/api/web_check_login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password: hashedPassword }),
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
+    if (!user) {
       return NextResponse.json(
-        { error: data.content || data.message || "Authentication failed" },
+        { error: "Invalid credentials" },
         { status: 401 }
       )
     }
 
-    if (data.message !== "OK") {
+    // Check if user is active
+    if (!user.isActive) {
       return NextResponse.json(
-        { error: data.content || "Invalid credentials" },
+        { error: "User account is disabled. Please contact your administrator." },
         { status: 401 }
       )
     }
 
-    if (!data.emp_code) {
-      return NextResponse.json(
-        { error: "Missing employee code" },
-        { status: 401 }
-      )
-    }
+    // Map position to role if not already set
+    const role = user.role || mapPositionToRole(user.departmentName || 'STAFF')
 
     const result = {
       message: "OK",
-      id: data.emp_code, // Use emp_code as ID
-      emp_code: data.emp_code,
-      emp_pos: data.emp_pos,
-      emp_dept: data.emp_dept,
-      emp_dept_name: data.emp_dept_name,
-      emp_name: data.emp_name,
-      email: data.email || `${data.emp_code}@tipa.co.th`,
+      id: user.id,
+      emp_code: user.empCode || user.username,
+      emp_pos: user.departmentName || 'STAFF',
+      emp_dept: user.centralDepartment || user.department || 'OPS',
+      emp_dept_name: user.departmentName || 'Unknown Department',
+      emp_name: user.name || user.username,
+      email: user.email || `${user.username}@tipa.co.th`,
+      role: role
     }
 
     return NextResponse.json(result)
   } catch (error) {
+    console.error('Login error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Authentication failed" },
       { status: 401 }

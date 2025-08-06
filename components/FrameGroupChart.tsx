@@ -60,7 +60,7 @@ export default function FrameGroupChart() {
       const nextRange = rangeOptions[(currentIndex + 1) % rangeOptions.length];
 
       // Prefetch next range data (without React Query)
-      fetch("http://10.116.2.72:8091/api/wo-comp-query", {
+              fetch(process.env.NEXT_PUBLIC_API_URL || "http://10.116.2.72:8091/api/wo-comp-query", {
         method: "POST",
         body: JSON.stringify({ range_type: nextRange }),
         headers: { "Content-Type": "application/json" },

@@ -1,11 +1,11 @@
-import { Notification } from "@/hooks/useNotifications";
+import { Notification as NotificationType } from "@/types";
 import { Dispatch, SetStateAction, useState, useMemo } from "react";
 
 interface NotificationModalProps {
   open: boolean;
   onClose: () => void;
-  notifications: Notification[];
-  setNotifications: Dispatch<SetStateAction<Notification[]>>;
+  notifications: NotificationType[];
+  setNotifications: Dispatch<SetStateAction<NotificationType[]>>;
   unreadCount: number;
   notifLoading: boolean;
 }
@@ -27,7 +27,7 @@ export function NotificationModal({
   };
 
   // Function to parse notification message and extract department and project
-  const parseNotification = (notification: Notification) => {
+  const parseNotification = (notification: NotificationType) => {
     const message = notification.message || "";
     const title = notification.title || "";
     
@@ -194,7 +194,7 @@ export function NotificationModal({
   };
 
   // Function to get status icon and color based on notification content
-  const getStatusIcon = (notification: Notification) => {
+  const getStatusIcon = (notification: NotificationType) => {
     const title = notification.title?.toLowerCase() || "";
     const message = notification.message?.toLowerCase() || "";
     const content = `${title} ${message}`;
@@ -336,8 +336,8 @@ export function NotificationModal({
                       headers: { "Content-Type": "application/json" },
                     });
                     
-                    setNotifications((prev: Notification[]) =>
-                      prev.map((notif: Notification) => ({ ...notif, read: true }))
+                    setNotifications((prev: NotificationType[]) =>
+                      prev.map((notif: NotificationType) => ({ ...notif, read: true }))
                     );
                   } catch (error) {
                     console.error("Failed to mark all as read:", error);
@@ -499,8 +499,8 @@ export function NotificationModal({
                                 body: JSON.stringify({ id: n.id }),
                               });
                               
-                              setNotifications((prev: Notification[]) =>
-                                prev.map((notif: Notification) =>
+                              setNotifications((prev: NotificationType[]) =>
+                                prev.map((notif: NotificationType) =>
                                   notif.id === n.id ? { ...notif, read: true } : notif
                                 )
                               );
@@ -535,7 +535,7 @@ export function NotificationModal({
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ id: n.id, hidden: true })
                               });
-                              setNotifications((prev: Notification[]) => prev.filter((notif: Notification) => notif.id !== n.id));
+                              setNotifications((prev: NotificationType[]) => prev.filter((notif: NotificationType) => notif.id !== n.id));
                             }}
                             className="p-0.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
                             title="Delete"

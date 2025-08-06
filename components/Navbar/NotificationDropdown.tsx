@@ -1,11 +1,11 @@
-import { Notification } from "@/hooks/useNotifications";
+import { Notification as NotificationType } from "@/types";
 import { Dispatch, SetStateAction, useState, useEffect, useRef } from "react";
 
 interface NotificationDropdownProps {
-  notifications: Notification[];
+  notifications: NotificationType[];
   unreadCount: number;
   setNotificationsModalOpen: (open: boolean) => void;
-  setNotifications: Dispatch<SetStateAction<Notification[]>>;
+  setNotifications: Dispatch<SetStateAction<NotificationType[]>>;
   notifLoading: boolean;
 }
 
@@ -42,7 +42,7 @@ export function NotificationDropdown({
   };
 
   // Function to parse notification message and extract department and project
-  const parseNotification = (notification: Notification) => {
+  const parseNotification = (notification: NotificationType) => {
     const message = notification.message || "";
     const title = notification.title || "";
     
@@ -196,7 +196,7 @@ export function NotificationDropdown({
   };
 
   // Function to get status icon and color based on notification content
-  const getStatusIcon = (notification: Notification) => {
+  const getStatusIcon = (notification: NotificationType) => {
     const title = notification.title?.toLowerCase() || "";
     const message = notification.message?.toLowerCase() || "";
     const content = `${title} ${message}`;
@@ -395,8 +395,8 @@ export function NotificationDropdown({
                                       body: JSON.stringify({ id: n.id }),
                                     });
                                     
-                                    setNotifications((prev: Notification[]) =>
-                                      prev.map((notif: Notification) =>
+                                    setNotifications((prev: NotificationType[]) =>
+                                      prev.map((notif: NotificationType) =>
                                         notif.id === n.id ? { ...notif, read: true } : notif
                                       )
                                     );

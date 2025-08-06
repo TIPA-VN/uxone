@@ -96,7 +96,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({
 };
 const PR_AGENT_URL =
   process.env.NEXT_PUBLIC_PR_AGENT_URL ||
-  "http://10.116.2.72:5678/webhook/pr-agent-prompt"; //
+        process.env.NEXT_PUBLIC_PR_AGENT_URL || "http://10.116.2.72:5678/webhook/pr-agent-prompt"; //
 const ProcurementAgent: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState<string>("");

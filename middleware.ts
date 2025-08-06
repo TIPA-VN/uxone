@@ -4,8 +4,8 @@ import type { NextRequest } from 'next/server'
 import { getUserHomePage } from '@/config/app'
 
 export async function middleware(request: NextRequest) {
-  // Handle CORS for service API routes
-  if (request.nextUrl.pathname.startsWith('/api/service/')) {
+  // Handle CORS for service API routes and integration routes
+  if (request.nextUrl.pathname.startsWith('/api/service/') || request.nextUrl.pathname.startsWith('/api/integration/')) {
     // Handle preflight requests
     if (request.method === 'OPTIONS') {
       return new NextResponse(null, {
