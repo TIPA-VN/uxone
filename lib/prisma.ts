@@ -10,11 +10,23 @@ declare global {
 function getPrismaClient() {
   // In production, create a new client
   if (process.env.NODE_ENV === 'production') {
-    return new PrismaClient()
+    return new PrismaClient({
+      datasources: {
+        db: {
+          url: process.env.UXONE_DATABASE_URL
+        }
+      }
+    })
   }
   // In development, reuse the same client
   if (!global.__prisma) {
-    global.__prisma = new PrismaClient()
+    global.__prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: process.env.UXONE_DATABASE_URL
+        }
+      }
+    })
   }
   return global.__prisma
 }

@@ -36,8 +36,8 @@ export async function getTIPAPrisma(): Promise<PrismaClient> {
   return tipaPrisma
 }
 
-// Sync user from TIPA Mobile to UXOne
-export async function syncUserFromTIPA(empCode: string) {
+// Sync user from TIPA Mobile to UXOne (with central API role mapping)
+export async function syncUserFromTIPA(empCode: string, centralApiData?: any) {
   try {
     const tipaPrisma = await getTIPAPrisma()
     const uxonePrisma = await getUXOnePrisma()
@@ -62,6 +62,16 @@ export async function syncUserFromTIPA(empCode: string) {
       where: { username: empCode }
     })
 
+    // Determine role - use central API data if available, otherwise use TIPA Mobile data
+    let role = 'STAFF'
+    if (centralApiData && centralApiData.emp_pos) {
+      // Map emp_pos to role using the mapping function
+      const { mapPositionToRole } = await import('./auth-middleware')
+      role = mapPositionToRole(centralApiData.emp_pos)
+    } else {
+      role = tipaUser.role || 'STAFF'
+    }
+
     if (uxoneUser) {
       // Update existing user
       const updatedUser = await uxonePrisma.user.update({
@@ -72,12 +82,12 @@ export async function syncUserFromTIPA(empCode: string) {
           department: tipaUser.department,
           centralDepartment: tipaUser.centralDepartment,
           departmentName: tipaUser.departmentName,
-          role: tipaUser.role,
+          role: role, // Use mapped role from central API or TIPA Mobile
           isActive: tipaUser.isActive,
           updatedAt: new Date()
         }
       })
-      console.log(`✅ Updated user ${empCode} in UXOne database`)
+      console.log(`✅ Updated user ${empCode} in UXOne database with role: ${role}`)
       return updatedUser
     } else {
       // Create new user in UXOne
@@ -89,16 +99,69 @@ export async function syncUserFromTIPA(empCode: string) {
           department: tipaUser.department || 'OPS',
           centralDepartment: tipaUser.centralDepartment,
           departmentName: tipaUser.departmentName,
-          role: tipaUser.role || 'STAFF',
+          role: role, // Use mapped role from central API or TIPA Mobile
           isActive: tipaUser.isActive,
           hashedPassword: tipaUser.hashedPassword || ''
         }
       })
-      console.log(`✅ Created user ${empCode} in UXOne database`)
+      console.log(`✅ Created user ${empCode} in UXOne database with role: ${role}`)
       return newUser
     }
   } catch (error) {
     console.error('Error syncing user from TIPA Mobile:', error)
+    return null
+  }
+}
+
+// Sync user from central API to UXOne (with role mapping)
+export async function syncUserFromCentralAPI(centralApiData: any) {
+  try {
+    const uxonePrisma = await getUXOnePrisma()
+    
+    // Map emp_pos to role using the mapping function
+    const { mapPositionToRole } = await import('./auth-middleware')
+    const role = mapPositionToRole(centralApiData.emp_pos)
+
+    // Check if user exists in UXOne database
+    const uxoneUser = await uxonePrisma.user.findFirst({
+      where: { username: centralApiData.emp_code }
+    })
+
+    if (uxoneUser) {
+      // Update existing user
+      const updatedUser = await uxonePrisma.user.update({
+        where: { id: uxoneUser.id },
+        data: {
+          name: centralApiData.emp_name,
+          email: centralApiData.email || `${centralApiData.emp_code}@tipa.co.th`,
+          centralDepartment: centralApiData.emp_dept,
+          departmentName: centralApiData.emp_dept_name,
+          role: role, // Use mapped role from emp_pos
+          isActive: true,
+          updatedAt: new Date()
+        }
+      })
+      console.log(`✅ Updated user ${centralApiData.emp_code} in UXOne database with role: ${role}`)
+      return updatedUser
+    } else {
+      // Create new user in UXOne
+      const newUser = await uxonePrisma.user.create({
+        data: {
+          username: centralApiData.emp_code,
+          name: centralApiData.emp_name,
+          email: centralApiData.email || `${centralApiData.emp_code}@tipa.co.th`,
+          department: 'OPS', // Default department for new users
+          centralDepartment: centralApiData.emp_dept,
+          departmentName: centralApiData.emp_dept_name,
+          role: role, // Use mapped role from emp_pos
+          isActive: true
+        }
+      })
+      console.log(`✅ Created new user ${centralApiData.emp_code} in UXOne database with role: ${role}`)
+      return newUser
+    }
+  } catch (error) {
+    console.error('Error syncing user from Central API:', error)
     return null
   }
 }

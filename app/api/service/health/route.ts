@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         responseTime: Date.now() - dbStart
       }
     } catch (error) {
+      const dbStart = Date.now() // Define dbStart for error case
       healthChecks.checks.database = {
         status: 'unhealthy',
         responseTime: Date.now() - dbStart,
@@ -50,9 +51,10 @@ export async function GET(request: NextRequest) {
         responseTime: Date.now() - uxoneStart
       }
     } catch (error) {
+      const uxoneStart = Date.now() // Define uxoneStart for error case
       healthChecks.checks.uxoneDb = {
         status: 'unhealthy',
-        responseTime: 0,
+        responseTime: Date.now() - uxoneStart,
         error: error instanceof Error ? error.message : String(error)
       }
       healthChecks.status = 'degraded'
@@ -68,9 +70,10 @@ export async function GET(request: NextRequest) {
         responseTime: Date.now() - tipaStart
       }
     } catch (error) {
+      const tipaStart = Date.now() // Define tipaStart for error case
       healthChecks.checks.tipaDb = {
         status: 'unhealthy',
-        responseTime: 0,
+        responseTime: Date.now() - tipaStart,
         error: error instanceof Error ? error.message : String(error)
       }
       healthChecks.status = 'degraded'

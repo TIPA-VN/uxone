@@ -27,14 +27,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Map position to role if not already set
-    const role = user.role || mapPositionToRole(user.departmentName || 'STAFF')
+    // Use the role field from the user (which should be mapped from emp_pos)
+    const role = user.role || 'STAFF'
 
     const result = {
       message: "OK",
       id: user.id,
       emp_code: user.empCode || user.username,
-      emp_pos: user.departmentName || 'STAFF',
+      emp_pos: role, // Use the role as emp_pos
       emp_dept: user.centralDepartment || user.department || 'OPS',
       emp_dept_name: user.departmentName || 'Unknown Department',
       emp_name: user.name || user.username,
