@@ -5,6 +5,7 @@ import { PDFTools } from "@/components/PDFTools";
 import { SimpleDocumentViewer } from "@/components/SimpleDocumentViewer";
 import { Document, DOCUMENT_TYPES } from "../types/project";
 import { isRestrictedDocumentType } from "@/lib/documentAccess";
+import { canUploadToDepartment, canApproveDepartment } from "@/lib/rbac";
 
 interface DepartmentTabProps {
   projectId: string;
@@ -51,27 +52,27 @@ export function DepartmentTab({
   } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Upload permission check
-  const canUpload = user && (user.role?.toUpperCase() === "ADMIN" || 
-    user.role?.toUpperCase() === "SENIOR MANAGER" || 
-    user.role?.toUpperCase() === "SENIOR_MANAGER" ||
-    user.role?.toUpperCase() === "MANAGER" || 
-    project?.ownerId === user?.id);
+  // Enhanced permission checks using RBAC functions
+  const canUpload = user && canUploadToDepartment(
+    user.role || '',
+    user.department || '',
+    department,
+    user.id,
+    project?.ownerId || ''
+  );
 
-  // Approval permission check
+  const canApprove = user && canApproveDepartment(
+    user.role || '',
+    user.department || '',
+    department,
+    user.id,
+    project?.ownerId || ''
+  );
+
+  // Check if approval is still possible (not already approved/rejected)
   const approvalState = project?.approvalState || {};
-  const isSeniorManagerOfDept =
-    user &&
-    (user.role?.toUpperCase() === "SENIOR MANAGER" || user.role?.toUpperCase() === "SENIOR_MANAGER") &&
-    (user.department?.toUpperCase() === department?.toUpperCase() || 
-     user.department?.toLowerCase() === department?.toLowerCase());
-  const canApprove =
-    user &&
-    project &&
-    (user.role?.toUpperCase() === "ADMIN" || 
-     isSeniorManagerOfDept || 
-     project.ownerId === user.id) &&
-    approvalState[department] !== "APPROVED" &&
+  const canPerformApproval = canApprove && 
+    approvalState[department] !== "APPROVED" && 
     approvalState[department] !== "REJECTED";
 
   const handleUpload = async (e: React.FormEvent) => {

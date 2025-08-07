@@ -2,12 +2,14 @@
 import { AlertTriangle, Calendar } from "lucide-react";
 import { Project, Task } from "../types/project";
 import { ApprovalStamp } from "./ApprovalStamp";
+import { canEditProjectMainTab } from "@/lib/rbac";
 
 interface ProjectOverviewProps {
   project: Project;
   tasks: Task[];
   user: {
     id: string;
+    role?: string;
   } | null | undefined;
   onUpdateProjectStatus: (newStatus: string) => void;
   onEditDueDates: () => void;
@@ -37,6 +39,13 @@ export function ProjectOverview({
   showDueDateEditor 
 }: ProjectOverviewProps) {
   const approvalState = project?.approvalState || {};
+
+  // Permission check for editing due dates
+  const canEditDueDates = user && canEditProjectMainTab(
+    user.role || '',
+    user.id,
+    project.ownerId || ''
+  );
 
   return (
     <div className="w-full">
@@ -125,8 +134,8 @@ export function ProjectOverview({
           <div className="bg-white rounded-lg shadow p-2 flex-1 min-w-[180px] relative">
             <ApprovalStamp isApproved={project.status === "APPROVED"} />
             <div className="flex flex-col gap-2">
-              {/* Edit Due Dates Button - Only for project owner */}
-              {project.ownerId === user?.id && (
+              {/* Edit Due Dates Button - Only for project owner and admins */}
+              {canEditDueDates && (
                 <div className="flex justify-end mb-1">
                   <button
                     onClick={onEditDueDates}

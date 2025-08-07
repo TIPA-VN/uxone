@@ -160,6 +160,8 @@ export default function ProjectDetailsPage() {
         departments={project.departments || []}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        user={user}
+        projectOwnerId={project.ownerId || ''}
       />
 
       {/* Tab Content */}
@@ -283,6 +285,8 @@ export default function ProjectDetailsPage() {
             onTaskStatusUpdated={(taskId, newStatus) => {
               tasksHook.updateTaskStatus(taskId, newStatus);
             }}
+            user={user}
+            projectOwnerId={project.ownerId || ''}
           />
         )}
 

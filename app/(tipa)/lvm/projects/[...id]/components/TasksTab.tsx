@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { CheckCircle, XCircle, Clock, Menu } from "lucide-react";
 import { Task, User } from "../types/project";
+import { canCreateTasks, canAssignTasks } from "@/lib/rbac";
 
 interface TasksTabProps {
   projectId: string;
@@ -9,9 +10,23 @@ interface TasksTabProps {
   users: User[];
   onTaskCreated: (task: Task) => void;
   onTaskStatusUpdated: (taskId: string, newStatus: string) => void;
+  user: {
+    id: string;
+    role?: string;
+    department?: string;
+  } | undefined;
+  projectOwnerId: string;
 }
 
-export function TasksTab({ projectId, tasks, users, onTaskCreated, onTaskStatusUpdated }: TasksTabProps) {
+export function TasksTab({ 
+  projectId, 
+  tasks, 
+  users, 
+  onTaskCreated, 
+  onTaskStatusUpdated,
+  user,
+  projectOwnerId
+}: TasksTabProps) {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
   const [taskForm, setTaskForm] = useState({
@@ -25,6 +40,26 @@ export function TasksTab({ projectId, tasks, users, onTaskCreated, onTaskStatusU
     tags: [] as string[],
   });
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+
+  // Permission checks using RBAC functions
+  const canCreate = user && canCreateTasks(
+    user.role || '',
+    user.id,
+    projectOwnerId
+  );
+
+  const canAssign = user && canAssignTasks(
+    user.role || '',
+    user.id,
+    projectOwnerId
+  );
+
+  // Filter users to only show staff members for assignment
+  const assignableUsers = users.filter(u => {
+    // Only show users with STAFF level roles for assignment
+    const staffRoles = ['STAFF', 'SENIOR_STAFF', 'ASSOCIATE', 'SENIOR_ASSOCIATE', 'ENGINEER', 'SENIOR_ENGINEER', 'SPECIALIST', 'SENIOR_SPECIALIST'];
+    return staffRoles.includes(u.role?.toUpperCase() || '');
+  });
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,16 +136,19 @@ export function TasksTab({ projectId, tasks, users, onTaskCreated, onTaskStatusU
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Tasks</h3>
-          <button
-            onClick={() => setShowCreateTask(!showCreateTask)}
-            className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
-          >
-            {showCreateTask ? "Cancel" : "New Task"}
-          </button>
+          {/* Only show create task button if user has permission */}
+          {canCreate && (
+            <button
+              onClick={() => setShowCreateTask(!showCreateTask)}
+              className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors cursor-pointer"
+            >
+              {showCreateTask ? "Cancel" : "New Task"}
+            </button>
+          )}
         </div>
 
         {/* Task Creation Form */}
-        {showCreateTask && (
+        {showCreateTask && canCreate && (
           <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
             <h4 className="font-medium text-purple-900 mb-3">Create New Task</h4>
             <form onSubmit={handleCreateTask} className="space-y-3">
@@ -138,9 +176,10 @@ export function TasksTab({ projectId, tasks, users, onTaskCreated, onTaskStatusU
                     className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
                   >
                     <option value="">Select assignee</option>
-                    {(Array.isArray(users) ? users : []).map((user) => (
+                    {/* Only show staff members for assignment */}
+                    {assignableUsers.map((user) => (
                       <option key={user.id} value={user.id}>
-                        {user.name || user.username} ({user.department})
+                        {user.name || user.username} ({user.department}) - {user.role}
                       </option>
                     ))}
                   </select>

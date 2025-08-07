@@ -434,3 +434,134 @@ export const canTransitionTicketStatus = (userRole: string, currentStatus: strin
   
   return true;
 }; 
+
+// Project Tab Access Control Functions
+export const canAccessProjectTab = (
+  userRole: string, 
+  userDepartment: string, 
+  userId: string,
+  tabName: string, 
+  projectDepartments: string[], 
+  projectOwnerId: string
+) => {
+  // Admins can access all tabs
+  if (isUserAdmin(userRole)) {
+    return true;
+  }
+
+  switch (tabName) {
+    case "MAIN":
+      // All project members can access Main tab
+      return true;
+    
+    case "ANALYTICS":
+      // Only managers and above can access KPI tab
+      return isUserManager(userRole) || isUserSupervisor(userRole);
+    
+    case "tasks":
+      // Only project owner and managers can access Task tab
+      return projectOwnerId === userId || isUserManager(userRole);
+    
+    case "PRODUCTION":
+      // Only managers and above can access Published tab
+      return isUserManager(userRole) || isUserSupervisor(userRole);
+    
+    default:
+      // For department tabs, only department members can access
+      if (projectDepartments.includes(userDepartment)) {
+        return true;
+      }
+      return false;
+  }
+};
+
+export const canEditProjectMainTab = (
+  userRole: string,
+  userId: string,
+  projectOwnerId: string
+) => {
+  // Only project owner can edit due dates and critical project info
+  return projectOwnerId === userId || isUserAdmin(userRole);
+};
+
+export const canCreateTasks = (
+  userRole: string,
+  userId: string,
+  projectOwnerId: string
+) => {
+  // Only project owner and managers can create tasks
+  return projectOwnerId === userId || isUserManager(userRole) || isUserAdmin(userRole);
+};
+
+export const canAssignTasks = (
+  userRole: string,
+  userId: string,
+  projectOwnerId: string
+) => {
+  // Only project owner and managers can assign tasks
+  return projectOwnerId === userId || isUserManager(userRole) || isUserAdmin(userRole);
+};
+
+export const canAccessDepartmentTab = (
+  userRole: string,
+  userDepartment: string,
+  targetDepartment: string
+) => {
+  // Admins can access all department tabs
+  if (isUserAdmin(userRole)) {
+    return true;
+  }
+
+  // Users can only access their own department tab
+  return userDepartment.toLowerCase() === targetDepartment.toLowerCase();
+};
+
+export const canUploadToDepartment = (
+  userRole: string,
+  userDepartment: string,
+  targetDepartment: string,
+  userId: string,
+  projectOwnerId: string
+) => {
+  // Admins can upload to any department
+  if (isUserAdmin(userRole)) {
+    return true;
+  }
+
+  // Project owner can upload to any department
+  if (projectOwnerId === userId) {
+    return true;
+  }
+
+  // Managers can upload to their own department
+  if (isUserManager(userRole) && userDepartment.toLowerCase() === targetDepartment.toLowerCase()) {
+    return true;
+  }
+
+  return false;
+};
+
+export const canApproveDepartment = (
+  userRole: string,
+  userDepartment: string,
+  targetDepartment: string,
+  userId: string,
+  projectOwnerId: string
+) => {
+  // Admins can approve any department
+  if (isUserAdmin(userRole)) {
+    return true;
+  }
+
+  // Project owner can approve any department
+  if (projectOwnerId === userId) {
+    return true;
+  }
+
+  // Senior managers can approve their own department
+  if (isUserSupervisor(userRole) && userDepartment.toLowerCase() === targetDepartment.toLowerCase()) {
+    return true;
+  }
+
+  return false;
+}; 

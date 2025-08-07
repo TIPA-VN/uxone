@@ -1,12 +1,12 @@
 import { getUXOnePrisma, syncUserFromTIPA, syncUserFromCentralAPI } from '@/lib/database-integration'
+import bcrypt from 'bcryptjs'
 
 // Force Node.js runtime
 export const runtime = 'nodejs'
 
 export async function authenticateUser(emp_code: string, password: string) {
   try {
-    // Hash password for central API
-    const bcrypt = await import('bcrypt')
+    // Hash password for central API using bcryptjs
     const hashedPassword = await bcrypt.hash(password, 10)
     
     // Call central API

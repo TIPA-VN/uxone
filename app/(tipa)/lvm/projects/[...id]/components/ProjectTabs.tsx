@@ -1,12 +1,19 @@
 import { DEPARTMENTS } from '../types/project';
+import { canAccessProjectTab, canAccessDepartmentTab } from '@/lib/rbac';
 
 interface ProjectTabsProps {
   departments: string[];
   activeTab: string;
   onTabChange: (tab: string) => void;
+  user: {
+    id: string;
+    role?: string;
+    department?: string;
+  } | undefined;
+  projectOwnerId: string;
 }
 
-export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabsProps) {
+export function ProjectTabs({ departments, activeTab, onTabChange, user, projectOwnerId }: ProjectTabsProps) {
   const getTabColor = (dept: string, active: boolean) => {
     switch(dept) {
       case 'logistics': return active
@@ -48,11 +55,40 @@ export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabs
     }
   };
 
+  // Check if user can access a specific tab
+  const canAccessTab = (tabName: string) => {
+    if (!user) return false;
+    
+    return canAccessProjectTab(
+      user.role || '',
+      user.department || '',
+      user.id,
+      tabName,
+      departments,
+      projectOwnerId
+    );
+  };
+
+  // Check if user can access a department tab
+  const canAccessDeptTab = (dept: string) => {
+    if (!user) return false;
+    
+    return canAccessDepartmentTab(
+      user.role || '',
+      user.department || '',
+      dept
+    );
+  };
+
   return (
-    <div className="flex flex-wrap gap-0.5 border-b mb-3" role="tablist" aria-label="Department Tabs">
-      {/* Department Tabs */}
+    <div className="flex flex-wrap gap-0.5 border-b mb-3" role="tablist" aria-label="Project Tabs">
+      {/* Department Tabs - Only show if user has access */}
       {departments.map((dept: string) => {
         const isActive = activeTab === dept;
+        const hasAccess = canAccessDeptTab(dept);
+        
+        if (!hasAccess) return null;
+        
         return (
           <button
             key={dept}
@@ -71,77 +107,85 @@ export function ProjectTabs({ departments, activeTab, onTabChange }: ProjectTabs
         );
       })}
       
-      {/* MAIN tab */}
-      <button
-        key="MAIN"
-        role="tab"
-        aria-selected={activeTab === "MAIN"}
-        aria-controls="main-pane"
-        id="main-tab"
-        tabIndex={activeTab === "MAIN" ? 0 : -1}
-        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
-          activeTab === "MAIN" 
-            ? "border-b-2 bg-white shadow-sm border-slate-500 text-slate-700" 
-            : "border-transparent border-slate-500 text-slate-600 bg-slate-50 hover:bg-slate-100"
-        }`}
-        onClick={() => onTabChange("MAIN")}
-      >
-        MAIN
-      </button>
+      {/* Main tab - All project members can access */}
+      {canAccessTab("MAIN") && (
+        <button
+          key="MAIN"
+          role="tab"
+          aria-selected={activeTab === "MAIN"}
+          aria-controls="main-pane"
+          id="main-tab"
+          tabIndex={activeTab === "MAIN" ? 0 : -1}
+          className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+            activeTab === "MAIN" 
+              ? "border-b-2 bg-white shadow-sm border-slate-500 text-slate-700" 
+              : "border-transparent border-slate-500 text-slate-600 bg-slate-50 hover:bg-slate-100"
+          }`}
+          onClick={() => onTabChange("MAIN")}
+        >
+          Main
+        </button>
+      )}
       
-      {/* ANALYTICS tab */}
-      <button
-        key="ANALYTICS"
-        role="tab"
-        aria-selected={activeTab === "ANALYTICS"}
-        aria-controls="analytics-pane"
-        id="analytics-tab"
-        tabIndex={activeTab === "ANALYTICS" ? 0 : -1}
-        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
-          activeTab === "ANALYTICS" 
-            ? "border-b-2 bg-white shadow-sm border-purple-500 text-purple-700" 
-            : "border-transparent border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100"
-        }`}
-        onClick={() => onTabChange("ANALYTICS")}
-      >
-        ANALYTICS
-      </button>
+      {/* KPI tab - Only managers and above */}
+      {canAccessTab("ANALYTICS") && (
+        <button
+          key="ANALYTICS"
+          role="tab"
+          aria-selected={activeTab === "ANALYTICS"}
+          aria-controls="analytics-pane"
+          id="analytics-tab"
+          tabIndex={activeTab === "ANALYTICS" ? 0 : -1}
+          className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+            activeTab === "ANALYTICS" 
+              ? "border-b-2 bg-white shadow-sm border-purple-500 text-purple-700" 
+              : "border-transparent border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100"
+          }`}
+          onClick={() => onTabChange("ANALYTICS")}
+        >
+          KPI
+        </button>
+      )}
       
-      {/* TASKS tab */}
-      <button
-        key="tasks"
-        role="tab"
-        aria-selected={activeTab === "tasks"}
-        aria-controls="tasks-pane"
-        id="tasks-tab"
-        tabIndex={activeTab === "tasks" ? 0 : -1}
-        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
-          activeTab === "tasks" 
-            ? "border-b-2 bg-white shadow-sm border-purple-500 text-purple-700" 
-            : "border-transparent border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100"
-        }`}
-        onClick={() => onTabChange("tasks")}
-      >
-        TASKS
-      </button>
+      {/* Task tab - Only project owner and managers */}
+      {canAccessTab("tasks") && (
+        <button
+          key="tasks"
+          role="tab"
+          aria-selected={activeTab === "tasks"}
+          aria-controls="tasks-pane"
+          id="tasks-tab"
+          tabIndex={activeTab === "tasks" ? 0 : -1}
+          className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+            activeTab === "tasks" 
+              ? "border-b-2 bg-white shadow-sm border-purple-500 text-purple-700" 
+              : "border-transparent border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100"
+          }`}
+          onClick={() => onTabChange("tasks")}
+        >
+          Task
+        </button>
+      )}
       
-      {/* PRODUCTION tab */}
-      <button
-        key="PRODUCTION"
-        role="tab"
-        aria-selected={activeTab === "PRODUCTION"}
-        aria-controls="production-pane"
-        id="production-tab"
-        tabIndex={activeTab === "PRODUCTION" ? 0 : -1}
-        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
-          activeTab === "PRODUCTION" 
-            ? "border-b-2 bg-white shadow-sm border-orange-500 text-orange-700" 
-            : "border-transparent border-orange-500 text-orange-600 bg-orange-50 hover:bg-orange-100"
-        }`}
-        onClick={() => onTabChange("PRODUCTION")}
-      >
-        PRODUCTION
-      </button>
+      {/* Published tab - Only managers and above */}
+      {canAccessTab("PRODUCTION") && (
+        <button
+          key="PRODUCTION"
+          role="tab"
+          aria-selected={activeTab === "PRODUCTION"}
+          aria-controls="production-pane"
+          id="production-tab"
+          tabIndex={activeTab === "PRODUCTION" ? 0 : -1}
+          className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+            activeTab === "PRODUCTION" 
+              ? "border-b-2 bg-white shadow-sm border-orange-500 text-orange-700" 
+              : "border-transparent border-orange-500 text-orange-600 bg-orange-50 hover:bg-orange-100"
+          }`}
+          onClick={() => onTabChange("PRODUCTION")}
+        >
+          Published
+        </button>
+      )}
     </div>
   );
 } 

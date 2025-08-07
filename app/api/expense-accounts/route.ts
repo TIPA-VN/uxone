@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
         bu: true,
       },
       orderBy: [
-        { businessName: 'asc' },
-        { orderType: 'asc' },
-        { account: 'asc' }
+        { description: 'asc' },
+        { account: 'asc' },
+        { orderType: 'asc' }
       ],
     });
 

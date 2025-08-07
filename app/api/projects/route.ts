@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateDocumentNumber } from "@/lib/documentNumberGenerator";
+import { sendNotification } from "@/app/api/notifications/stream/route";
 
 // Type definitions for better type safety
 interface ProjectWithCounts {
@@ -402,6 +403,72 @@ export async function POST(request: NextRequest) {
         where: { id: generatedDocumentNumber.id },
         data: { projectId: project.id },
       });
+    }
+
+    // Create notifications for project creation
+    try {
+      // 1. Notify department heads/managers of involved departments
+      const departmentUsers = await prisma.user.findMany({
+        where: {
+          department: { in: departments },
+          role: { in: ["MANAGER", "SENIOR_MANAGER", "GENERAL_MANAGER", "ADMIN"] },
+          isActive: true,
+        },
+        select: { id: true, name: true, username: true, department: true },
+      });
+
+      // 2. Notify team members (excluding the owner who will get a different notification)
+      const teamMemberIds = teamMembers.filter(id => id !== currentUser.id);
+      const teamMemberUsers = teamMemberIds.length > 0 ? await prisma.user.findMany({
+        where: { id: { in: teamMemberIds } },
+        select: { id: true, name: true, username: true },
+      }) : [];
+
+      // 3. Create notifications for department heads
+      for (const deptUser of departmentUsers) {
+        if (deptUser.id !== currentUser.id) { // Don't notify the owner twice
+          const notification = await prisma.notification.create({
+            data: {
+              userId: deptUser.id,
+              title: `New Project Created: ${project.name}`,
+              message: `${currentUser.name || currentUser.username} has created a new project "${project.name}" involving your department (${deptUser.department}).`,
+              type: "info",
+              link: `/lvm/projects/${project.id}`,
+            },
+          });
+          sendNotification(notification, deptUser.id);
+        }
+      }
+
+      // 4. Create notifications for team members
+      for (const member of teamMemberUsers) {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: member.id,
+            title: `You've been added to project: ${project.name}`,
+            message: `${currentUser.name || currentUser.username} has added you to the project "${project.name}".`,
+            type: "info",
+            link: `/lvm/projects/${project.id}`,
+          },
+        });
+        sendNotification(notification, member.id);
+      }
+
+      // 5. Create confirmation notification for project owner
+      const ownerNotification = await prisma.notification.create({
+        data: {
+          userId: currentUser.id,
+          title: `Project Created Successfully: ${project.name}`,
+          message: `Your project "${project.name}" has been created successfully.${documentNumber ? ` Document number: ${documentNumber}` : ''}`,
+          type: "success",
+          link: `/lvm/projects/${project.id}`,
+        },
+      });
+      sendNotification(ownerNotification, currentUser.id);
+
+    } catch (error) {
+      console.error("Error creating notifications:", error);
+      // Don't fail the project creation if notifications fail
     }
 
     return NextResponse.json(project, { status: 201 });

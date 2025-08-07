@@ -311,7 +311,7 @@ export default function BUDepartmentSelector({
           
           {selectedAccountData.approvalRoute && (
             <div className="flex items-center space-x-2">
-              <span className="font-medium text-gray-700">Luồng:</span>
+              <span className="font-medium text-gray-700">Approval Form:</span>
               <Badge 
                 variant="outline" 
                 className={cn(
