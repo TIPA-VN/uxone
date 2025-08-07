@@ -16,17 +16,16 @@ export async function GET(request: NextRequest) {
       environment: process.env.NODE_ENV || 'development',
       checks: {
         database: { status: 'unknown', responseTime: 0 },
-        uxoneDb: { status: 'unknown', responseTime: 0 },
-        tipaDb: { status: 'unknown', responseTime: 0 },
         serviceApps: { status: 'unknown', count: 0 },
         memory: { status: 'unknown', usage: 0, limit: 0 }
       }
     }
 
-    // Check main database connection
+    // Check main database connection (UXOne database)
     try {
       const dbStart = Date.now()
-      await prisma.$queryRaw`SELECT 1`
+      const uxonePrisma = await getUXOnePrisma()
+      await uxonePrisma.$queryRaw`SELECT 1`
       healthChecks.checks.database = {
         status: 'healthy',
         responseTime: Date.now() - dbStart
@@ -41,47 +40,14 @@ export async function GET(request: NextRequest) {
       healthChecks.status = 'degraded'
     }
 
-    // Check UXOne database connection
-    try {
-      const uxoneStart = Date.now()
-      const uxonePrisma = await getUXOnePrisma()
-      await uxonePrisma.$queryRaw`SELECT 1`
-      healthChecks.checks.uxoneDb = {
-        status: 'healthy',
-        responseTime: Date.now() - uxoneStart
-      }
-    } catch (error) {
-      const uxoneStart = Date.now() // Define uxoneStart for error case
-      healthChecks.checks.uxoneDb = {
-        status: 'unhealthy',
-        responseTime: Date.now() - uxoneStart,
-        error: error instanceof Error ? error.message : String(error)
-      }
-      healthChecks.status = 'degraded'
-    }
 
-    // Check TIPA database connection
-    try {
-      const tipaStart = Date.now()
-      const tipaPrisma = await getTIPAPrisma()
-      await tipaPrisma.$queryRaw`SELECT 1`
-      healthChecks.checks.tipaDb = {
-        status: 'healthy',
-        responseTime: Date.now() - tipaStart
-      }
-    } catch (error) {
-      const tipaStart = Date.now() // Define tipaStart for error case
-      healthChecks.checks.tipaDb = {
-        status: 'unhealthy',
-        responseTime: Date.now() - tipaStart,
-        error: error instanceof Error ? error.message : String(error)
-      }
-      healthChecks.status = 'degraded'
-    }
+
+
 
     // Check service apps
     try {
-      const serviceCount = await prisma.serviceApp.count({
+      const uxonePrisma = await getUXOnePrisma()
+      const serviceCount = await uxonePrisma.serviceApp.count({
         where: { isActive: true }
       })
       healthChecks.checks.serviceApps = {

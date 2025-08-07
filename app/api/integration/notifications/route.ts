@@ -1,27 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUXOnePrisma, getTIPAPrisma } from '@/lib/database-integration'
 import { authenticateUser } from '@/lib/auth-middleware'
+import { getUXOnePrisma, getTIPAPrisma } from '@/lib/database-integration'
 
 export const runtime = 'nodejs'
 
-// GET /api/integration/notifications - Cross-system compatible notifications API
+// GET /api/integration/notifications - Get notifications from both systems
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const limit = parseInt(searchParams.get('limit') || '20')
     const read = searchParams.get('read')
-    const empCode = searchParams.get('empCode')
+    const emp_code = searchParams.get('empCode')
     const source = searchParams.get('source') || 'auto' // 'uxone', 'tipa', or 'auto'
 
     // Handle different authentication methods
     let authenticatedUserId = userId
 
     // If empCode is provided, authenticate and get user
-    if (empCode && !userId) {
+    if (emp_code && !userId) {
       const password = request.headers.get('x-password')
       if (password) {
-        const user = await authenticateUser(empCode, password)
+        const user = await authenticateUser(emp_code, password)
         if (user) {
           authenticatedUserId = user.id
         } else {
@@ -118,27 +118,27 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Sort combined notifications by creation date
+    // Sort notifications by creation date (newest first)
     notifications.sort((a, b) => {
-      const aDate = a.createdAt as string | Date
-      const bDate = b.createdAt as string | Date
-      return new Date(bDate).getTime() - new Date(aDate).getTime()
+      const dateA = new Date(a.createdAt as string).getTime()
+      const dateB = new Date(b.createdAt as string).getTime()
+      return dateB - dateA
     })
 
-    // Limit the final result
-    notifications = notifications.slice(0, limit)
+    // Apply limit to final result
+    const limitedNotifications = notifications.slice(0, limit)
 
-    console.log(`✅ Returning ${notifications.length} notifications from ${source} source(s)`)
+    console.log(`📊 Returning ${limitedNotifications.length} notifications from ${source}`)
 
     return NextResponse.json({
       success: true,
-      notifications,
-      count: notifications.length,
+      count: limitedNotifications.length,
+      notifications: limitedNotifications,
       source
     })
 
   } catch (error) {
-    console.error('Error in cross-system notifications API:', error)
+    console.error('Error fetching cross-system notifications:', error)
     return NextResponse.json(
       { error: 'Failed to fetch notifications' },
       { status: 500 }
@@ -150,14 +150,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, empCode, title, message, type, link, targetSystem = 'both' } = body
+    const { userId, empCode: emp_code, title, message, type, link, targetSystem = 'both' } = body
 
     // Handle authentication
     let authenticatedUserId = userId
-    if (empCode && !userId) {
+    if (emp_code && !userId) {
       const password = request.headers.get('x-password')
       if (password) {
-        const user = await authenticateUser(empCode, password)
+        const user = await authenticateUser(emp_code, password)
         if (user) {
           authenticatedUserId = user.id
         } else {
@@ -237,14 +237,14 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, empCode, notificationId, read, hidden, targetSystem = 'both' } = body
+    const { userId, empCode: emp_code, notificationId, read, hidden, targetSystem = 'both' } = body
 
     // Handle authentication
     let authenticatedUserId = userId
-    if (empCode && !userId) {
+    if (emp_code && !userId) {
       const password = request.headers.get('x-password')
       if (password) {
-        const user = await authenticateUser(empCode, password)
+        const user = await authenticateUser(emp_code, password)
         if (user) {
           authenticatedUserId = user.id
         } else {
@@ -263,9 +263,9 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    console.log(`📝 Updating notification ${notificationId} for user ${authenticatedUserId}`)
+    console.log(`🔄 Updating notification ${notificationId} for user ${authenticatedUserId} in ${targetSystem}`)
 
-    const updateData: { read?: boolean; hidden?: boolean } = {}
+    const updateData: Record<string, unknown> = {}
     if (read !== undefined) updateData.read = read
     if (hidden !== undefined) updateData.hidden = hidden
 
@@ -274,15 +274,12 @@ export async function PATCH(request: NextRequest) {
     if (targetSystem === 'uxone' || targetSystem === 'both') {
       try {
         const uxonePrisma = await getUXOnePrisma()
-        const uxoneNotification = await uxonePrisma.notification.updateMany({
-          where: {
-            id: notificationId,
-            userId: authenticatedUserId
-          },
+        const uxoneNotification = await uxonePrisma.notification.update({
+          where: { id: notificationId },
           data: updateData
         })
         results.uxone = uxoneNotification
-        console.log(`✅ Updated notification in UXOne`)
+        console.log(`✅ Updated notification in UXOne: ${notificationId}`)
       } catch (error) {
         console.error('Error updating UXOne notification:', error)
         results.uxoneError = error
@@ -292,15 +289,12 @@ export async function PATCH(request: NextRequest) {
     if (targetSystem === 'tipa' || targetSystem === 'both') {
       try {
         const tipaPrisma = await getTIPAPrisma()
-        const tipaNotification = await tipaPrisma.notification.updateMany({
-          where: {
-            id: notificationId,
-            userId: authenticatedUserId
-          },
+        const tipaNotification = await tipaPrisma.notification.update({
+          where: { id: notificationId },
           data: updateData
         })
         results.tipa = tipaNotification
-        console.log(`✅ Updated notification in TIPA Mobile`)
+        console.log(`✅ Updated notification in TIPA Mobile: ${notificationId}`)
       } catch (error) {
         console.error('Error updating TIPA notification:', error)
         results.tipaError = error

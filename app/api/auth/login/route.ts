@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { authenticateUser, mapPositionToRole } from "@/lib/auth-middleware"
+import { authenticateUser } from "@/lib/auth-middleware"
 
 // Force Node.js runtime for bcrypt
 export const runtime = 'nodejs'
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     const result = {
       message: "OK",
       id: user.id,
-      emp_code: user.empCode || user.username,
+      emp_code: username, // Use the username as emp_code (same as what was sent to auth)
       emp_pos: role, // Use the role as emp_pos
       emp_dept: user.centralDepartment || user.department || 'OPS',
       emp_dept_name: user.departmentName || 'Unknown Department',

@@ -6,19 +6,19 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { empCode, syncNotifications: shouldSyncNotifications } = body
+    const { empCode: emp_code, syncNotifications: shouldSyncNotifications } = body
 
-    if (!empCode) {
+    if (!emp_code) {
       return NextResponse.json(
         { error: 'empCode is required' },
         { status: 400 }
       )
     }
 
-    console.log(`🔄 Syncing user ${empCode} from TIPA Mobile to UXOne...`)
+    console.log(`🔄 Syncing user ${emp_code} from TIPA Mobile to UXOne...`)
 
     // Sync user from TIPA Mobile to UXOne
-    const syncedUser = await syncUserFromTIPA(empCode)
+    const syncedUser = await syncUserFromTIPA(emp_code)
 
     if (!syncedUser) {
       return NextResponse.json(
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       await syncNotifications(syncedUser.id)
     }
 
-    console.log(`✅ Successfully synced user ${empCode}`)
+          console.log(`✅ Successfully synced user ${emp_code}`)
 
     return NextResponse.json({
       success: true,

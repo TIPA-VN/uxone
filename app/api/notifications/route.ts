@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendNotification } from "./stream/route";
+import { sendWebhookWithRetry } from "@/lib/webhook-sender";
 
 export const runtime = 'nodejs'
 
@@ -75,6 +76,18 @@ export async function POST(req: NextRequest) {
         );
         for (const notification of createdNotifications as Record<string, unknown>[]) {
           await sendNotification(notification, notification.userId as string);
+          
+          // Get user's username for webhook
+          const user = await prisma.user.findUnique({
+            where: { id: notification.userId as string },
+            select: { username: true }
+          });
+          
+          // Send webhook to TIPA Mobile with username (async)
+          const targetUserId = user?.username || notification.userId as string;
+          sendWebhookWithRetry(notification, targetUserId).catch(error => {
+            console.error(`❌ UXOne: Failed to send webhook to TIPA Mobile for user ${targetUserId}:`, error);
+          });
         }
         return NextResponse.json({ count: users.length, notifications: (createdNotifications as Record<string, unknown>[]).length });
       } catch {
@@ -100,6 +113,18 @@ export async function POST(req: NextRequest) {
         );
         for (const notification of createdNotifications as Record<string, unknown>[]) {
           await sendNotification(notification, notification.userId as string);
+          
+          // Get user's username for webhook
+          const user = await prisma.user.findUnique({
+            where: { id: notification.userId as string },
+            select: { username: true }
+          });
+          
+          // Send webhook to TIPA Mobile with username (async)
+          const targetUserId = user?.username || notification.userId as string;
+          sendWebhookWithRetry(notification, targetUserId).catch(error => {
+            console.error(`❌ UXOne: Failed to send webhook to TIPA Mobile for user ${targetUserId}:`, error);
+          });
         }
         return NextResponse.json({ count: users.length, notifications: (createdNotifications as Record<string, unknown>[]).length });
       }
@@ -129,7 +154,22 @@ export async function POST(req: NextRequest) {
           createdAt: now,
         }
       });
+      
+      // Get user's username for webhook
+      const user = await prisma.user.findUnique({
+        where: { id: sessionUserId },
+        select: { username: true }
+      });
+      
+      // Send notification to UXOne SSE clients
       await sendNotification(notification, sessionUserId);
+      
+      // Send webhook to TIPA Mobile with username (async, don't wait for response)
+      const targetUserId = user?.username || sessionUserId;
+      sendWebhookWithRetry(notification, targetUserId).catch(error => {
+        console.error('❌ UXOne: Failed to send webhook to TIPA Mobile:', error);
+      });
+      
       return NextResponse.json(notification);
     }
   } catch (error) {

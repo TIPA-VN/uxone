@@ -3,7 +3,7 @@ import { getUXOnePrisma, syncUserFromTIPA, syncUserFromCentralAPI } from '@/lib/
 // Force Node.js runtime
 export const runtime = 'nodejs'
 
-export async function authenticateUser(empCode: string, password: string) {
+export async function authenticateUser(emp_code: string, password: string) {
   try {
     // Hash password for central API
     const bcrypt = await import('bcrypt')
@@ -16,7 +16,7 @@ export async function authenticateUser(empCode: string, password: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        username: empCode,
+        username: emp_code,
         password: hashedPassword
       })
     })
@@ -61,9 +61,10 @@ export async function authenticateUser(empCode: string, password: string) {
         user = await uxonePrisma.user.create({
           data: {
             username: centralApiData.emp_code,
+            emp_code: centralApiData.emp_code, // Store emp_code for TIPA Mobile and services
             name: centralApiData.emp_name,
             email: centralApiData.email || `${centralApiData.emp_code}@tipa.co.th`,
-            department: 'OPS', // Default department for new users
+            department: centralApiData.emp_dept || 'OPS', // Use emp_dept from central API
             centralDepartment: centralApiData.emp_dept,
             departmentName: centralApiData.emp_dept_name,
             role: role, // Use mapped role from emp_pos
@@ -79,8 +80,10 @@ export async function authenticateUser(empCode: string, password: string) {
         user = await uxonePrisma.user.update({
           where: { id: user.id },
           data: {
+            emp_code: centralApiData.emp_code, // Update emp_code for TIPA Mobile and services
             name: centralApiData.emp_name,
             email: centralApiData.email || `${centralApiData.emp_code}@tipa.co.th`,
+            department: centralApiData.emp_dept || user.department, // Update department from central API
             centralDepartment: centralApiData.emp_dept,
             departmentName: centralApiData.emp_dept_name,
             role: role, // Use mapped role from emp_pos

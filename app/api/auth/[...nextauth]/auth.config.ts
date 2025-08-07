@@ -1,6 +1,6 @@
 import type { NextAuthConfig } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { hashPassword, verifyPassword } from '@/lib/hashPassword'
+import { verifyPassword } from '@/lib/hashPassword'
 import { authenticateUser, mapPositionToRole } from '@/lib/auth-middleware'
 
 export const runtime = 'nodejs'
@@ -55,7 +55,7 @@ function shouldOverrideToAdmin(username: string): boolean {
 async function isCentralApiAvailable(): Promise<boolean> {
   try {
     // Just check if the endpoint is reachable with a simple request
-          const response = await fetch(process.env.CENTRAL_API_URL || "http://10.116.3.138:8888/api/web_check_login", {
+    await fetch(process.env.CENTRAL_API_URL || "http://10.116.3.138:8888/api/web_check_login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
@@ -67,7 +67,7 @@ async function isCentralApiAvailable(): Promise<boolean> {
     
     // If we get any response (even 401 for wrong credentials), the API is available
     return true
-  } catch (error) {
+  } catch {
     return false
   }
 }
@@ -88,7 +88,7 @@ async function validateAdminCredentials(username: string, password: string): Pro
 }
 
 // Validate test account credentials
-function validateTestCredentials(username: string, password: string): any {
+function validateTestCredentials(username: string, password: string): typeof TEST_ACCOUNTS[0] | null {
   const testAccount = TEST_ACCOUNTS.find(account => 
     account.username === username && account.password === password
   );
@@ -219,7 +219,7 @@ export const authConfig = {
             position: user.departmentName || 'Unknown Department',
             isFallbackAuth: false,
           }
-        } catch (error) {
+        } catch {
           // If normal authentication fails, check if this is an admin user for fallback
           
           const isAdmin = await validateAdminCredentials(

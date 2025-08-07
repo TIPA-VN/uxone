@@ -9,7 +9,7 @@ import { canAccessFeature } from "@/config/app";
 import { AnnouncementDialog } from "./Navbar/AnnouncementDialog";
 import { NotificationModal } from "./Navbar/NotificationModal";
 import { NotificationDropdown } from "./Navbar/NotificationDropdown";
-import DepartmentSwitcher from "./DepartmentSwitcher";
+
 
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -77,8 +77,7 @@ const Navbar = () => {
         className="flex items-center gap-6 justify-end w-full relative"
         ref={dropdownRef}
       >
-        {/* Department Switcher for Testing */}
-        <DepartmentSwitcher />
+
 
         {/* Message icon triggers announcement dialog for authorized users */}
         <div
