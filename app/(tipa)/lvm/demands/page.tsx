@@ -204,9 +204,9 @@ export default function DemandsPage() {
 
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="container mx-auto px-4 py-4 space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <Breadcrumb>
             <BreadcrumbList>
@@ -219,8 +219,8 @@ export default function DemandsPage() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h1 className="text-3xl font-bold mt-2">Demand Management</h1>
-          <p className="text-gray-600 mt-1">View and manage all demand requests</p>
+          <h1 className="text-2xl font-bold mt-1">Demand Management</h1>
+          <p className="text-gray-600 text-sm">View and manage all demand requests</p>
         </div>
         
         <Link href="/lvm/demands/create">
@@ -239,8 +239,8 @@ export default function DemandsPage() {
             <span>Filters & Search</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -304,12 +304,12 @@ export default function DemandsPage() {
       </Card>
 
       {/* Demands List */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-lg font-semibold">
             Demands ({filteredDemands.length})
           </h2>
-          <div className="text-sm text-gray-500">
+          <div className="text-xs text-gray-500">
             Showing {filteredDemands.length} of {demands.length} demands
           </div>
         </div>
@@ -327,51 +327,51 @@ export default function DemandsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {filteredDemands.map((demand) => (
               <Card key={demand.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <CardContent className="p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     {/* Main Content */}
-                    <div className="flex-1 space-y-3">
+                    <div className="flex-1 space-y-2">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          <h3 className="text-base font-semibold text-gray-900 mb-1">
                             {demand.id}
                           </h3>
-                          <p className="text-gray-600 line-clamp-2">
+                          <p className="text-gray-600 line-clamp-1 text-sm">
                             {demand.justification}
                           </p>
                         </div>
-                        <div className="flex items-center space-x-2 ml-4">
+                        <div className="flex items-center space-x-2 ml-3">
                           {getStatusBadge(demand.status)}
                           {getPriorityBadge(demand.priorityLevel)}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <Package className="h-4 w-4 text-gray-400" />
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                        <div className="flex items-center space-x-1">
+                          <Package className="h-3 w-3 text-gray-400" />
                           <span>{demand._count?.demandLines || demand.demandLines?.length || 0} items</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="h-4 w-4 text-gray-400" />
+                        <div className="flex items-center space-x-1">
+                          <DollarSign className="h-3 w-3 text-gray-400" />
                           <span>{calculateTotalCost(demand.demandLines || []).toLocaleString('vi-VN')} VND</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3 text-gray-400" />
                           <span>Due: {formatDate(demand.expectedDeliveryDate)}</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-gray-400" />
+                        <div className="flex items-center space-x-1">
+                          <FileText className="h-3 w-3 text-gray-400" />
                           <span>{demand.department}</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>Submitted by {demand.user?.name || 'Unknown User'} on {formatDate(demand.submittedAt)}</span>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>By {demand.user?.name || 'Unknown'} • {formatDate(demand.submittedAt)}</span>
                         {demand.approvedAt && (
-                          <span>Approved on {formatDate(demand.approvedAt)}</span>
+                          <span>✓ {formatDate(demand.approvedAt)}</span>
                         )}
                       </div>
                     </div>
@@ -379,9 +379,9 @@ export default function DemandsPage() {
                     {/* Actions */}
                     <div className="flex items-center space-x-2">
                       <Link href={`/lvm/demands/${demand.id}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
+                        <Button variant="outline" size="sm" className="text-xs px-3 py-1">
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
                         </Button>
                       </Link>
                     </div>

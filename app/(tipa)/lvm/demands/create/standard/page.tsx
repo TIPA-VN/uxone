@@ -47,7 +47,7 @@ export default function StandardDemandPage() {
     setSubmitStatus("success");
     setSubmitMessage("Demand created successfully! You will be redirected shortly.");
     setTimeout(() => {
-      router.push("/lvm/demands/create");
+      router.push("/lvm/demands");
     }, 2000);
   };
 
