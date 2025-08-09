@@ -2,14 +2,14 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  getDepartmentCodes, 
   getDepartmentByCode 
 } from "@/config/app";
+import { APP_CONFIG } from "@/config/app";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Code, Users } from "lucide-react";
 
 export default function DepartmentCodesPage() {
-  const departmentCodes = getDepartmentCodes();
+  const departmentCodes = APP_CONFIG.departmentCodes;
 
   return (
     <div className="container mx-auto py-6 space-y-6">

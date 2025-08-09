@@ -1,10 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { 
-  ArrowLeft, Save, X, User, Mail, AlertCircle, 
-  Clock, Star, Bug, Wrench, FileText, Tag
+  Save, X, AlertCircle, Tag
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -33,7 +31,6 @@ interface Ticket {
 }
 
 export default function EditTicketPage() {
-  const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
   const ticketId = params.id as string;
@@ -57,11 +54,7 @@ export default function EditTicketPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTicket();
-  }, [ticketId]);
-
-  const fetchTicket = async () => {
+  const fetchTicket = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -94,7 +87,11 @@ export default function EditTicketPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ticketId]);
+
+  useEffect(() => {
+    fetchTicket();
+  }, [fetchTicket]);
 
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -224,7 +221,6 @@ export default function EditTicketPage() {
             <div className="flex items-center space-x-4">
               <Link href={`/lvm/helpdesk/tickets/${ticketId}`}>
                 <Button variant="ghost" size="sm">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Ticket
                 </Button>
               </Link>

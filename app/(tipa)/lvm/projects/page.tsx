@@ -1,13 +1,18 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Plus, Users, AlertCircle, Menu } from "lucide-react";
+import { 
+  Plus, 
+  Users, 
+  Menu,
+  AlertCircle
+} from "lucide-react";
 import Link from "next/link";
 import { useProjects } from "@/hooks/useProjects";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Project } from "@/types";
-import { APP_CONFIG } from "@/config/app";
+import { getActiveDepartments } from "@/config/app";
 
 export default function ProjectsPage() {
   const { data: session } = useSession();
@@ -24,27 +29,30 @@ export default function ProjectsPage() {
   const { 
     projects, 
     loading, 
-    error, 
     createProject 
   } = useProjects();
 
-  const [documentTemplates, setDocumentTemplates] = useState<any[]>([]);
+  const [documentTemplates, setDocumentTemplates] = useState<Array<{ id: string; name: string }>>([]);
+
+  // Get active departments for the form
+  const activeDepartments = getActiveDepartments();
 
   // Fetch document templates from database
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        const response = await fetch('/api/document-templates');
-        if (response.ok) {
-          const data = await response.json();
-          setDocumentTemplates(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch document templates:', error);
+  const fetchTemplates = useCallback(async () => {
+    try {
+      const response = await fetch('/api/document-templates');
+      if (response.ok) {
+        const data = await response.json();
+        setDocumentTemplates(data);
       }
-    };
-    fetchTemplates();
+    } catch (error) {
+      console.error('Failed to fetch document templates:', error);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,7 +269,7 @@ export default function ProjectsPage() {
                   Departments for Approval *
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {APP_CONFIG.departments.map(d => (
+                  {activeDepartments.map(d => (
                     <label key={d.value} className="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -286,7 +294,7 @@ export default function ProjectsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
                   <option value="">Select a document template</option>
-                  {documentTemplates.map((template: any) => (
+                  {documentTemplates.map((template: { id: string; name: string }) => (
                     <option key={template.id} value={template.id}>
                       {template.templateName}
                     </option>
@@ -384,7 +392,7 @@ export default function ProjectsPage() {
                     <AlertCircle className="w-6 h-6 text-green-400" />
                   </div>
                   <h3 className="text-sm font-medium text-gray-900 mb-1">No projects to review</h3>
-                  <p className="text-xs text-gray-600">You'll see projects here when they're assigned to your department</p>
+                  <p className="text-xs text-gray-600">You&apos;ll see projects here when they&apos;re assigned to your department</p>
                 </div>
               ) : (
                 <DataTable

@@ -22,7 +22,7 @@ import {
   Loader2,
   AlertCircle
 } from "lucide-react";
-import { canAccessFeature, mapRoleToConfigKey } from "@/config/app";
+import { mapRoleToConfigKey } from "@/config/app";
 import Link from "next/link";
 
 export default function CreateDemandsPage() {
@@ -221,7 +221,7 @@ export default function CreateDemandsPage() {
               <div>
                 <h3 className="font-semibold text-red-800">Access Restricted</h3>
                 <p className="text-sm text-red-600 mt-1">
-                  You don't have permission to create demands. Contact your supervisor for access.
+                  You don&apos;t have permission to create demands. Contact your supervisor for access.
                 </p>
               </div>
             </div>

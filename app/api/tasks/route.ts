@@ -261,6 +261,22 @@ export async function POST(request: NextRequest) {
       tags = [],
     } = body;
 
+    // Log the request data for debugging
+    console.log("Task creation request data:", {
+      title,
+      description,
+      status,
+      priority,
+      projectId,
+      parentTaskId,
+      assigneeId,
+      ownerId,
+      dueDate,
+      estimatedHours,
+      tags,
+      currentUserId: session.user.id
+    });
+
     if (!title) {
       return NextResponse.json(
         { error: "Task title is required" },
@@ -284,10 +300,20 @@ export async function POST(request: NextRequest) {
     if (projectId) {
       // Ensure projectId is a string, not an array
       const projectIdString = Array.isArray(projectId) ? projectId[0] : projectId;
+      
+      // Additional validation for projectId format
+      if (typeof projectIdString !== 'string' || projectIdString.trim() === '') {
+        return NextResponse.json(
+          { error: "Invalid project ID format" },
+          { status: 400 }
+        );
+      }
+      
       const project = await prisma.project.findUnique({
         where: { id: projectIdString },
       });
       if (!project) {
+        console.error(`Project not found for ID: ${projectIdString}`);
         return NextResponse.json(
           { error: "Project not found" },
           { status: 400 }
@@ -297,10 +323,19 @@ export async function POST(request: NextRequest) {
 
     // Validate parent task exists if provided
     if (parentTaskId) {
+      // Additional validation for parentTaskId format
+      if (typeof parentTaskId !== 'string' || parentTaskId.trim() === '') {
+        return NextResponse.json(
+          { error: "Invalid parent task ID format" },
+          { status: 400 }
+        );
+      }
+      
       const parentTask = await prisma.task.findUnique({
         where: { id: parentTaskId },
       });
       if (!parentTask) {
+        console.error(`Parent task not found for ID: ${parentTaskId}`);
         return NextResponse.json(
           { error: "Parent task not found" },
           { status: 400 }
@@ -310,10 +345,19 @@ export async function POST(request: NextRequest) {
 
     // Validate assignee exists if provided
     if (assigneeId) {
+      // Additional validation for assigneeId format
+      if (typeof assigneeId !== 'string' || assigneeId.trim() === '') {
+        return NextResponse.json(
+          { error: "Invalid assignee ID format" },
+          { status: 400 }
+        );
+      }
+      
       const assignee = await prisma.user.findUnique({
         where: { id: assigneeId },
       });
       if (!assignee) {
+        console.error(`Assignee not found for ID: ${assigneeId}`);
         return NextResponse.json(
           { error: "Assignee not found" },
           { status: 400 }
@@ -323,10 +367,19 @@ export async function POST(request: NextRequest) {
 
     // Validate owner exists if provided
     if (ownerId) {
+      // Additional validation for ownerId format
+      if (typeof ownerId !== 'string' || ownerId.trim() === '') {
+        return NextResponse.json(
+          { error: "Invalid owner ID format" },
+          { status: 400 }
+        );
+      }
+      
       const owner = await prisma.user.findUnique({
         where: { id: ownerId },
       });
       if (!owner) {
+        console.error(`Owner not found for ID: ${ownerId}`);
         return NextResponse.json(
           { error: "Owner not found" },
           { status: 400 }
@@ -425,6 +478,7 @@ export async function POST(request: NextRequest) {
     
     // Handle specific Prisma errors
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2003') {
+      console.error("Prisma foreign key constraint error:", error);
       return NextResponse.json(
         { error: "Invalid reference. Please check project, assignee, or owner." },
         { status: 400 }

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+// import { Button } from "@/components/ui/button";
+// import { Badge } from "@/components/ui/badge";
 import { 
   FileText, 
   CheckCircle, 
@@ -18,7 +18,7 @@ export default function TestFormPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSuccess = (data: any) => {
+  const handleSuccess = (data: unknown) => {
     console.log("=== FORM SUCCESS CALLBACK ===");
     console.log("Form submitted successfully!");
     console.log("Form data:", data);
@@ -40,15 +40,15 @@ export default function TestFormPage() {
     setIsSubmitting(false);
   };
 
-  const handleSubmitStart = () => {
-    console.log("=== FORM SUBMIT START ===");
-    console.log("Form submission started...");
-    console.log("=========================");
+  // const handleSubmitStart = () => {
+  //   console.log("=== FORM SUBMIT START ===");
+  //   console.log("Form submission started...");
+  //   console.log("=========================");
     
-    setIsSubmitting(true);
-    setSuccessMessage(null);
-    setErrorMessage(null);
-  };
+  //   setIsSubmitting(true);
+  //   setSuccessMessage(null);
+  //   setErrorMessage(null);
+  // };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -177,7 +177,7 @@ export default function TestFormPage() {
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Form State Logs</h4>
                 <p className="text-sm text-gray-600">
-                  Watch for "FORM STATE DEBUG" messages that show real-time form values, 
+                  Watch for &quot;FORM STATE DEBUG&quot; messages that show real-time form values, 
                   validation status, and field changes as you type.
                 </p>
               </div>
@@ -185,7 +185,7 @@ export default function TestFormPage() {
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">API Interaction Logs</h4>
                 <p className="text-sm text-gray-600">
-                  Look for "FORM SUBMISSION DEBUG" and "API RESPONSE DEBUG" messages 
+                  Look for &quot;FORM SUBMISSION DEBUG&quot; and &quot;API RESPONSE DEBUG&quot; messages 
                   that show the complete data flow from form to server.
                 </p>
               </div>
@@ -193,7 +193,7 @@ export default function TestFormPage() {
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Database Transaction Logs</h4>
                 <p className="text-sm text-gray-600">
-                  Check "DATABASE TRANSACTION DEBUG" messages to see how the demand 
+                  Check &quot;DATABASE TRANSACTION DEBUG&quot; messages to see how the demand 
                   and demand lines are created in the database.
                 </p>
               </div>
@@ -201,7 +201,7 @@ export default function TestFormPage() {
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Error Handling Logs</h4>
                 <p className="text-sm text-gray-600">
-                  Monitor "ERROR DEBUG" messages for detailed error information 
+                  Monitor &quot;ERROR DEBUG&quot; messages for detailed error information 
                   if something goes wrong during form submission.
                 </p>
               </div>

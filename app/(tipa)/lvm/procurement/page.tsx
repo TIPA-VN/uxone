@@ -28,7 +28,7 @@ interface ProcurementStats {
 
 export default function ProcurementDashboard() {
   const { data: session } = useSession();
-  const [stats, setStats] = useState<ProcurementStats>({
+  const [stats] = useState<ProcurementStats>({
     totalPurchaseOrders: 156,
     activePurchaseOrders: 24,
     totalInventoryItems: 1247,
@@ -93,7 +93,7 @@ export default function ProcurementDashboard() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'overview' | 'orders' | 'inventory' | 'suppliers' | 'ai-insights')}
                 className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-100 text-blue-700 border border-blue-200'

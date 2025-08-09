@@ -1,52 +1,11 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { Package, Plus, Search, Filter, RefreshCw, Trash2, Database, Clock, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { Package, Search, Filter, RefreshCw, Trash2, Database, Clock, Calendar } from 'lucide-react';
 import { useInventory } from '@/hooks/useInventory';
 import { useGLClasses } from '@/hooks/useGLClasses';
 import { formatQuantityForTable } from '@/lib/quantity-formatter';
 
 import { InventoryExport } from '@/components/InventoryExport';
-
-interface JDEInventoryLevel {
-  IMITM: string;    // Item Number
-  IMLITM: string;   // Item Description
-  IMTYP: string;    // Item Type
-  IMUM: string;     // Unit of Measure (legacy field)
-  IMUOM1: string;   // Primary UOM (from F4101)
-  IMUOM3: string;   // Purchasing UOM (from F4101)
-  IMSSQ: number;    // Safety Stock
-  IMMOQ: number;    // Minimum Order Quantity
-  IMMXQ: number;    // Maximum Order Quantity
-  IMLOTS: number;   // Lot Size
-  IMCC: string;     // Cost Center
-  IMPL: string;     // Planner
-  IMBUY: string;    // Buyer
-  IMGLPT: string;   // General Ledger Posting Type
-  LIMCU: string;    // Business Unit
-  
-  // Stock Levels
-  TotalQOH: number;           // Total Quantity On Hand
-  TotalQOO: number;           // Total Quantity On Order
-  TotalQC: number;            // Total Quantity Committed
-  TotalHardCommit: number;    // Total Hard Committed
-  TotalSoftCommit: number;    // Total Soft Committed
-  
-  // Calculated Values
-  AvailableStock: number;
-  NetStock: number;
-  
-  // Status Logic
-  StockStatus: string;
-}
-
-interface InventorySummary {
-  totalItems: number;
-  inStock: number;
-  lowStock: number;
-  outOfStock: number;
-  totalValue: number;
-  timestamp: string;
-}
 
 export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,13 +48,7 @@ export default function InventoryPage() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
+
 
 
 

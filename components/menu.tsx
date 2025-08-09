@@ -150,61 +150,6 @@ export default function Menu() {
         );
       })}
       
-      {/* Admin Link - Only show for admin users */}
-      {hasAdminAccess && (
-        <>
-          <Link
-            href="/admin"
-            className={cn(
-              "flex flex-col lg:flex-row items-center lg:items-center text-center lg:text-left mx-auto px-4 py-2 text-sm font-medium rounded-md group transition-colors duration-200",
-              pathname === "/admin"
-                ? "bg-red-400 text-white"
-                : "text-red-200 hover:bg-red-400 hover:text-white"
-            )}
-            style={{ fontFamily: "Roboto, sans-serif", width: "100%" }}
-          >
-            <span
-              className="text-red-200 mb-1 lg:mb-0 lg:mr-3"
-              style={{ fontFamily: "Roboto, sans-serif" }}
-            >
-              <Settings size={22} />
-            </span>
-            <span
-              className="hidden lg:block text-red-200"
-              style={{ fontFamily: "Roboto, sans-serif" }}
-            >
-              Admin
-            </span>
-          </Link>
-          
-          {/* Test Accounts Link - Only show for admin users in development */}
-          {process.env.NODE_ENV !== 'production' && (
-            <Link
-              href="/lvm/test-accounts"
-              className={cn(
-                "flex flex-col lg:flex-row items-center lg:items-center text-center lg:text-left mx-auto px-4 py-2 text-sm font-medium rounded-md group transition-colors duration-200",
-                pathname === "/lvm/test-accounts"
-                  ? "bg-orange-400 text-white"
-                  : "text-orange-200 hover:bg-orange-400 hover:text-white"
-              )}
-              style={{ fontFamily: "Roboto, sans-serif", width: "100%" }}
-            >
-              <span
-                className="text-orange-200 mb-1 lg:mb-0 lg:mr-3"
-                style={{ fontFamily: "Roboto, sans-serif" }}
-              >
-                <Users size={22} />
-              </span>
-              <span
-                className="hidden lg:block text-orange-200"
-                style={{ fontFamily: "Roboto, sans-serif" }}
-              >
-                Test Accounts
-              </span>
-            </Link>
-          )}
-        </>
-      )}
     </nav>
   );
 }

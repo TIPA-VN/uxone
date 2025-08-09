@@ -72,6 +72,14 @@ export function useNotifications() {
         }
         
         setNotifications((prev) => {
+          // Handle notification updates (read status changes)
+          if (notif.type === 'notification_update') {
+            return prev.map((n) => 
+              n.id === notif.id ? { ...n, read: notif.read, hidden: notif.hidden } : n
+            );
+          }
+          
+          // Handle new notifications
           // Avoid duplicates by id
           if (prev.some((n) => n.id === notif.id)) {
             return prev;

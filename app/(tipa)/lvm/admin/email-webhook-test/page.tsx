@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { 
   Breadcrumb, 
   BreadcrumbList, 
@@ -37,12 +36,38 @@ interface TestEmail {
   expectedPriority: string;
 }
 
+interface EmailData {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  messageId: string;
+  timestamp: string;
+  attachments: unknown[];
+}
+
+interface TestResult {
+  success: boolean;
+  message?: string;
+  action?: string;
+  ticket?: {
+    ticketNumber: string;
+    status: string;
+    category: string;
+    priority: string;
+  };
+  comment?: {
+    content: string;
+  };
+  error?: string;
+  details?: string | Record<string, unknown>;
+}
+
 export default function EmailWebhookTestPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [testResult, setTestResult] = useState<any>(null);
-  const [selectedExample, setSelectedExample] = useState<TestEmail | null>(null);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [customEmail, setCustomEmail] = useState({
     from: "",
     subject: "",
@@ -94,7 +119,7 @@ export default function EmailWebhookTestPage() {
     }
   ];
 
-  const runTest = async (testEmail: any) => {
+  const runTest = async (testEmail: EmailData) => {
     setIsLoading(true);
     setTestResult(null);
 
@@ -113,7 +138,7 @@ export default function EmailWebhookTestPage() {
       setTestResult({
         success: false,
         error: "Failed to run test",
-        details: error
+        details: error instanceof Error ? error.message : String(error)
       });
     } finally {
       setIsLoading(false);
@@ -121,7 +146,6 @@ export default function EmailWebhookTestPage() {
   };
 
   const handleExampleSelect = (example: TestEmail) => {
-    setSelectedExample(example);
     setCustomEmail({
       from: example.from,
       subject: example.subject,
@@ -135,7 +159,7 @@ export default function EmailWebhookTestPage() {
       return;
     }
 
-    const testEmail = {
+    const testEmail: EmailData = {
       from: customEmail.from,
       to: "test-support@yourcompany.com",
       subject: customEmail.subject,
@@ -177,7 +201,7 @@ export default function EmailWebhookTestPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            <BreadcrumbLink href="/lvm/admin">Admin</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -190,7 +214,7 @@ export default function EmailWebhookTestPage() {
       <div className="space-y-2">
         <div className="flex items-center space-x-4">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/admin">
+            <Link href="/lvm/admin">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Admin
             </Link>

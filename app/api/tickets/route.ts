@@ -1,205 +1,139 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { withRBAC } from "@/lib/rbac";
-import { getTicketsForUser, canUserCreateTicket } from "@/lib/rbac";
+import { auth } from "@/lib/auth";
+import { TicketNumberGenerator } from "@/lib/ticketNumberGenerator";
 
-export const runtime = 'nodejs';
-
-// GET /api/tickets - Get all tickets with filtering and pagination
-export const GET = withRBAC(async (request: NextRequest) => {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get('status');
+    const priority = searchParams.get('priority');
+    const category = searchParams.get('category');
+    const assignedTo = searchParams.get('assignedTo');
 
-
-    // Check if this is a fallback authentication session
-    const isFallbackAuth = (session.user as any).isFallbackAuth;
-    if (isFallbackAuth) {
-      return NextResponse.json({ tickets: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const status = searchParams.get("status");
-    const priority = searchParams.get("priority");
-    const category = searchParams.get("category");
-    const assignedTo = searchParams.get("assignedTo");
-    const search = searchParams.get("search");
-
-    // Get role-based tickets for the user
-    const userTickets = await getTicketsForUser(
-      prisma, 
-      session.user.id, 
-      session.user.role, 
-      session.user.department || 'UNKNOWN'
-    );
-
-    // Apply additional filters to the role-based results
-    let filteredTickets = userTickets;
+    // Build where clause
+    const where: any = {};
     
-    if (status) {
-      filteredTickets = filteredTickets.filter((ticket: any) => ticket.status === status);
+    if (status && status !== 'all') {
+      where.status = status;
     }
-    if (priority) {
-      filteredTickets = filteredTickets.filter((ticket: any) => ticket.priority === priority);
+    if (priority && priority !== 'all') {
+      where.priority = priority;
     }
-    if (category) {
-      filteredTickets = filteredTickets.filter((ticket: any) => ticket.category === category);
+    if (category && category !== 'all') {
+      where.category = category;
     }
-    if (assignedTo) {
-      filteredTickets = filteredTickets.filter((ticket: any) => ticket.assignedToId === assignedTo);
-    }
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredTickets = filteredTickets.filter((ticket: any) => 
-        ticket.title.toLowerCase().includes(searchLower) ||
-        ticket.description.toLowerCase().includes(searchLower) ||
-        ticket.customerName.toLowerCase().includes(searchLower) ||
-        ticket.customerEmail.toLowerCase().includes(searchLower) ||
-        ticket.ticketNumber.toLowerCase().includes(searchLower)
-      );
+    if (assignedTo && assignedTo !== 'all') {
+      where.assignedToId = assignedTo;
     }
 
-    // Apply pagination
-    const total = filteredTickets.length;
-    const totalPages = Math.ceil(total / limit);
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
-
-    return NextResponse.json({
-      tickets: paginatedTickets,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching tickets:', error);
-    return NextResponse.json(
-      { error: "Failed to fetch tickets" },
-      { status: 500 }
-    );
-  }
-}, "helpdesk:read");
-
-// POST /api/tickets - Create a new ticket
-export const POST = withRBAC(async (request: NextRequest) => {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if this is a fallback authentication session
-    const isFallbackAuth = (session.user as any).isFallbackAuth;
-    if (isFallbackAuth) {
-      return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
-    }
-
-    // Check if user can create tickets
-    if (!canUserCreateTicket(session.user.role)) {
-      return NextResponse.json({ error: "Insufficient permissions to create tickets" }, { status: 403 });
-    }
-
-    const body = await request.json();
-    const {
-      title,
-      description,
-      priority = 'MEDIUM',
-      category = 'SUPPORT',
-      customerEmail,
-      customerName,
-      customerId,
-      assignedToId,
-      assignedTeam,
-      tags = [],
-    } = body;
-
-    // Validate required fields
-    if (!title || !description || !customerEmail || !customerName) {
-      return NextResponse.json(
-        { error: "Missing required fields: title, description, customerEmail, customerName" },
-        { status: 400 }
-      );
-    }
-
-    // Generate ticket number (TIPA-HD-YYMMDD-XXX format)
-    const now = new Date();
-    const year = String(now.getFullYear()).slice(-2);
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const dateString = `${year}${month}${day}`;
-    
-    const lastTicket = await prisma.ticket.findFirst({
-      where: {
-        ticketNumber: {
-          startsWith: `TIPA-HD-${dateString}-`
-        }
+    const tickets = await prisma.ticket.findMany({
+      where,
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
       },
       orderBy: {
-        ticketNumber: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
 
-    let ticketNumber;
-    if (lastTicket) {
-      const lastNumber = parseInt(lastTicket.ticketNumber.split('-')[3]);
-      ticketNumber = `TIPA-HD-${dateString}-${String(lastNumber + 1).padStart(3, '0')}`;
-    } else {
-      ticketNumber = `TIPA-HD-${dateString}-001`;
+    // Transform the data to match the expected format
+    const transformedTickets = tickets.map(ticket => ({
+      id: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: ticket.title,
+      description: ticket.description,
+      status: ticket.status,
+      priority: ticket.priority,
+      category: ticket.category,
+      assignedTo: ticket.assignedTo,
+      createdBy: ticket.createdBy,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+      commentCount: ticket._count.comments,
+    }));
+
+    return NextResponse.json({ tickets: transformedTickets });
+  } catch (error) {
+    console.error('Error fetching tickets:', error);
+    return NextResponse.json({ error: 'Failed to fetch tickets' }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Create ticket
+    const body = await req.json();
+    const { title, description, priority, category, assignedToId, customerEmail, customerName } = body;
+
+    if (!title || !description || !customerEmail || !customerName) {
+      return NextResponse.json({ error: "Title, description, customer email, and customer name are required" }, { status: 400 });
+    }
+
+    // Generate ticket number
+    const ticketNumber = await TicketNumberGenerator.generateManualTicket();
+
     const ticket = await prisma.ticket.create({
       data: {
         ticketNumber,
         title,
         description,
-        priority,
-        category,
+        priority: priority || 'MEDIUM',
+        category: category || 'GENERAL',
+        status: 'OPEN',
         customerEmail,
         customerName,
-        customerId,
-        assignedToId,
-        assignedTeam: assignedTeam || session.user.department || 'UNKNOWN',
-        tags,
         createdById: session.user.id,
+        assignedToId: assignedToId || null,
       },
       include: {
         assignedTo: {
           select: {
             id: true,
             name: true,
-            username: true,
-            department: true,
-          }
+            email: true,
+          },
         },
         createdBy: {
           select: {
             id: true,
             name: true,
-            username: true,
-          }
+            email: true,
+          },
         },
-      }
+      },
     });
 
-    return NextResponse.json(ticket, { status: 201 });
+    return NextResponse.json(ticket);
   } catch (error) {
     console.error('Error creating ticket:', error);
-    return NextResponse.json(
-      { error: "Failed to create ticket" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 });
   }
-}, "helpdesk:create"); 
+} 

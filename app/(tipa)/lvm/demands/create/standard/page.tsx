@@ -11,7 +11,6 @@ import {
   BreadcrumbPage, 
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
@@ -22,13 +21,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import MultiLineDemandForm from "@/components/MultiLineDemandForm";
-import type { DemandCreationInput } from "@/lib/zod";
+// import type { DemandCreationInput } from "@/lib/zod";
 
 export default function StandardDemandPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
 
@@ -43,7 +41,7 @@ export default function StandardDemandPage() {
     setIsLoading(false);
   }, [status, router]);
 
-  const handleSuccess = (data: DemandCreationInput) => {
+  const handleSuccess = () => {
     setSubmitStatus("success");
     setSubmitMessage("Demand created successfully! You will be redirected shortly.");
     setTimeout(() => {
@@ -136,7 +134,6 @@ export default function StandardDemandPage() {
       <MultiLineDemandForm
         onSuccess={handleSuccess}
         onError={handleError}
-        isSubmitting={isSubmitting}
       />
     </div>
   );

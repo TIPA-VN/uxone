@@ -9,14 +9,40 @@ import {
   Clock, 
   DollarSign,
   Users,
-  Calendar,
   TrendingUp,
-  AlertTriangle,
   CheckCircle,
   ArrowRight,
   Plus
 } from 'lucide-react';
 import InvoiceChecker from '@/components/logistics/InvoiceChecker';
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  change?: number;
+}
+
+interface QuickActionCardProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  description: string;
+  onClick?: () => void;
+}
+
+interface Shipment {
+  id: string;
+  customer: string;
+  status: string;
+  date: string;
+  amount: number;
+}
+
+interface ShipmentRowProps {
+  shipment: Shipment;
+}
 
 export default function LogisticsPage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -45,7 +71,7 @@ export default function LogisticsPage() {
     { title: 'Cost Analysis', icon: BarChart3, color: 'bg-orange-500', description: 'Financial reports' },
   ];
 
-  const StatCard = ({ title, value, icon: Icon, color, change }: any) => (
+  const StatCard = ({ title, value, icon: Icon, color, change }: StatCardProps) => (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <div className="flex items-center justify-between">
         <div>
@@ -64,7 +90,7 @@ export default function LogisticsPage() {
     </div>
   );
 
-  const QuickActionCard = ({ title, icon: Icon, color, description, onClick }: any) => (
+  const QuickActionCard = ({ title, icon: Icon, color, description, onClick }: QuickActionCardProps) => (
     <button
       onClick={onClick}
       className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow text-left group"
@@ -80,7 +106,7 @@ export default function LogisticsPage() {
     </button>
   );
 
-  const ShipmentRow = ({ shipment }: any) => (
+  const ShipmentRow = ({ shipment }: ShipmentRowProps) => (
     <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
       <div className="flex items-center space-x-4">
         <div className={`p-2 rounded-lg ${

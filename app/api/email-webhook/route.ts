@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { TicketNumberGenerator } from "@/lib/ticketNumberGenerator";
 
 export const runtime = 'nodejs';
 
@@ -254,29 +255,7 @@ function determineTicketPriority(subject: string, content: string): string {
 }
 
 async function generateTicketNumber(): Promise<string> {
-  const now = new Date();
-  const year = String(now.getFullYear()).slice(-2);
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const dateString = `${year}${month}${day}`;
-  
-  const lastTicket = await prisma.ticket.findFirst({
-    where: {
-      ticketNumber: {
-        startsWith: `TIPA-HD-${dateString}-`
-      }
-    },
-    orderBy: {
-      ticketNumber: 'desc'
-    }
-  });
-
-  if (lastTicket) {
-    const lastNumber = parseInt(lastTicket.ticketNumber.split('-')[3]);
-    return `TIPA-HD-${dateString}-${String(lastNumber + 1).padStart(3, '0')}`;
-  } else {
-    return `TIPA-HD-${dateString}-001`;
-  }
+  return TicketNumberGenerator.generateEmailTicket();
 }
 
 function createTicketDescription(subject: string, content: string, from: string, timestamp?: string): string {

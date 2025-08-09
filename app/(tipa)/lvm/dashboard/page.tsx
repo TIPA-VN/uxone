@@ -1,34 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { 
   TrendingUp, 
-  TrendingDown, 
   Users, 
-  FileText,
-  Activity,
+  Calendar, 
   BarChart3,
-  PieChart,
-  LineChart
+  Activity
 } from "lucide-react";
 
-interface DashboardData {
-  totalProjects: number;
-  activeProjects: number;
-  completedProjects: number;
-  totalTasks: number;
-  completedTasks: number;
-  pendingTasks: number;
-  totalUsers: number;
-  activeUsers: number;
-  recentActivities: Array<{
-    id: string;
-    type: string;
-    description: string;
-    timestamp: string;
-    user: string;
-  }>;
-}
+
 
 type Project = {
   id: string;
@@ -36,7 +17,7 @@ type Project = {
   description?: string;
   status: string;
   departments: string[];
-  approvalState?: Record<string, any>;
+  approvalState?: Record<string, unknown>;
   ownerId?: string;
   createdAt: string;
   updatedAt: string;
@@ -76,7 +57,7 @@ type DashboardStats = {
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
   const user = session?.user;
   
   const [projects, setProjects] = useState<Project[]>([]);
@@ -95,15 +76,8 @@ export default function DashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'tasks' | 'analytics'>('overview');
-  const [myProjects] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
 
-  useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
-  }, [user]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -120,7 +94,6 @@ export default function DashboardPage() {
       setTasks(tasksData);
 
       // Calculate statistics
-      const myProjects = projectsData.filter((p: Project) => p.ownerId === user?.id);
       const myTasks = tasksData.filter((t: Task) => t.assigneeId === user?.id);
       
       const totalHours = tasksData.reduce((sum: number, t: Task) => sum + (t.actualHours || 0), 0);
@@ -147,7 +120,13 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, fetchDashboardData]);
 
   const getStatusColor = (status: string) => {
     switch(status?.toUpperCase()) {
@@ -204,15 +183,15 @@ export default function DashboardPage() {
           <nav className="flex space-x-8">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
-              { id: 'projects', label: 'Projects', icon: FileText },
-              { id: 'tasks', label: 'Tasks', icon: Users },
+              { id: 'projects', label: 'Projects', icon: Users },
+              { id: 'tasks', label: 'Tasks', icon: Calendar },
               { id: 'analytics', label: 'Analytics', icon: Activity },
             ].map((tab) => {
               const IconComponent = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as 'overview' | 'projects' | 'tasks' | 'analytics')}
                   className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                     activeTab === tab.id
                       ? 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -235,7 +214,7 @@ export default function DashboardPage() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center">
                   <div className="p-2 bg-blue-100 rounded-lg">
-                    <FileText className="w-6 h-6 text-blue-600" />
+                    <Users className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Projects</p>

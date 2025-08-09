@@ -1,12 +1,17 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { canAccessFeature } from "@/config/app";
-import {
-  Users, UserCheck, Calendar, CheckCircle, Clock, AlertTriangle,
-  TrendingUp, BarChart3, Target, Activity, Filter, Search,
-  ChevronDown, ChevronUp, Eye, User, Award, Star, FileText
+import { 
+  Search, 
+  Users, 
+  CheckCircle, 
+  AlertTriangle,
+  Building,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
+
 
 type TeamMember = {
   id: string;
@@ -135,35 +140,37 @@ export default function TeamManagementPage() {
     efficiency: 0,
   });
 
-  // Check if user has team management access
-  const hasTeamAccess = user && canAccessFeature(user.role as any, "teamManagement");
+      // Check if user has team management access using centralized RBAC
+    const hasTeamAccess = user && canAccessFeature(user.role as any, "teamManagement");
   
   // Check if user is a manager or above (has edit permissions)
   const isManagerOrAbove = user && [
     "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
     "SENIOR_MANAGER", "SENIOR_MANAGER_2", "ASSISTANT_SENIOR_MANAGER",
     "MANAGER", "MANAGER_2"
-  ].includes(user.role);
+  ].includes(user.role as string);
 
-
-
-  useEffect(() => {
-    if (user && hasTeamAccess) {
-      fetchTeamData();
-    }
-  }, [user, hasTeamAccess]);
-
-  const fetchTeamData = async () => {
+  const fetchTeamData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch team members, projects, and tasks in parallel
+      // Fetch team members, projects, and tasks in parallel with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const [membersRes, projectsRes, tasksRes] = await Promise.all([
-        fetch('/api/team/members'),
-        fetch('/api/projects?includeTasks=true'),
-        fetch('/api/tasks')
+        fetch('/api/team/members', { signal: controller.signal }),
+        fetch('/api/projects?includeTasks=true', { signal: controller.signal }),
+        fetch('/api/tasks', { signal: controller.signal })
       ]);
 
+      clearTimeout(timeoutId);
+
       if (!membersRes.ok || !projectsRes.ok || !tasksRes.ok) {
+        console.error('API responses not ok:', { 
+          members: membersRes.status, 
+          projects: projectsRes.status, 
+          tasks: tasksRes.status 
+        });
         throw new Error('Failed to fetch team data');
       }
 
@@ -182,7 +189,6 @@ export default function TeamManagementPage() {
       setTeamKPI(kpi);
 
       // Calculate dashboard stats
-      const myProjects = (projectsData || []).filter((p: Project) => p.ownerId === user?.id);
       const myTasks = (tasksData || []).filter((t: Task) => t.assigneeId === user?.id);
       
       const totalHours = (tasksData || []).reduce((sum: number, t: Task) => sum + (t.actualHours || 0), 0);
@@ -204,17 +210,43 @@ export default function TeamManagementPage() {
         estimatedHours,
         efficiency,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching team data:', error);
+      
+      // Handle specific error types
+      if (error.name === 'AbortError') {
+        console.error('Request timed out after 10 seconds');
+      }
+      
       // Set empty arrays to prevent further errors
       setTeamMembers([]);
       setProjects([]);
       setTasks([]);
       setTeamKPI(null);
+      
+      // Set default dashboard stats
+      setDashboardStats({
+        totalProjects: 0,
+        activeProjects: 0,
+        completedProjects: 0,
+        totalTasks: 0,
+        myTasks: 0,
+        completedTasks: 0,
+        overdueTasks: 0,
+        totalHours: 0,
+        estimatedHours: 0,
+        efficiency: 0,
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user && hasTeamAccess) {
+      fetchTeamData();
+    }
+  }, [user, hasTeamAccess, fetchTeamData]);
 
   const calculateTeamKPI = (members: TeamMember[], projects: Project[], tasks: Task[]): TeamKPI => {
     const totalMembers = members.length;
@@ -376,17 +408,17 @@ export default function TeamManagementPage() {
         <div className="mb-6">
           <div className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
             {[
-              { id: 'dashboard', label: 'My Dashboard', icon: BarChart3 },
-              { id: 'overview', label: 'Overview', icon: BarChart3 },
+              { id: 'dashboard', label: 'My Dashboard', icon: Users },
+              { id: 'overview', label: 'Overview', icon: Users },
               { id: 'members', label: 'Team Members', icon: Users },
-              { id: 'projects', label: 'Projects', icon: Target },
+              { id: 'projects', label: 'Projects', icon: Users },
               { id: 'tasks', label: 'Tasks', icon: CheckCircle }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as 'dashboard' | 'overview' | 'members' | 'projects' | 'tasks')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     activeTab === tab.id
                       ? 'bg-blue-600 text-white shadow-sm'
@@ -414,7 +446,7 @@ export default function TeamManagementPage() {
                     <p className="text-xs text-green-600">+{dashboardStats.activeProjects} active</p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-blue-600" />
+                    <Building className="w-6 h-6 text-blue-600" />
                   </div>
                 </div>
               </div>
@@ -427,7 +459,7 @@ export default function TeamManagementPage() {
                     <p className="text-xs text-green-600">{dashboardStats.completedTasks} completed</p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Target className="w-6 h-6 text-green-600" />
+                    <CheckCircle className="w-6 h-6 text-green-600" />
                   </div>
                 </div>
               </div>
@@ -455,7 +487,7 @@ export default function TeamManagementPage() {
                     <p className="text-xs text-gray-600">Time tracking</p>
                   </div>
                   <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-orange-600" />
+                    <Users className="w-6 h-6 text-orange-600" />
                   </div>
                 </div>
               </div>
@@ -654,8 +686,8 @@ export default function TeamManagementPage() {
                     value={`${sortBy}-${sortOrder}`}
                     onChange={(e) => {
                       const [sort, order] = e.target.value.split('-');
-                      setSortBy(sort as any);
-                      setSortOrder(order as any);
+                              setSortBy(sort as 'name' | 'efficiency' | 'tasks' | 'projects');
+        setSortOrder(order as 'asc' | 'desc');
                     }}
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >

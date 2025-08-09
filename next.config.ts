@@ -27,15 +27,6 @@ const nextConfig: NextConfig = {
   },
   // Updated: Use serverExternalPackages instead of deprecated experimental option
   serverExternalPackages: ['bcryptjs'],
-  // Turbopack configuration
-  turbo: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-  },
 };
 
 export default nextConfig;

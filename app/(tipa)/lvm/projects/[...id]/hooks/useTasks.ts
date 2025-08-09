@@ -33,12 +33,17 @@ export function useTasks(projectId: string) {
   const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users");
+      
       if (res.ok) {
         const data = await res.json();
         // Handle paginated response from users API
         const userList = data.users || data;
-        console.log("Fetched users for task assignment:", userList);
+        
         setUsers(userList);
+      } else {
+        console.error("Users API error:", res.status, res.statusText);
+        const errorData = await res.text();
+        console.error("Users API error response:", errorData);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -48,7 +53,7 @@ export function useTasks(projectId: string) {
   useEffect(() => {
     fetchTasks();
     fetchUsers();
-  }, [fetchTasks, fetchUsers]);
+  }, [fetchTasks, fetchUsers, projectId]);
 
   const createTask = async (e: React.FormEvent) => {
     e.preventDefault();

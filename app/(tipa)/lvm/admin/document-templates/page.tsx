@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   Plus, 
   Edit, 
@@ -52,11 +52,7 @@ export default function DocumentTemplatesPage() {
     revisionNumber: 1,
   });
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/document-templates');
@@ -71,7 +67,11 @@ export default function DocumentTemplatesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

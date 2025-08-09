@@ -15,38 +15,7 @@ import {
   Edit,
 } from "lucide-react";
 
-interface PurchaseOrder {
-  id: string;
-  poNumber: string;
-  supplier: string;
-  status:
-    | "PENDING"
-    | "PENDING_APPROVAL"
-    | "PARTIALLY_APPROVED"
-    | "APPROVED"
-    | "ACTIVE"
-    | "COMPLETED"
-    | "CANCELLED";
-  totalAmount: number;
-  orderDate: number | string;  // JDE Julian date or string
-  expectedDelivery: number | string;  // JDE Julian date or string
-  items: number;
-  createdBy: string;
-  approvedBy?: string;
-  businessUnit: string;
-  poType: string;
-  // Approval information
-  approver1?: string; // First approver name
-  approver2?: string; // Second approver name
-  requiresApproval?: boolean;
-}
 
-interface PaginationInfo {
-  currentPage: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
-}
 
 type SearchMode = "general" | "single" | "range";
 

@@ -6,12 +6,30 @@ const HomePage = async () => {
   const session = await auth()
   
   if (session?.user) {
-    // Redirect to user's department-specific home page
-    const userHomePage = getUserHomePage(session.user.department || 'UNKNOWN')
+    // Check if user has admin access - don't redirect admin users
+    const userRole = session.user.role;
+    const userDepartment = session.user.department || session.user.centralDepartment;
     
-    // If the user's department has a specific home page, redirect there
-    if (userHomePage !== '/lvm') {
-      redirect(userHomePage)
+    // Define admin roles and departments
+    const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'SENIOR_MANAGER'];
+    const adminDepartments = ['IS', 'ADMIN', 'IT'];
+    
+    // Map the user role to the config key format (handles spaces vs underscores)
+    const { mapRoleToConfigKey } = await import('@/config/app');
+    const mappedRole = mapRoleToConfigKey(userRole);
+    
+    const hasAdminRole = adminRoles.includes(mappedRole);
+    const hasAdminDepartment = adminDepartments.includes(userDepartment);
+    
+    // If user has admin access, don't redirect - let them stay on LVM page
+    if (!(hasAdminRole || hasAdminDepartment)) {
+      // Redirect to user's department-specific home page
+      const userHomePage = getUserHomePage(userDepartment || 'UNKNOWN')
+      
+      // If the user's department has a specific home page, redirect there
+      if (userHomePage !== '/lvm') {
+        redirect(userHomePage)
+      }
     }
   }
   
@@ -31,7 +49,7 @@ const HomePage = async () => {
           Project Management System
         </p>
         <p className="text-lg text-white/80 drop-shadow-md mt-2">
-          Redirecting to your department dashboard...
+          {session?.user ? 'Welcome to LVM Dashboard' : 'Redirecting to your department dashboard...'}
         </p>
       </div>
     </div>

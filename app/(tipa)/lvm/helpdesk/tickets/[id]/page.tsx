@@ -1,15 +1,14 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { 
-  ArrowLeft, Edit, MessageSquare, Paperclip, Clock, 
-  AlertCircle, CheckCircle, XCircle, User, Mail, 
-  Calendar, Tag, MoreVertical, Send, Plus, Users, Search, Activity
+  ArrowLeft, MessageSquare, Paperclip, Clock, 
+  AlertCircle, CheckCircle, XCircle, User, 
+  Send, Plus, Users, Search, Activity
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getTicketCategories, getTicketPriorities, getTicketStatuses } from "@/config/app";
 
@@ -88,7 +87,6 @@ interface Agent {
 }
 
 export default function TicketDetailPage() {
-  const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
   const ticketId = params.id as string;
@@ -125,25 +123,7 @@ export default function TicketDetailPage() {
   const categoryOptions = getTicketCategories();
   const statusOptions = getTicketStatuses();
 
-  useEffect(() => {
-    fetchTicket();
-    fetchAgents();
-    fetchProjects();
-  }, [ticketId]);
-
-  useEffect(() => {
-    if (selectedDepartment) {
-      const filtered = agents.filter(agent => 
-        agent.department === selectedDepartment &&
-        agent.username.toLowerCase().includes(usernameSearch.toLowerCase())
-      );
-      setFilteredAgents(filtered);
-    } else {
-      setFilteredAgents([]);
-    }
-  }, [selectedDepartment, usernameSearch, agents]);
-
-  const fetchTicket = async () => {
+  const fetchTicket = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -162,11 +142,11 @@ export default function TicketDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ticketId]);
 
-  const fetchAgents = async () => {
+  const fetchAgents = useCallback(async () => {
     try {
-      const response = await fetch('/api/users?limit=100');
+      const response = await fetch('/api/users');
       if (response.ok) {
         const data = await response.json();
         setAgents(data.users || []);
@@ -174,11 +154,11 @@ export default function TicketDetailPage() {
     } catch (err) {
       console.error('Failed to fetch agents:', err);
     }
-  };
+  }, []);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
-      const response = await fetch('/api/projects?limit=100');
+      const response = await fetch('/api/projects');
       if (response.ok) {
         const data = await response.json();
         setProjects(data.projects || []);
@@ -186,7 +166,25 @@ export default function TicketDetailPage() {
     } catch (err) {
       console.error('Failed to fetch projects:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTicket();
+    fetchAgents();
+    fetchProjects();
+  }, [fetchTicket, fetchAgents, fetchProjects]);
+
+  useEffect(() => {
+    if (selectedDepartment) {
+      const filtered = agents.filter(agent => 
+        agent.department === selectedDepartment &&
+        agent.username.toLowerCase().includes(usernameSearch.toLowerCase())
+      );
+      setFilteredAgents(filtered);
+    } else {
+      setFilteredAgents([]);
+    }
+  }, [selectedDepartment, usernameSearch, agents]);
 
   const handleStatusChange = async (newStatus: Ticket['status']) => {
     if (!ticket) return;

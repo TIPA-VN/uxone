@@ -6,9 +6,7 @@ import { sendWebhookWithRetry } from "@/lib/webhook-sender";
 
 export const runtime = 'nodejs'
 
-// Removed unused User type
-
-type DbUser = { id: string; username: string; } // Defined for broadcast user mapping
+type DbUser = { id: string; username: string; }
 
 export async function GET() {
   try {
@@ -22,16 +20,34 @@ export async function GET() {
         }
       );
     }
-    // Use raw query to fetch notifications, filter out hidden
-    const notifications = await prisma.$queryRawUnsafe(
-      `SELECT * FROM notifications WHERE "userId" = '${session.user.id}' AND hidden = false ORDER BY "createdAt" DESC`
-    );
-    // Filter out notifications without id
-    const filtered = (notifications as Record<string, unknown>[]).filter((n) => n.id);
-    return NextResponse.json(filtered);
+
+    // Use Prisma ORM instead of raw SQL to prevent injection
+    const notifications = await prisma.notification.findMany({
+      where: {
+        userId: session.user.id,
+        hidden: false
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return NextResponse.json(notifications);
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    return NextResponse.json([], { status: 500 });
+    
+    // Check if it's a database connection error
+    if (error instanceof Error && error.message.includes('connect')) {
+      return NextResponse.json(
+        { error: 'Database connection failed' }, 
+        { status: 503 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    );
   }
 }
 
@@ -47,18 +63,23 @@ export async function POST(req: NextRequest) {
         }
       );
     }
+    
     const body = await req.json();
     const { broadcast = false, ...notificationData } = body;
 
     if (broadcast) {
-      // Fetch all users
-      const users = await prisma.$queryRawUnsafe<DbUser[]>(
-        `SELECT id, username FROM users`
-      );
+      // Fetch all users using Prisma ORM
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          username: true
+        }
+      });
+
       // Create notifications for all users
       const now = new Date();
       try {
-        // Try using createMany (if available)
+        // Try using createMany
         await prisma.notification.createMany({
           data: users.map((user: DbUser) => ({
             userId: user.id,
@@ -70,27 +91,44 @@ export async function POST(req: NextRequest) {
             createdAt: now,
           }))
         });
+
         // Fetch created notifications for SSE
-        const createdNotifications = await prisma.$queryRawUnsafe(
-          `SELECT * FROM notifications WHERE title = '${notificationData.title}' AND message = '${notificationData.message}' AND type = '${notificationData.type || 'broadcast'}' ORDER BY "createdAt" DESC LIMIT ${users.length}`
-        );
-        for (const notification of createdNotifications as Record<string, unknown>[]) {
-          await sendNotification(notification, notification.userId as string);
+        const createdNotifications = await prisma.notification.findMany({
+          where: {
+            title: notificationData.title,
+            message: notificationData.message,
+            type: notificationData.type || 'broadcast',
+            createdAt: now
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: users.length
+        });
+
+        for (const notification of createdNotifications) {
+          await sendNotification(notification, notification.userId);
           
           // Get user's username for webhook
           const user = await prisma.user.findUnique({
-            where: { id: notification.userId as string },
+            where: { id: notification.userId },
             select: { username: true }
           });
           
           // Send webhook to TIPA Mobile with username (async)
-          const targetUserId = user?.username || notification.userId as string;
+          const targetUserId = user?.username || notification.userId;
           sendWebhookWithRetry(notification, targetUserId).catch(error => {
             console.error(`❌ UXOne: Failed to send webhook to TIPA Mobile for user ${targetUserId}:`, error);
           });
         }
-        return NextResponse.json({ count: users.length, notifications: (createdNotifications as Record<string, unknown>[]).length });
-      } catch {
+        
+        return NextResponse.json({ 
+          count: users.length, 
+          notifications: createdNotifications.length 
+        });
+      } catch (error) {
+        console.error('Error in createMany, falling back to transaction:', error);
+        
         // Fallback: use $transaction with multiple create calls
         await prisma.$transaction(
           users.map((user: DbUser) =>
@@ -107,29 +145,44 @@ export async function POST(req: NextRequest) {
             })
           )
         );
+
         // Fetch created notifications for SSE
-        const createdNotifications = await prisma.$queryRawUnsafe(
-          `SELECT * FROM notifications WHERE title = '${notificationData.title}' AND message = '${notificationData.message}' AND type = '${notificationData.type || 'broadcast'}' ORDER BY "createdAt" DESC LIMIT ${users.length}`
-        );
-        for (const notification of createdNotifications as Record<string, unknown>[]) {
-          await sendNotification(notification, notification.userId as string);
+        const createdNotifications = await prisma.notification.findMany({
+          where: {
+            title: notificationData.title,
+            message: notificationData.message,
+            type: notificationData.type || 'broadcast',
+            createdAt: now
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: users.length
+        });
+
+        for (const notification of createdNotifications) {
+          await sendNotification(notification, notification.userId);
           
           // Get user's username for webhook
           const user = await prisma.user.findUnique({
-            where: { id: notification.userId as string },
+            where: { id: notification.userId },
             select: { username: true }
           });
           
           // Send webhook to TIPA Mobile with username (async)
-          const targetUserId = user?.username || notification.userId as string;
+          const targetUserId = user?.username || notification.userId;
           sendWebhookWithRetry(notification, targetUserId).catch(error => {
             console.error(`❌ UXOne: Failed to send webhook to TIPA Mobile for user ${targetUserId}:`, error);
           });
         }
-        return NextResponse.json({ count: users.length, notifications: (createdNotifications as Record<string, unknown>[]).length });
+        
+        return NextResponse.json({ 
+          count: users.length, 
+          notifications: createdNotifications.length 
+        });
       }
     } else {
-      // Upsert user if not exists
+      // Upsert user if not exists using Prisma ORM
       const sessionUserId = session.user.id;
       const sessionUsername = session.user.username || `user_${session.user.id}`;
       const sessionName = session.user.name || session.user.id;
@@ -137,10 +190,33 @@ export async function POST(req: NextRequest) {
       const sessionDepartment = session.user.department || '';
       const sessionDepartmentName = session.user.departmentName || '';
       const sessionRole = session.user.role || '';
-      // Upsert user using raw SQL (ON CONFLICT)
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO users (id, name, email, username, department, "departmentName", role, "hashedPassword", "createdAt", "updatedAt") VALUES ('${sessionUserId}', '${sessionName}', '${sessionEmail}', '${sessionUsername}', '${sessionDepartment}', '${sessionDepartmentName}', '${sessionRole}', '', NOW(), NOW()) ON CONFLICT (id) DO NOTHING`
-      );
+
+      // Upsert user using Prisma ORM
+      await prisma.user.upsert({
+        where: { id: sessionUserId },
+        update: {
+          name: sessionName,
+          email: sessionEmail,
+          username: sessionUsername,
+          department: sessionDepartment,
+          departmentName: sessionDepartmentName,
+          role: sessionRole,
+          updatedAt: new Date()
+        },
+        create: {
+          id: sessionUserId,
+          name: sessionName,
+          email: sessionEmail,
+          username: sessionUsername,
+          department: sessionDepartment,
+          departmentName: sessionDepartmentName,
+          role: sessionRole,
+          hashedPassword: '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+
       // Insert notification using Prisma ORM
       const now = new Date();
       const notification = await prisma.notification.create({
@@ -174,7 +250,19 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error('Error creating notification:', error);
-    return NextResponse.json({ error: 'Failed to create notification' }, { status: 500 });
+    
+    // Check if it's a database connection error
+    if (error instanceof Error && error.message.includes('connect')) {
+      return NextResponse.json(
+        { error: 'Database connection failed' }, 
+        { status: 503 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to create notification' }, 
+      { status: 500 }
+    );
   }
 }
 
@@ -190,33 +278,69 @@ export async function PATCH(req: NextRequest) {
         }
       );
     }
+    
     const body = await req.json();
     if (!body.id) {
       return NextResponse.json({ error: "Missing notification ID" }, { status: 400 });
     }
-    // Verify notification ownership
-    const existing = await prisma.$queryRawUnsafe(
-      `SELECT * FROM notifications WHERE id = '${body.id}' AND "userId" = '${session.user.id}' LIMIT 1`
-    );
-    if (!existing || (Array.isArray(existing) && existing.length === 0)) {
+    
+    // Verify notification ownership using Prisma ORM
+    const existing = await prisma.notification.findFirst({
+      where: {
+        id: body.id,
+        userId: session.user.id
+      }
+    });
+    
+    if (!existing) {
       return NextResponse.json({ error: "Notification not found" }, { status: 404 });
     }
+    
     // If body.hidden === true, set hidden=true
     if (body.hidden === true) {
-      const updated = await prisma.$queryRawUnsafe(
-        `UPDATE notifications SET hidden = true WHERE id = '${body.id}' RETURNING *`
-      );
-      const notification = Array.isArray(updated) ? updated[0] : updated;
-      return NextResponse.json(notification);
+      const updated = await prisma.notification.update({
+        where: { id: body.id },
+        data: { hidden: true }
+      });
+      
+      // Send update via SSE
+      await sendNotification({
+        ...updated,
+        type: 'notification_update',
+        updateType: 'hidden'
+      }, session.user.id);
+      
+      return NextResponse.json(updated);
     }
-    // Update notification as read
-    const updated = await prisma.$queryRawUnsafe(
-      `UPDATE notifications SET read = true WHERE id = '${body.id}' RETURNING *`
-    );
-    const notification = Array.isArray(updated) ? updated[0] : updated;
-    return NextResponse.json(notification);
+    
+    // Update notification as read using Prisma ORM
+    const updated = await prisma.notification.update({
+      where: { id: body.id },
+      data: { read: true }
+    });
+    
+    // Send read status update via SSE
+    await sendNotification({
+      ...updated,
+      type: 'notification_update',
+      updateType: 'read'
+    }, session.user.id);
+    
+    return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating notification:', error);
-    return NextResponse.json({ error: 'Failed to update notification' }, { status: 500 });
+    
+    // Check if it's a database connection error
+    if (error instanceof Error && error.message.includes('connect')) {
+      return NextResponse.json(
+        { error: 'Database connection failed' }, 
+        { status: 503 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to update notification' }, 
+      { status: 500 }
+    );
   }
 } 

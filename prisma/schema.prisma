@@ -43,6 +43,7 @@ model User {
   assignedTickets          Ticket[]                  @relation("TicketAssignee")
   createdTickets           Ticket[]                  @relation("TicketCreator")
   triggeredEvents          WebhookEvent[]
+  updatedSystemConfigs     SystemConfig[]            @relation("SystemConfigUpdater")
 
   @@map("users")
 }
@@ -762,22 +763,37 @@ model WebhookEvent {
 }
 
 model WebhookDelivery {
-  id           String         @id @default(cuid())
+  id           String   @id @default(cuid())
   webhookId    String
   eventId      String
-  status       String
-  responseCode Int?
-  responseBody String?
-  attemptCount Int            @default(0)
-  nextRetryAt  DateTime?
-  deliveredAt  DateTime?
-  createdAt    DateTime       @default(now())
-  event        WebhookEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  url          String
+  method       String
+  headers      Json
+  body         Json
+  status       Int
+  response     Json?
+  error        String?
+  retryCount   Int      @default(0)
+  createdAt    DateTime @default(now())
   webhook      ServiceWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event        WebhookEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  @@index([webhookId, status])
-  @@index([nextRetryAt])
   @@map("webhook_deliveries")
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  category    String   @default("general")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  user        User?    @relation("SystemConfigUpdater", fields: [updatedBy], references: [id])
+
+  @@map("system_configs")
 }
 
 enum TicketStatus {

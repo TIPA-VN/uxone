@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, XCircle, Clock, Menu } from "lucide-react";
 import { Task, User } from "../types/project";
-import { canCreateTasks, canAssignTasks } from "@/lib/rbac";
+import { canCreateTasks } from "@/lib/rbac";
+import { useClickOutside } from "@/hooks/useClickOutside";
 
 interface TasksTabProps {
   projectId: string;
@@ -41,6 +42,24 @@ export function TasksTab({
   });
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
+  // Click outside handling for dropdowns
+  const dropdownRef = useClickOutside(dropdownOpen !== null, () => setDropdownOpen(null));
+  
+  // Click outside handling for create task form
+  const createTaskFormRef = useClickOutside(showCreateTask, () => setShowCreateTask(false));
+
+  // Keyboard escape handler for dropdowns
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && dropdownOpen) {
+        setDropdownOpen(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [dropdownOpen]);
+
   // Permission checks using RBAC functions
   const canCreate = user && canCreateTasks(
     user.role || '',
@@ -48,18 +67,21 @@ export function TasksTab({
     projectOwnerId
   );
 
-  const canAssign = user && canAssignTasks(
-    user.role || '',
-    user.id,
-    projectOwnerId
-  );
-
-  // Filter users to only show staff members for assignment
+  // Filter users to only show assignable users for assignment
   const assignableUsers = users.filter(u => {
-    // Only show users with STAFF level roles for assignment
-    const staffRoles = ['STAFF', 'SENIOR_STAFF', 'ASSOCIATE', 'SENIOR_ASSOCIATE', 'ENGINEER', 'SENIOR_ENGINEER', 'SPECIALIST', 'SENIOR_SPECIALIST'];
-    return staffRoles.includes(u.role?.toUpperCase() || '');
+    // Show users with roles that can be assigned tasks
+    const assignableRoles = ['MANAGER', 'SENIOR_MANAGER', 'DEVELOPER', 'SUPPORT', 'ADMIN'];
+    const hasValidRole = assignableRoles.includes(u.role?.toUpperCase() || '');
+    const isActive = u.isActive !== false;
+    
+    return hasValidRole && isActive;
   });
+
+  // Temporary: show all users for debugging
+  const allUsers = users.filter(u => u.isActive !== false);
+
+  // Fallback: if no assignable users found, show all active users
+  const displayUsers = assignableUsers.length > 0 ? assignableUsers : allUsers;
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,7 +171,7 @@ export function TasksTab({
 
         {/* Task Creation Form */}
         {showCreateTask && canCreate && (
-          <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200" ref={createTaskFormRef}>
             <h4 className="font-medium text-purple-900 mb-3">Create New Task</h4>
             <form onSubmit={handleCreateTask} className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -176,12 +198,18 @@ export function TasksTab({
                     className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
                   >
                     <option value="">Select assignee</option>
-                    {/* Only show staff members for assignment */}
-                    {assignableUsers.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name || user.username} ({user.department}) - {user.role}
+                    {/* Show assignable users for assignment */}
+                    {displayUsers.length > 0 ? (
+                      displayUsers.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name || user.username} ({user.department}) - {user.role || 'No Role'}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        {users.length === 0 ? "No users available" : "No assignable users found"}
                       </option>
-                    ))}
+                    )}
                   </select>
                 </div>
               </div>
@@ -308,7 +336,7 @@ export function TasksTab({
                       {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : <span className="text-gray-400 italic">No due date</span>}
                     </td>
                     <td className="py-0.5 px-3 w-1/10 min-w-[60px]">
-                      <div className="relative dropdown-container flex justify-center">
+                      <div className="relative dropdown-container flex justify-center" ref={dropdownRef}>
                         <button
                           onClick={() => toggleDropdown(task.id)}
                           className="p-1 hover:bg-gray-100 rounded"
@@ -316,24 +344,24 @@ export function TasksTab({
                           <Menu className="w-4 h-4 text-gray-600" />
                         </button>
                         {dropdownOpen === task.id && (
-                          <div className="absolute right-0 mt-1 w-28 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                          <div className="absolute right-0 mt-1 w-28 bg-white border border-gray-200 rounded-md shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100">
                             <button
                               onClick={() => handleUpdateTaskStatus(task.id, "COMPLETED")}
-                              className="w-full px-2 py-1 text-left text-xs hover:bg-green-100 flex items-center gap-1"
+                              className="w-full px-2 py-1 text-left text-xs hover:bg-green-100 focus:bg-green-100 focus:outline-none focus:ring-1 focus:ring-green-500 flex items-center gap-1 transition-colors"
                             >
                               <CheckCircle className="w-3 h-3 text-green-600" />
                               Complete
                             </button>
                             <button
                               onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
-                              className="w-full px-2 py-1 text-left text-xs hover:bg-blue-100 flex items-center gap-1"
+                              className="w-full px-2 py-1 text-left text-xs hover:bg-blue-100 focus:bg-blue-100 focus:outline-none focus:ring-1 focus:ring-blue-500 flex items-center gap-1 transition-colors"
                             >
                               <Clock className="w-3 h-3 text-blue-600" />
                               In Progress
                             </button>
                             <button
                               onClick={() => handleUpdateTaskStatus(task.id, "TODO")}
-                              className="w-full px-2 py-1 text-left text-xs hover:bg-gray-100 flex items-center gap-1"
+                              className="w-full px-2 py-1 text-left text-xs hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-500 flex items-center gap-1 transition-colors"
                             >
                               <XCircle className="w-3 h-3 text-gray-600" />
                               To Do

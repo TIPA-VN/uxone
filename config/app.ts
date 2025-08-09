@@ -28,6 +28,8 @@ type RoleName =
   | "SENIOR_ENGINEER"
   | "ENGINEER"
   | "TECHNICIAN"
+  | "DEVELOPER"
+  | "SUPPORT"
   | "SENIOR_ASSOCIATE"
   | "ASSOCIATE"
   | "SENIOR_STAFF"
@@ -42,26 +44,7 @@ export const APP_CONFIG = {
   version: "1.0.0",
   description: "Unified Project Management System",
 
-  // Department Codes Configuration
-  departmentCodes: {
-    IS: "Information Systems",
-    HELPDESK: "Helpdesk",
-    QC: "Quality Control", 
-    QA: "Quality Assurance",
-    HR: "Human Resources",
-    FIN: "Finance",
-    LOG: "Logistics",
-    PROC: "Procurement",
-    PC: "Production Planning",
-    PM: "Production Maintenance",
-    FM: "Facility Management",
-    CS: "Customer Service",
-    RD: "Research & Development",
-    MKT: "Marketing",
-    SALES: "Sales",
-    OPS: "Operations",
-    ADMIN: "Administration"
-  },
+
 
   // Department Home Pages Configuration
   departmentHomePages: {
@@ -80,102 +63,145 @@ export const APP_CONFIG = {
     MKT: "/lvm/marketing",         // Marketing - Marketing activities
     SALES: "/lvm/sales",           // Sales - Sales management
     OPS: "/lvm/operations",        // Operations - Operations management
-    ADMIN: "/lvm/admin",           // Administration - Admin panel
+    ADMIN: "/lvm/admin",                // Administration - Admin panel
     DEFAULT: "/lvm"                // Default fallback
+  },
+
+  // Department Codes Mapping (for backward compatibility and quick lookups)
+  departmentCodes: {
+    LOG: "Logistics (LOG)",
+    PROC: "Procurement", 
+    PC: "Production Planning",
+    QA: "Quality Assurance",
+    QC: "Quality Control",
+    PM: "Production Maintenance",
+    FM: "Facility Management",
+    HR: "Human Resources",
+    CS: "Customer Service",
+    IS: "Information Systems",
+    HELPDESK: "Helpdesk",
+    SALES: "Sales",
+    "LVM-EXPAT": "LVM EXPATS"
   },
 
   // Departments Configuration (using department codes)
   departments: [
     {
       value: "LOG",
-      label: "Logistics",
+      label: "Logistics (LOG)",
       code: "LOG",
       color: "bg-blue-500",
-      description: "Supply chain and logistics management"
+      description: "Supply chain and logistics management",
+      isActive: true,
+      sortOrder: 1
     },
     {
       value: "PROC",
       label: "Procurement",
       code: "PROC", 
       color: "bg-green-500",
-      description: "Purchasing and procurement operations"
+      description: "Purchasing and procurement operations",
+      isActive: true,
+      sortOrder: 2
     },
     {
       value: "PC",
       label: "Production Planning",
       code: "PC",
       color: "bg-purple-500",
-      description: "Production planning and scheduling"
+      description: "Production planning and scheduling",
+      isActive: true,
+      sortOrder: 3
     },
     {
       value: "QA",
       label: "Quality Assurance",
       code: "QA",
       color: "bg-yellow-500",
-      description: "Quality assurance and testing"
+      description: "Quality assurance and testing",
+      isActive: true,
+      sortOrder: 4
     },
     {
       value: "QC",
       label: "Quality Control",
       code: "QC",
       color: "bg-orange-500",
-      description: "Quality control and inspection"
+      description: "Quality control and inspection",
+      isActive: true,
+      sortOrder: 5
     },
     {
       value: "PM",
       label: "Production Maintenance",
       code: "PM",
       color: "bg-red-500",
-      description: "Production equipment maintenance"
+      description: "Production equipment maintenance",
+      isActive: true,
+      sortOrder: 6
     },
     {
       value: "FM",
       label: "Facility Management",
       code: "FM",
       color: "bg-indigo-500",
-      description: "Facility and infrastructure management"
+      description: "Facility and infrastructure management",
+      isActive: true,
+      sortOrder: 7
     },
     {
       value: "HR",
       label: "Human Resources",
       code: "HR",
       color: "bg-pink-500",
-      description: "Human resources and personnel management"
+      description: "Human resources and personnel management",
+      isActive: true,
+      sortOrder: 8
     },
     {
       value: "CS",
       label: "Customer Service",
       code: "CS",
       color: "bg-teal-500",
-      description: "Customer service and support"
+      description: "Customer service and support",
+      isActive: true,
+      sortOrder: 9
     },
     {
       value: "IS",
       label: "Information Systems",
       code: "IS",
       color: "bg-cyan-500",
-      description: "IT and information systems management"
+      description: "IT and information systems management",
+      isActive: true,
+      sortOrder: 10
     },
     {
       value: "HELPDESK",
       label: "Helpdesk",
       code: "HELPDESK",
       color: "bg-violet-500",
-      description: "Technical support and helpdesk services"
+      description: "Technical support and helpdesk services",
+      isActive: true,
+      sortOrder: 11
     },
     {
       value: "SALES",
       label: "Sales",
       code: "SALES",
-      color: "bg-cyan-500",
-      description: "Sales and business development"
+      color: "bg-emerald-500",
+      description: "Sales and business development",
+      isActive: true,
+      sortOrder: 12
     },
     {
       value: "LVM-EXPAT",
       label: "LVM EXPATS",
       code: "LVM-EXPAT",
       color: "bg-gray-500",
-      description: "LVM Expatriate team"
+      description: "LVM Expatriate team",
+      isActive: true,
+      sortOrder: 13
     }
   ] as const,
 
@@ -463,6 +489,28 @@ export const APP_CONFIG = {
       ] as Permission[]
     },
 
+    // Developer and Support roles (for IS team)
+    DEVELOPER: {
+      value: "DEVELOPER",
+      label: "Developer",
+      description: "Software Developer",
+      level: 2,
+      permissions: [
+        "projects:read",
+        "tasks:read", "tasks:write",
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
+      ] as Permission[]
+    },
+    SUPPORT: {
+      value: "SUPPORT",
+      label: "Support Staff",
+      description: "Technical Support",
+      level: 2,
+      permissions: [
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:resolve"
+      ] as Permission[]
+    },
+
     // Staff Level (Level 1)
     SENIOR_ASSOCIATE: {
       value: "SENIOR ASSOCIATE",
@@ -600,7 +648,8 @@ export const APP_CONFIG = {
           "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
           "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
           "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN",
-          "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF"
+          "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF",
+          "DEVELOPER", "SUPPORT"
         ] as RoleName[],
         description: "Team member management and KPIs (read-only for team members, full access for managers+)"
       },
@@ -1264,51 +1313,75 @@ export const mapRoleToConfigKey = (roleValue: string): Role => {
   // Map common database role values to config keys
   const roleMapping: Record<string, Role> = {
     // Admin Level
-    "ADMIN": "GENERAL_DIRECTOR", // Map ADMIN to GENERAL_DIRECTOR for full access
+    "ADMIN": "ADMIN", // Keep ADMIN as ADMIN for proper access control
     
     // Executive Level
     "GENERAL DIRECTOR": "GENERAL_DIRECTOR",
+    "GENERAL_MANAGER": "GENERAL_MANAGER",
     "GENERAL MANAGER": "GENERAL_MANAGER",
     "ASSISTANT GENERAL MANAGER": "ASSISTANT_GENERAL_MANAGER",
+    "ASSISTANT_GENERAL_MANAGER": "ASSISTANT_GENERAL_MANAGER",
     "ASSISTANT GENERAL MANAGER 2": "ASSISTANT_GENERAL_MANAGER_2",
+    "ASSISTANT_GENERAL_MANAGER_2": "ASSISTANT_GENERAL_MANAGER_2",
     
     // Senior Management Level
     "SENIOR MANAGER": "SENIOR_MANAGER",
+    "SENIOR_MANAGER": "SENIOR_MANAGER",
     "SENIOR MANAGER 2": "SENIOR_MANAGER_2",
+    "SENIOR_MANAGER_2": "SENIOR_MANAGER_2",
     "ASSISTANT SENIOR MANAGER": "ASSISTANT_SENIOR_MANAGER",
+    "ASSISTANT_SENIOR_MANAGER": "ASSISTANT_SENIOR_MANAGER",
     
     // Management Level
     "MANAGER": "MANAGER",
     "MANAGER 2": "MANAGER_2",
+    "MANAGER_2": "MANAGER_2",
     "ASSISTANT MANAGER": "ASSISTANT_MANAGER",
+    "ASSISTANT_MANAGER": "ASSISTANT_MANAGER",
     "ASSISTANT MANAGER 2": "ASSISTANT_MANAGER_2",
+    "ASSISTANT_MANAGER_2": "ASSISTANT_MANAGER_2",
     
     // Supervision Level
     "SUPERVISOR": "SUPERVISOR",
     "SUPERVISOR 2": "SUPERVISOR_2",
+    "SUPERVISOR_2": "SUPERVISOR_2",
     "LINE LEADER": "LINE_LEADER",
+    "LINE_LEADER": "LINE_LEADER",
     
     // Specialist Level
     "CHIEF SPECIALIST": "CHIEF_SPECIALIST",
+    "CHIEF_SPECIALIST": "CHIEF_SPECIALIST",
     "TECHNICAL SPECIALIST": "TECHNICAL_SPECIALIST",
+    "TECHNICAL_SPECIALIST": "TECHNICAL_SPECIALIST",
     "SENIOR SPECIALIST": "SENIOR_SPECIALIST",
+    "SENIOR_SPECIALIST": "SENIOR_SPECIALIST",
     "SENIOR SPECIALIST 2": "SENIOR_SPECIALIST_2",
+    "SENIOR_SPECIALIST_2": "SENIOR_SPECIALIST_2",
     "SPECIALIST": "SPECIALIST",
     "SPECIALIST 2": "SPECIALIST_2",
+    "SPECIALIST_2": "SPECIALIST_2",
     
     // Engineering Level
     "SENIOR ENGINEER": "SENIOR_ENGINEER",
+    "SENIOR_ENGINEER": "SENIOR_ENGINEER",
     "ENGINEER": "ENGINEER",
     "TECHNICIAN": "TECHNICIAN",
     
+    // Developer and Support roles (for IS team)
+    "DEVELOPER": "DEVELOPER",
+    "SUPPORT": "SUPPORT",
+    
     // Staff Level
     "SENIOR ASSOCIATE": "SENIOR_ASSOCIATE",
+    "SENIOR_ASSOCIATE": "SENIOR_ASSOCIATE",
     "ASSOCIATE": "ASSOCIATE",
     "SENIOR STAFF": "SENIOR_STAFF",
+    "SENIOR_STAFF": "SENIOR_STAFF",
     "STAFF": "STAFF",
     
     // Operations Level
     "SENIOR OPERATOR": "SENIOR_OPERATOR",
+    "SENIOR_OPERATOR": "SENIOR_OPERATOR",
     "OPERATOR": "OPERATOR",
     "INTERN": "INTERN"
   };
@@ -1317,22 +1390,42 @@ export const mapRoleToConfigKey = (roleValue: string): Role => {
 };
 
 export const hasPermission = (userRole: Role, permission: string) => {
+  // Special case: ADMIN role has all permissions
+  if (userRole === "ADMIN") {
+    return true;
+  }
+  
   const role = APP_CONFIG.roles[userRole];
   return role.permissions.includes("*") || role.permissions.includes(permission);
 };
 
 export const canAccessFeature = (userRole: Role, feature: keyof typeof APP_CONFIG.rbac.features) => {
+  // Special case: ADMIN role has access to all features
+  if (userRole === "ADMIN") {
+    return true;
+  }
+  
   const featureConfig = APP_CONFIG.rbac.features[feature];
   return featureConfig.roles.includes(userRole as RoleName);
 };
 
 export const canAccessPage = (userRole: string, page: keyof typeof APP_CONFIG.rbac.pages) => {
+  // Special case: ADMIN role has access to all pages
+  if (userRole === "ADMIN") {
+    return true;
+  }
+  
   const mappedRole = mapRoleToConfigKey(userRole);
   const pageConfig = APP_CONFIG.rbac.pages[page];
   return pageConfig.roles.includes(mappedRole as RoleName);
 };
 
 export const canAccessApi = (userRole: Role, endpoint: keyof typeof APP_CONFIG.rbac.api, method: string) => {
+  // Special case: ADMIN role has access to all API endpoints
+  if (userRole === "ADMIN") {
+    return true;
+  }
+  
   const apiConfig = APP_CONFIG.rbac.api[endpoint];
   return apiConfig[method as keyof typeof apiConfig]?.includes(userRole as RoleName) || false;
 };
@@ -1345,25 +1438,228 @@ export const getRolesByLevel = (minLevel: number) => {
 
 export const getDepartments = () => APP_CONFIG.departments;
 
+export const getActiveDepartments = () => APP_CONFIG.departments.filter(dept => dept.isActive);
+
 // Department Code Mapping Functions
 export const getDepartmentCodes = () => APP_CONFIG.departmentCodes;
 
 export const getDepartmentNameByCode = (code: string): string | undefined => {
-  return APP_CONFIG.departmentCodes[code as keyof typeof APP_CONFIG.departmentCodes];
+  const dept = APP_CONFIG.departments.find(d => d.code === code);
+  return dept?.label;
 };
 
 export const getDepartmentCodeByName = (name: string): string | undefined => {
-  const codes = Object.keys(APP_CONFIG.departmentCodes);
-  return codes.find(code => 
-    APP_CONFIG.departmentCodes[code as keyof typeof APP_CONFIG.departmentCodes] === name
-  );
+  const dept = APP_CONFIG.departments.find(d => d.label === name);
+  return dept?.code;
 };
 
 export const getDepartmentByCode = (code: string) => {
   return APP_CONFIG.departments.find(dept => dept.code === code);
 };
 
+export const getDepartmentsByStatus = (isActive: boolean) => {
+  return APP_CONFIG.departments.filter(dept => dept.isActive === isActive);
+};
+
+export const getDepartmentsSorted = () => {
+  return [...APP_CONFIG.departments].sort((a, b) => a.sortOrder - b.sortOrder);
+};
+
+export const getAvailableColors = () => {
+  const usedColors = new Set(APP_CONFIG.departments.map(dept => dept.color));
+  const allColors = [
+    'bg-blue-500', 'bg-blue-600', 'bg-green-500', 'bg-green-600', 'bg-emerald-500',
+    'bg-purple-500', 'bg-violet-500', 'bg-indigo-500', 'bg-red-500', 'bg-rose-500',
+    'bg-pink-500', 'bg-yellow-500', 'bg-orange-500', 'bg-amber-500', 'bg-gray-500',
+    'bg-slate-500', 'bg-zinc-500', 'bg-teal-500', 'bg-cyan-500'
+  ] as const;
+  return allColors.filter(color => !usedColors.has(color as any));
+};
+
+export const validateDepartmentData = (dept: Partial<Department>) => {
+  const errors: string[] = [];
+  
+  if (!dept.value) errors.push('Value is required');
+  if (!dept.label) errors.push('Label is required');
+  if (!dept.code) errors.push('Code is required');
+  if (!dept.color) errors.push('Color is required');
+  
+  // Check for duplicate values
+  const existingDept = APP_CONFIG.departments.find(d => 
+    d.value === dept.value || d.code === dept.code
+  );
+  if (existingDept && existingDept.value !== dept.value) {
+    errors.push('Department with this value or code already exists');
+  }
+  
+  return errors;
+};
+
+export const getNextSortOrder = () => {
+  const maxOrder = Math.max(...APP_CONFIG.departments.map(dept => dept.sortOrder));
+  return maxOrder + 1;
+};
+
+export const canDeleteDepartment = (departmentCode: string) => {
+  // In a real application, you would check if the department is referenced elsewhere
+  // For now, we'll just check if it's a core department that shouldn't be deleted
+  const coreDepartments = ['IS', 'ADMIN', 'DEFAULT'];
+  return !coreDepartments.includes(departmentCode);
+};
+
+export const getDepartmentStats = () => {
+  const total = APP_CONFIG.departments.length;
+  const active = APP_CONFIG.departments.filter(dept => dept.isActive).length;
+  const inactive = total - active;
+  
+  return {
+    total,
+    active,
+    inactive,
+    activePercentage: Math.round((active / total) * 100)
+  };
+};
+
+export const searchDepartments = (query: string) => {
+  const lowerQuery = query.toLowerCase();
+  return APP_CONFIG.departments.filter(dept => 
+    dept.label.toLowerCase().includes(lowerQuery) ||
+    dept.code.toLowerCase().includes(lowerQuery) ||
+    dept.description.toLowerCase().includes(lowerQuery)
+  );
+};
+
+export const getDepartmentsByColor = (color: string) => {
+  return APP_CONFIG.departments.filter(dept => dept.color === color);
+};
+
+export const getNextAvailableCode = (baseCode: string) => {
+  let counter = 1;
+  let newCode = baseCode;
+  
+  while (APP_CONFIG.departments.some(dept => dept.code === newCode)) {
+    newCode = `${baseCode}${counter}`;
+    counter++;
+  }
+  
+  return newCode;
+};
+
+export const validateDepartmentConfig = () => {
+  const errors: string[] = [];
+  const codes = new Set<string>();
+  const values = new Set<string>();
+  
+  APP_CONFIG.departments.forEach((dept, index) => {
+    if (codes.has(dept.code)) {
+      errors.push(`Duplicate department code: ${dept.code}`);
+    }
+    if (values.has(dept.value)) {
+      errors.push(`Duplicate department value: ${dept.value}`);
+    }
+    if (!dept.color.startsWith('bg-')) {
+      errors.push(`Invalid color format for ${dept.code}: ${dept.color}`);
+    }
+    
+    codes.add(dept.code);
+    values.add(dept.value);
+  });
+  
+  return errors;
+};
+
+export const getDepartmentSuggestions = (input: string, maxResults: number = 5) => {
+  if (!input || input.length < 2) return [];
+  
+  const lowerInput = input.toLowerCase();
+  const suggestions = APP_CONFIG.departments
+    .filter(dept => 
+      dept.label.toLowerCase().includes(lowerInput) ||
+      dept.code.toLowerCase().includes(lowerInput)
+    )
+    .slice(0, maxResults)
+    .map(dept => ({
+      code: dept.code,
+      label: dept.label,
+      description: dept.description
+    }));
+  
+  return suggestions;
+};
+
+export const getDepartmentGroups = () => {
+  const groups: Record<string, Department[]> = {
+    'Operations': [],
+    'Support': [],
+    'Management': [],
+    'Technical': []
+  };
+  
+  APP_CONFIG.departments.forEach(dept => {
+    if (['LOG', 'PROC', 'PC', 'PM', 'FM'].includes(dept.code)) {
+      groups['Operations'].push(dept);
+    } else if (['CS', 'HELPDESK'].includes(dept.code)) {
+      groups['Support'].push(dept);
+    } else if (['HR', 'FIN', 'ADMIN'].includes(dept.code)) {
+      groups['Management'].push(dept);
+    } else if (['IS', 'QA', 'QC', 'RD'].includes(dept.code)) {
+      groups['Technical'].push(dept);
+    } else {
+      groups['Operations'].push(dept); // Default group
+    }
+  });
+  
+  return groups;
+};
+
+export const getDepartmentExportData = () => {
+  return APP_CONFIG.departments.map(dept => ({
+    code: dept.code,
+    name: dept.label,
+    description: dept.description,
+    color: dept.color,
+    status: dept.isActive ? 'Active' : 'Inactive',
+    sortOrder: dept.sortOrder,
+    homePage: getDepartmentHomePage(dept.code)
+  }));
+};
+
+export const getDepartmentColorPalette = () => {
+  const colorCounts: Record<string, number> = {};
+  
+  APP_CONFIG.departments.forEach(dept => {
+    colorCounts[dept.color] = (colorCounts[dept.color] || 0) + 1;
+  });
+  
+  return Object.entries(colorCounts).map(([color, count]) => ({
+    color,
+    count,
+    departments: getDepartmentsByColor(color)
+  }));
+};
+
+export const getDepartmentAnalytics = () => {
+  const stats = getDepartmentStats();
+  const groups = getDepartmentGroups();
+  const colorPalette = getDepartmentColorPalette();
+  
+  return {
+    overview: stats,
+    groups,
+    colorPalette,
+    topDepartments: getDepartmentsSorted().slice(0, 5),
+    inactiveDepartments: getDepartmentsByStatus(false),
+    colorDistribution: colorPalette.map(item => ({
+      color: item.color,
+      count: item.count,
+      percentage: Math.round((item.count / stats.total) * 100)
+    }))
+  };
+};
+
 export const mapUserDepartmentToCode = (userDepartment: string): string => {
+  if (!userDepartment) return 'DEFAULT';
+  
   // First try exact match
   if (APP_CONFIG.departmentCodes[userDepartment as keyof typeof APP_CONFIG.departmentCodes]) {
     return userDepartment;
@@ -1383,7 +1679,7 @@ export const mapUserDepartmentToCode = (userDepartment: string): string => {
            userDepartment.toLowerCase().includes(deptName.toLowerCase());
   });
   
-  return matchedCode || userDepartment; // Return original if no match found
+  return matchedCode || 'DEFAULT'; // Return DEFAULT if no match found
 };
 
 // Department Home Page Functions

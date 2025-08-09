@@ -395,11 +395,7 @@ export function NotificationDropdown({
                                       body: JSON.stringify({ id: n.id }),
                                     });
                                     
-                                    setNotifications((prev: NotificationType[]) =>
-                                      prev.map((notif: NotificationType) =>
-                                        notif.id === n.id ? { ...notif, read: true } : notif
-                                      )
-                                    );
+                                    // SSE will handle the real-time update automatically
                                   }}
                                   className="text-[10px] text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
                                 >

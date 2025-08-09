@@ -275,19 +275,22 @@ export default function ProjectDetailsPage() {
 
         {/* TASKS Tab */}
         {activeTab === "tasks" && (
-          <TasksTab
-            projectId={projectId}
-            tasks={tasksHook.tasks}
-            users={tasksHook.users}
-            onTaskCreated={() => {
-              tasksHook.fetchTasks();
-            }}
-            onTaskStatusUpdated={(taskId, newStatus) => {
-              tasksHook.updateTaskStatus(taskId, newStatus);
-            }}
-            user={user}
-            projectOwnerId={project.ownerId || ''}
-          />
+          <>
+            {console.log("Rendering TasksTab with projectId:", projectId, "users count:", tasksHook.users.length)}
+            <TasksTab
+              projectId={projectId}
+              tasks={tasksHook.tasks}
+              users={tasksHook.users}
+              onTaskCreated={() => {
+                tasksHook.fetchTasks();
+              }}
+              onTaskStatusUpdated={(taskId, newStatus) => {
+                tasksHook.updateTaskStatus(taskId, newStatus);
+              }}
+              user={user}
+              projectOwnerId={project.ownerId || ''}
+            />
+          </>
         )}
 
         {/* ANALYTICS Tab */}

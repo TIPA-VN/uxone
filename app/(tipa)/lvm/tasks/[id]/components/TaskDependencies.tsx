@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { 
   Link, 
   Clock, 
@@ -49,7 +48,6 @@ interface TaskDependenciesProps {
 }
 
 export default function TaskDependencies({ taskId, canEdit }: TaskDependenciesProps) {
-  const { data: session } = useSession();
   const [dependencies, setDependencies] = useState<TaskDependenciesData>({
     dependencies: [],
     blockingTasks: [],

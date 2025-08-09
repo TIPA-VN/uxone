@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ShoppingCart, Calendar, DollarSign, User, MapPin, Package, RefreshCw, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Calendar, User, Package, RefreshCw, CheckCircle } from 'lucide-react';
 import { formatQuantityForTable } from '@/lib/quantity-formatter';
 import { formatJDEDate } from '@/lib/jde-date-utils';
 

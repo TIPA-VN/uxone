@@ -82,6 +82,12 @@ export type User = {
   username: string;
   department: string;
   departmentName: string;
+  role?: string;
+  isActive?: boolean;
+  email?: string;
+  centralDepartment?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Comment = {

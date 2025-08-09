@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { 
   Breadcrumb, 
@@ -11,7 +10,7 @@ import {
   BreadcrumbPage, 
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -27,10 +26,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Loader2,
-  ArrowUpDown,
-  ChevronDown
+  ArrowUpDown
 } from "lucide-react";
 import Link from "next/link";
 
@@ -64,8 +61,7 @@ interface Demand {
 }
 
 export default function DemandsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { status } = useSession();
   const [demands, setDemands] = useState<Demand[]>([]);
   const [filteredDemands, setFilteredDemands] = useState<Demand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,12 +121,12 @@ export default function DemandsPage() {
 
     // Sort
     filtered.sort((a, b) => {
-      let aValue: any = a[sortBy as keyof Demand];
-      let bValue: any = b[sortBy as keyof Demand];
+      let aValue: string | number | Date = a[sortBy as keyof Demand];
+      let bValue: string | number | Date = b[sortBy as keyof Demand];
 
       if (sortBy === "submittedAt" || sortBy === "expectedDeliveryDate") {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
+        aValue = new Date(aValue as string).getTime();
+        bValue = new Date(bValue as string).getTime();
       }
 
       if (sortOrder === "asc") {

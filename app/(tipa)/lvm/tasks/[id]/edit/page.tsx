@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Save, X, Eye } from "lucide-react";
+import { Eye, Save, X } from "lucide-react";
+import Link from "next/link";
 
 type Task = {
   id: string;
@@ -34,19 +35,7 @@ type User = {
   departmentName: string;
 };
 
-const DEPARTMENTS = [
-  { value: "logistics", label: "Logistics" },
-  { value: "procurement", label: "Procurement" },
-  { value: "pc", label: "Production Planning" },
-  { value: "qa", label: "Quality Assurance" },
-  { value: "qc", label: "Quality Control" },
-  { value: "pm", label: "Production Maintenance" },
-  { value: "fm", label: "Facility Management" },
-  { value: "hra", label: "Human Resources" },
-  { value: "cs", label: "Customer Service" },
-  { value: "sales", label: "Sales" },
-  { value: "LVM-EXPAT", label: "LVM EXPATS" },
-];
+
 
 export default function EditTaskPage() {
   const params = useParams();
@@ -71,14 +60,7 @@ export default function EditTaskPage() {
     dueDate: "",
   });
 
-  useEffect(() => {
-    if (taskId) {
-      fetchTask();
-      fetchUsers();
-    }
-  }, [taskId]);
-
-  const fetchTask = async () => {
+  const fetchTask = useCallback(async () => {
     try {
       const res = await fetch(`/api/tasks/${taskId}`);
       if (res.ok) {
@@ -95,14 +77,14 @@ export default function EditTaskPage() {
       } else {
         setError("Failed to load task");
       }
-    } catch (error) {
+    } catch {
       setError("Failed to load task");
     } finally {
       setLoading(false);
     }
-  };
+  }, [taskId]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users?limit=100");
       if (res.ok) {
@@ -113,7 +95,14 @@ export default function EditTaskPage() {
       console.error("Failed to fetch users:", error);
       setUsers([]);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (taskId) {
+      fetchTask();
+      fetchUsers();
+    }
+  }, [taskId, fetchTask, fetchUsers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +129,7 @@ export default function EditTaskPage() {
         const errorData = await res.json();
         setError(errorData.error || "Failed to update task");
       }
-    } catch (error) {
+    } catch {
       setError("Failed to update task");
     } finally {
       setSaving(false);
@@ -160,7 +149,7 @@ export default function EditTaskPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Task Not Found</h1>
-          <p className="text-gray-600">The task you're looking for doesn't exist or you don't have access to it.</p>
+          <p className="text-gray-600">The task you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
         </div>
       </div>
     );
@@ -173,7 +162,7 @@ export default function EditTaskPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to edit this task.</p>
+          <p className="text-gray-600">You don&apos;t have permission to edit this task.</p>
         </div>
       </div>
     );
@@ -185,9 +174,9 @@ export default function EditTaskPage() {
         {/* Breadcrumb */}
         <div className="mb-4">
           <nav className="flex items-center space-x-2 text-sm text-gray-500">
-            <a href="/lvm/tasks" className="hover:text-gray-700 hover:underline cursor-pointer">
+            <Link href="/lvm/tasks" className="hover:text-gray-700 hover:underline cursor-pointer">
               Tasks
-            </a>
+            </Link>
             <span>/</span>
             <a href={`/lvm/tasks/${taskId}`} className="hover:text-gray-700 hover:underline cursor-pointer">
               {task?.title || 'Task'}
@@ -207,13 +196,13 @@ export default function EditTaskPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <a
+              <Link
                 href={`/lvm/tasks/${taskId}`}
                 className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors cursor-pointer"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 View Task
-              </a>
+              </Link>
             </div>
           </div>
         </div>

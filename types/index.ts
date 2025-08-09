@@ -203,8 +203,8 @@ export type TeamMember = {
 };
 
 // Re-export from config for convenience
-export const DEPARTMENTS = APP_CONFIG.departments;
-export type Department = typeof APP_CONFIG.departments[number];
+export const DEPARTMENTS = APP_CONFIG.departments.list;
+export type Department = typeof APP_CONFIG.departments.list[number];
 export type Role = keyof typeof APP_CONFIG.roles;
 export type TaskPriority = typeof APP_CONFIG.tasks.priorities[number]["value"];
 export type TaskStatus = typeof APP_CONFIG.tasks.statuses[number]["value"];

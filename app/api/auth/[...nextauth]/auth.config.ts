@@ -293,9 +293,13 @@ export const authConfig = {
   },
   callbacks: {
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-      // After successful sign in, redirect to LVM (department routing handled in main page)
+      // Allow direct navigation to admin routes
+      if (url.includes('/lvm/admin')) {
+        return url
+      }
+      // After successful sign in, redirect to root (department routing handled in main page)
       if (url.startsWith(baseUrl)) {
-        return `${baseUrl}/lvm`
+        return `${baseUrl}/`
       }
       // Allows relative callback URLs
       else if (url.startsWith("/")) {

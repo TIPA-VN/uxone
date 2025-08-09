@@ -1,18 +1,21 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { Plus, Calendar, Users, AlertCircle, Menu } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+
+import { 
+  Plus, 
+  Users, 
+  Menu
+} from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PriorityBadge } from "@/components/ui/PriorityBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Task, User } from "@/types";
-import { APP_CONFIG } from "@/config/app";
+import { getActiveDepartments } from "@/config/app";
 import { isOverdue, formatDateString } from "@/lib/utils";
 
 export default function TasksPage() {
-  const { data: session } = useSession();
-  const user = session?.user;
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
@@ -22,7 +25,7 @@ export default function TasksPage() {
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -31,11 +34,13 @@ export default function TasksPage() {
   const { 
     tasks, 
     loading, 
-    error, 
     createTask 
   } = useTasks();
 
-  const fetchUsers = async () => {
+  // Get active departments for the form
+  const activeDepartments = getActiveDepartments();
+
+  const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
       const res = await fetch("/api/users");
@@ -49,9 +54,9 @@ export default function TasksPage() {
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, []);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setLoadingProjects(true);
     try {
       const res = await fetch("/api/projects");
@@ -65,13 +70,13 @@ export default function TasksPage() {
     } finally {
       setLoadingProjects(false);
     }
-  };
+  }, []);
 
   // Fetch users and projects when component mounts
   useEffect(() => {
     fetchUsers();
     fetchProjects();
-  }, []);
+  }, [fetchUsers, fetchProjects]);
 
   // Debug: Log current state
   useEffect(() => {
@@ -339,7 +344,7 @@ export default function TasksPage() {
                   </label>
                   <select
                     value={priority}
-                    onChange={e => setPriority(e.target.value as any)}
+                    onChange={e => setPriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT')}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   >
@@ -390,13 +395,13 @@ export default function TasksPage() {
                     Assigned Departments
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {APP_CONFIG.departments.map(d => (
+                    {activeDepartments.map(d => (
                       <label key={d.value} className="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="checkbox"
                           value={d.value}
                           checked={false} // This state is no longer managed
-                          onChange={e => {}} // This function is no longer needed
+                          onChange={() => {}} // This function is no longer needed
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                         />
                         <span className="text-sm text-gray-700">{d.label}</span>

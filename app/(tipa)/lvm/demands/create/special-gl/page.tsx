@@ -48,7 +48,7 @@ export default function SpecialGLDemandPage() {
     }
 
     setIsLoading(false);
-  }, [status, router]);
+  }, [status, router, isPRTeamMember]);
 
   if (status === "loading" || isLoading) {
     return (

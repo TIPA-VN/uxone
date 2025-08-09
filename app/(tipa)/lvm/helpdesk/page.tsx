@@ -1,23 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { 
-  MessageSquare, 
-  Ticket, 
-  Users, 
-  BarChart3, 
-  Settings, 
+import { useState, useEffect, useCallback } from "react";
+import {
   Plus,
-  Clock,
+  Users,
   CheckCircle,
-  AlertCircle,
-  Loader2,
+  Clock,
+  AlertTriangle,
   Eye,
-  Edit
+  Edit,
+  Settings,
+  MessageSquare,
+  Loader2,
+  BarChart3,
+  Shield,
+  Ticket,
 } from "lucide-react";
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+import { Badge } from "@/components/ui/badge";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -52,7 +62,7 @@ export default function ISHomePage() {
     resolvedToday: 0,
     pendingTickets: 0,
     averageResolutionTime: 0,
-    customerSatisfaction: 0
+    customerSatisfaction: 0,
   });
   const [recentTickets, setRecentTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,70 +70,73 @@ export default function ISHomePage() {
   const router = useRouter();
 
   // Fetch dashboard data
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch all tickets for stats calculation
-        const ticketsResponse = await fetch('/api/tickets?limit=1000');
-        if (!ticketsResponse.ok) {
-          throw new Error('Failed to fetch tickets');
-        }
-        
-        const ticketsData = await ticketsResponse.json();
-        const tickets = ticketsData.tickets || [];
-        
-        // Calculate stats
-        const totalTickets = tickets.length;
-        const openTickets = tickets.filter((ticket: Ticket) => 
-          ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS'
-        ).length;
-        const pendingTickets = tickets.filter((ticket: Ticket) => 
-          ticket.status === 'PENDING'
-        ).length;
-        
-        // Calculate resolved today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const resolvedToday = tickets.filter((ticket: Ticket) => {
-          if (ticket.status !== 'RESOLVED') return false;
-          const resolvedDate = new Date(ticket.updatedAt);
-          return resolvedDate >= today;
-        }).length;
-        
-        // Calculate average resolution time (mock for now)
-        const averageResolutionTime = 4.5; // hours
-        
-        // Calculate customer satisfaction (mock for now)
-        const customerSatisfaction = 92; // percentage
-        
-        setStats({
-          totalTickets,
-          openTickets,
-          resolvedToday,
-          pendingTickets,
-          averageResolutionTime,
-          customerSatisfaction
-        });
-        
-        // Get recent tickets (last 5)
-        const recentTicketsData = tickets
-          .sort((a: Ticket, b: Ticket) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 5);
-        
-        setRecentTickets(recentTicketsData);
-        
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
 
-    fetchDashboardData();
+      // Fetch all tickets for stats calculation
+      const ticketsResponse = await fetch("/api/tickets?limit=1000");
+      if (!ticketsResponse.ok) {
+        throw new Error("Failed to fetch tickets");
+      }
+
+      const ticketsData = await ticketsResponse.json();
+      const tickets = ticketsData.tickets || [];
+
+      // Calculate stats
+      const totalTickets = tickets.length;
+      const openTickets = tickets.filter(
+        (ticket: Ticket) =>
+          ticket.status === "OPEN" || ticket.status === "IN_PROGRESS"
+      ).length;
+      const pendingTickets = tickets.filter(
+        (ticket: Ticket) => ticket.status === "PENDING"
+      ).length;
+
+      // Calculate resolved today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const resolvedToday = tickets.filter((ticket: Ticket) => {
+        if (ticket.status !== "RESOLVED") return false;
+        const resolvedDate = new Date(ticket.updatedAt);
+        return resolvedDate >= today;
+      }).length;
+
+      // Calculate average resolution time (mock for now)
+      const averageResolutionTime = 4.5; // hours
+
+      // Calculate customer satisfaction (mock for now)
+      const customerSatisfaction = 92; // percentage
+
+      setStats({
+        totalTickets,
+        openTickets,
+        resolvedToday,
+        pendingTickets,
+        averageResolutionTime,
+        customerSatisfaction,
+      });
+
+      // Get recent tickets (last 5)
+      const recentTicketsData = tickets
+        .sort(
+          (a: Ticket, b: Ticket) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+        .slice(0, 5);
+
+      setRecentTickets(recentTicketsData);
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const handleViewTicket = (ticketId: string) => {
     router.push(`/lvm/helpdesk/tickets/${ticketId}`);
@@ -149,9 +162,9 @@ export default function ISHomePage() {
       <div className="container mx-auto py-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">Error loading dashboard: {error}</p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            variant="outline" 
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
             className="mt-2"
           >
             Retry
@@ -166,13 +179,18 @@ export default function ISHomePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Information Systems Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Information Systems Dashboard
+          </h1>
           <p className="text-gray-600 mt-2">
             Helpdesk management and IT support system
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
+          <Badge
+            variant="outline"
+            className="bg-cyan-50 text-cyan-700 border-cyan-200"
+          >
             IS Department
           </Badge>
           <Button asChild>
@@ -193,9 +211,7 @@ export default function ISHomePage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalTickets}</div>
-            <p className="text-xs text-muted-foreground">
-              All time tickets
-            </p>
+            <p className="text-xs text-muted-foreground">All time tickets</p>
           </CardContent>
         </Card>
 
@@ -205,49 +221,53 @@ export default function ISHomePage() {
             <Clock className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.openTickets}</div>
-            <p className="text-xs text-muted-foreground">
-              Currently open
-            </p>
+            <div className="text-2xl font-bold text-orange-600">
+              {stats.openTickets}
+            </div>
+            <p className="text-xs text-muted-foreground">Currently open</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolved Today</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Resolved Today
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.resolvedToday}</div>
-            <p className="text-xs text-muted-foreground">
-              Completed today
-            </p>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.resolvedToday}
+            </div>
+            <p className="text-xs text-muted-foreground">Completed today</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
+            <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingTickets}</div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting response
-            </p>
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.pendingTickets}
+            </div>
+            <p className="text-xs text-muted-foreground">Awaiting response</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Resolution</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Resolution
+            </CardTitle>
             <BarChart3 className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.averageResolutionTime}h</div>
-            <p className="text-xs text-muted-foreground">
-              Average time
-            </p>
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.averageResolutionTime}h
+            </div>
+            <p className="text-xs text-muted-foreground">Average time</p>
           </CardContent>
         </Card>
 
@@ -257,10 +277,10 @@ export default function ISHomePage() {
             <CheckCircle className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.customerSatisfaction}%</div>
-            <p className="text-xs text-muted-foreground">
-              Customer rating
-            </p>
+            <div className="text-2xl font-bold text-purple-600">
+              {stats.customerSatisfaction}%
+            </div>
+            <p className="text-xs text-muted-foreground">Customer rating</p>
           </CardContent>
         </Card>
       </div>
@@ -322,6 +342,23 @@ export default function ISHomePage() {
             </CardHeader>
           </Link>
         </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer bg-purple-50 border-purple-200">
+          <div
+            className="cursor-pointer"
+            onClick={() => router.push("/lvm/admin")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-purple-600" />
+                <span>Admin Panel</span>
+              </CardTitle>
+              <CardDescription>
+                Access system administration and RBAC management
+              </CardDescription>
+            </CardHeader>
+          </div>
+        </Card>
       </div>
 
       {/* Recent Tickets */}
@@ -335,9 +372,7 @@ export default function ISHomePage() {
               </CardDescription>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/lvm/helpdesk/tickets">
-                View All
-              </Link>
+              <Link href="/lvm/helpdesk/tickets">View All</Link>
             </Button>
           </div>
         </CardHeader>
@@ -350,39 +385,60 @@ export default function ISHomePage() {
               </div>
             ) : (
               recentTickets.map((ticket) => (
-                <div key={ticket.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center space-x-3 min-w-0 flex-1 cursor-pointer" onClick={() => handleViewTicket(ticket.id)}>
+                <div
+                  key={ticket.id}
+                  className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  <div
+                    className="flex items-center space-x-3 min-w-0 flex-1 cursor-pointer"
+                    onClick={() => handleViewTicket(ticket.id)}
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-2">
-                        <p className="font-medium text-sm truncate hover:text-blue-600">{ticket.title}</p>
-                        <span className="text-xs text-gray-400">#{ticket.ticketNumber}</span>
+                        <p className="font-medium text-sm truncate hover:text-blue-600">
+                          {ticket.title}
+                        </p>
+                        <span className="text-xs text-gray-400">
+                          #{ticket.ticketNumber}
+                        </span>
                       </div>
                       <div className="flex items-center space-x-3 mt-1">
                         <span className="text-xs text-gray-500">
                           {new Date(ticket.createdAt).toLocaleDateString()}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {ticket.assignedTo ? ticket.assignedTo.name : 'Unassigned'}
+                          {ticket.assignedTo
+                            ? ticket.assignedTo.name
+                            : "Unassigned"}
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-3">
-                    <Badge 
+                    <Badge
                       variant={
-                        ticket.status === 'RESOLVED' ? 'default' : 
-                        ticket.status === 'IN_PROGRESS' ? 'secondary' : 
-                        ticket.status === 'PENDING' ? 'outline' : 'destructive'
+                        ticket.status === "RESOLVED"
+                          ? "default"
+                          : ticket.status === "IN_PROGRESS"
+                          ? "secondary"
+                          : ticket.status === "PENDING"
+                          ? "outline"
+                          : "destructive"
                       }
                       className="text-xs px-2 py-0.5"
                     >
-                      {ticket.status.replace('_', ' ')}
+                      {ticket.status.replace("_", " ")}
                     </Badge>
-                    <Badge variant="outline" className={`text-xs px-2 py-0.5 ${
-                      ticket.priority === 'HIGH' ? 'border-red-200 text-red-700' :
-                      ticket.priority === 'MEDIUM' ? 'border-yellow-200 text-yellow-700' :
-                      'border-green-200 text-green-700'
-                    }`}>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs px-2 py-0.5 ${
+                        ticket.priority === "HIGH"
+                          ? "border-red-200 text-red-700"
+                          : ticket.priority === "MEDIUM"
+                          ? "border-yellow-200 text-yellow-700"
+                          : "border-green-200 text-green-700"
+                      }`}
+                    >
                       {ticket.priority}
                     </Badge>
                     <div className="flex items-center space-x-1 ml-2">
@@ -420,4 +476,4 @@ export default function ISHomePage() {
       </Card>
     </div>
   );
-} 
+}

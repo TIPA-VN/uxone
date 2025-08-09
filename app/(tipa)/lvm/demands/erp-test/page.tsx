@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Package, 
@@ -12,12 +12,26 @@ import {
   DollarSign,
   ArrowRight,
   CheckCircle,
-  AlertCircle
+  // AlertCircle
 } from "lucide-react";
 import ERPIntegrationTest from "@/components/ERPIntegrationTest";
 
+interface DemandLine {
+  estimatedCost: number;
+  // Add other properties as needed
+}
+
+interface Demand {
+  id: string;
+  title: string;
+  status: string;
+  createdAt: string;
+  demandLines?: DemandLine[];
+  // Add other properties as needed
+}
+
 export default function ERPTestPage() {
-  const [demands, setDemands] = useState<any[]>([]);
+  const [demands, setDemands] = useState<Demand[]>([]);
   const [selectedDemandId, setSelectedDemandId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -131,7 +145,7 @@ export default function ERPTestPage() {
                           <DollarSign className="h-3 w-3" />
                           <span>
                             {demand.demandLines
-                              .reduce((sum: number, line: any) => sum + (line.estimatedCost || 0), 0)
+                              .reduce((sum: number, line: DemandLine) => sum + (line.estimatedCost || 0), 0)
                               .toLocaleString('vi-VN')} VND
                           </span>
                         </div>
@@ -202,7 +216,7 @@ export default function ERPTestPage() {
                   <h4 className="font-medium text-green-900">Preview Data</h4>
                 </div>
                 <p className="text-sm text-green-700">
-                  Click "Preview ERP Data" to see how the demand will be transformed
+                  Click &quot;Preview ERP Data&quot; to see how the demand will be transformed
                 </p>
               </div>
               
@@ -214,7 +228,7 @@ export default function ERPTestPage() {
                   <h4 className="font-medium text-purple-900">Submit to ERP</h4>
                 </div>
                 <p className="text-sm text-purple-700">
-                  Click "Submit to ERP" to send the transformed data to the ERP system
+                  Click &quot;Submit to ERP&quot; to send the transformed data to the ERP system
                 </p>
               </div>
             </div>

@@ -1,21 +1,19 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { 
   CheckCircle, 
   Clock, 
   XCircle, 
-  AlertTriangle, 
   User, 
-  Calendar, 
   Paperclip, 
-  Download, 
-  X, 
   Plus,
-  ChevronLeft,
   Edit,
-  Eye
+  Calendar,
+  Eye,
+  Download,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import TaskDependencies from "./components/TaskDependencies";
@@ -81,6 +79,12 @@ type User = {
   username: string;
   department: string;
   departmentName: string;
+  role?: string;
+  isActive?: boolean;
+  email?: string;
+  centralDepartment?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 const getStatusIcon = (status: string) => {
@@ -156,7 +160,7 @@ export default function TaskDetailPage() {
 
   const taskId = params.id as string;
 
-  const fetchTask = async () => {
+  const fetchTask = useCallback(async () => {
     try {
       const res = await fetch(`/api/tasks/${taskId}`);
       if (res.ok) {
@@ -170,9 +174,9 @@ export default function TaskDetailPage() {
       console.error('Error fetching task:', error);
       setTask(null);
     }
-  };
+  }, [taskId]);
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       const res = await fetch(`/api/tasks/${taskId}/comments`);
       const data = await res.json();
@@ -180,9 +184,9 @@ export default function TaskDetailPage() {
     } catch (error) {
       console.error('Error fetching comments:', error);
     }
-  };
+  }, [taskId]);
 
-  const fetchAttachments = async () => {
+  const fetchAttachments = useCallback(async () => {
     try {
       const res = await fetch(`/api/tasks/${taskId}/attachments`);
       const data = await res.json();
@@ -190,9 +194,9 @@ export default function TaskDetailPage() {
     } catch (error) {
       console.error('Error fetching attachments:', error);
     }
-  };
+  }, [taskId]);
 
-  const fetchSubtasks = async () => {
+  const fetchSubtasks = useCallback(async () => {
     try {
       const res = await fetch(`/api/tasks/${taskId}/subtasks`);
       const data = await res.json();
@@ -200,17 +204,26 @@ export default function TaskDetailPage() {
     } catch (error) {
       console.error('Error fetching subtasks:', error);
     }
-  };
+  }, [taskId]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users");
-      const data = await res.json();
-      setUsers(data);
+      if (res.ok) {
+        const data = await res.json();
+        // Handle paginated response from users API
+        const userList = data.users || data;
+        console.log("Fetched users for subtask assignment:", userList);
+        setUsers(userList);
+      } else {
+        console.error('Error fetching users:', res.status, res.statusText);
+        setUsers([]);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (taskId) {
@@ -218,7 +231,7 @@ export default function TaskDetailPage() {
         setLoading(false);
       });
     }
-  }, [taskId]);
+  }, [taskId, fetchTask, fetchComments, fetchAttachments, fetchSubtasks, fetchUsers]);
 
   // Check for success message from edit page
   useEffect(() => {
@@ -401,7 +414,7 @@ export default function TaskDetailPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Task Not Found</h1>
-          <p className="text-gray-600">The task you're looking for doesn't exist or you don't have access to it.</p>
+          <p className="text-gray-600">The task you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
         </div>
       </div>
     );
@@ -415,9 +428,9 @@ export default function TaskDetailPage() {
         {/* Breadcrumb */}
         <div className="mb-3">
           <nav className="flex items-center space-x-2 text-xs text-gray-500">
-            <a href="/lvm/tasks" className="hover:text-gray-700 hover:underline cursor-pointer">
+            <Link href="/lvm/tasks" className="hover:text-gray-700 hover:underline cursor-pointer">
               Tasks
-            </a>
+            </Link>
             <span>/</span>
             <span className="text-gray-900 font-medium">{task.title}</span>
           </nav>
@@ -444,13 +457,13 @@ export default function TaskDetailPage() {
             </div>
             <div className="flex items-center gap-3">
               {canEdit && (
-                <a
+                <Link
                   href={`/lvm/tasks/${task.id}/edit`}
                   className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
                 >
                   <Edit className="w-3 h-3 mr-1.5" />
                   Edit Task
-                </a>
+                </Link>
               )}
             </div>
           </div>

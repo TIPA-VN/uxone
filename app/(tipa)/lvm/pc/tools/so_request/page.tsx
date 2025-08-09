@@ -157,7 +157,6 @@ const SOProcessorPage = () => {
 
     const data: SORecord[] = [];
     const seenRecords = new Set<string>();
-    let skippedRows = 0;
 
     // Parse data rows
     for (let i = 1; i < lines.length; i++) {
@@ -169,7 +168,6 @@ const SOProcessorPage = () => {
         
         if (values.length <= Math.max(soIndex, requestDateIndex)) {
           warnings.push(`Row ${i + 1}: Insufficient columns (expected at least ${Math.max(soIndex, requestDateIndex) + 1}, got ${values.length})`);
-          skippedRows++;
           continue;
         }
 
@@ -178,7 +176,6 @@ const SOProcessorPage = () => {
 
         if (!so || !requestDate) {
           warnings.push(`Row ${i + 1}: Missing SO or Request_date (SO: "${so}", Date: "${requestDate}")`);
-          skippedRows++;
           continue;
         }
 
@@ -186,7 +183,6 @@ const SOProcessorPage = () => {
         const recordKey = `${so.toUpperCase()}|${requestDate}`;
         if (seenRecords.has(recordKey)) {
           warnings.push(`Row ${i + 1}: Duplicate record (SO: ${so}, Date: ${requestDate})`);
-          skippedRows++;
           continue;
         }
 
@@ -197,7 +193,6 @@ const SOProcessorPage = () => {
         });
       } catch (error) {
         warnings.push(`Row ${i + 1}: Parse error - ${error}`);
-        skippedRows++;
       }
     }
 

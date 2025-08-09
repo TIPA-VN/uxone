@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { 
@@ -33,9 +33,9 @@ import {
   MessageSquare,
   ThumbsUp,
   ThumbsDown,
-  Send,
-  Edit,
-  Download
+  // Send,
+  // Edit,
+  // Download
 } from "lucide-react";
 import Link from "next/link";
 
@@ -80,7 +80,7 @@ interface Demand {
 
 export default function DemandDetailPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
+  // const router = useRouter();
   const params = useParams();
   const demandId = params.id as string;
   
@@ -162,7 +162,7 @@ export default function DemandDetailPage() {
     if (status === "authenticated" && demandId) {
       fetchDemand();
     }
-  }, [status, demandId]);
+  }, [status, demandId, fetchDemand]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -231,7 +231,7 @@ export default function DemandDetailPage() {
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Demand not found</h2>
-          <p className="text-gray-600 mb-4">The demand you're looking for doesn't exist or you don't have permission to view it.</p>
+          <p className="text-gray-600 mb-4">The demand you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it.</p>
           <Link href="/lvm/demands">
             <Button>
               <ArrowLeft className="h-4 w-4 mr-2" />
