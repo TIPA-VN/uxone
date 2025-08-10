@@ -220,7 +220,7 @@ const SOUploadInterface: React.FC = () => {
   const simulateProgress = useCallback((totalChunks: number, estimatedTimeMinutes: number) => {
     let currentChunk = 0;
     let currentStep = 0;
-    let interval: NodeJS.Timeout | undefined;
+    let interval: NodeJS.Timeout | undefined = undefined;
 
     const updateProgress = () => {
       if (currentStep === 0) {

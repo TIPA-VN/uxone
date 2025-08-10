@@ -100,15 +100,7 @@ export async function GET(request: NextRequest) {
       take: 10,
     });
 
-    // Time Tracking Summary
-    const timeTracking = await prisma.task.aggregate({
-      where: {
-        ...userWhere,
-        ...(projectId && { projectId }),
-        createdAt: { gte: startDate },
-      },
-      _count: { id: true },
-    });
+
 
     // Overdue Tasks
     const overdueTasks = await prisma.task.count({

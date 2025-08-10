@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { 
-  transformDemandToERP, 
   validateERPData, 
   createERPPurchaseOrder,
   generateERPTransformationSummary,
   type ERPPurchaseOrderData 
 } from '@/lib/erp-data-transformer';
-import { demandCreationSchema } from '@/lib/zod';
 
 export async function POST(request: NextRequest) {
   try {
@@ -152,7 +150,13 @@ export async function POST(request: NextRequest) {
 /**
  * Simulate ERP API call - replace with actual ERP API integration
  */
-async function simulateERPAPICall(erpData: ERPPurchaseOrderData): Promise<any> {
+async function simulateERPAPICall(erpData: ERPPurchaseOrderData): Promise<{
+  success: boolean;
+  poNumber: string;
+  message: string;
+  timestamp: string;
+  erpData: ERPPurchaseOrderData;
+}> {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 1000));
   

@@ -2,8 +2,32 @@ import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getUserHomePage, mapRoleToConfigKey } from '@/config/app'
+import { RequestContextManager } from './lib/logging/request-context';
 
 export async function middleware(request: NextRequest) {
+  // Extract user information from the request for logging context
+  const userId = request.headers.get('x-user-id') || 'anonymous';
+  const userName = request.headers.get('x-user-name') || 'Anonymous User';
+  const userRole = request.headers.get('x-user-role') || 'guest';
+  const userDepartment = request.headers.get('x-user-department') || 'unknown';
+  const sessionId = request.headers.get('x-session-id') || `sess_${Date.now()}`;
+  const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Set the request context for this request
+  RequestContextManager.setContext({
+    userId,
+    userName,
+    userRole,
+    userDepartment,
+    sessionId,
+    ipAddress,
+    userAgent,
+    requestId,
+    timestamp: new Date()
+  });
+
   // Handle CORS for service API routes and integration routes
   if (request.nextUrl.pathname.startsWith('/api/service/') || request.nextUrl.pathname.startsWith('/api/integration/')) {
     // Handle preflight requests
@@ -38,6 +62,21 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(signInUrl)
     }
 
+    // Update request context with actual user information from session
+    if (session.user) {
+      RequestContextManager.setContext({
+        userId: session.user.id || 'unknown',
+        userName: session.user.name || session.user.username || 'Unknown User',
+        userRole: session.user.role || 'unknown',
+        userDepartment: session.user.department || session.user.centralDepartment || 'unknown',
+        sessionId: sessionId,
+        ipAddress,
+        userAgent,
+        requestId,
+        timestamp: new Date()
+      });
+    }
+
     // Check procurement access for procurement routes
     if (request.nextUrl.pathname.startsWith('/lvm/procurement')) {
       const userDepartment = session.user.department || session.user.centralDepartment;
@@ -62,15 +101,27 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(signInUrl)
     }
 
+    // Update request context with actual user information from session
+    if (session.user) {
+      RequestContextManager.setContext({
+        userId: session.user.id || 'unknown',
+        userName: session.user.name || session.user.username || 'Unknown User',
+        userRole: session.user.role || 'unknown',
+        userDepartment: session.user.department || session.user.centralDepartment || 'unknown',
+        sessionId: sessionId,
+        ipAddress,
+        userAgent,
+        requestId,
+        timestamp: new Date()
+      });
+    }
+
     // Check if user has admin access based on role and department
     const userRole = session.user.role;
     const userDepartment = session.user.department || session.user.centralDepartment;
     
-    console.log('Middleware - Admin check:', { userRole, userDepartment });
-    
     // Map the user role to the config key format (handles spaces vs underscores)
     const mappedRole = mapRoleToConfigKey(userRole);
-    console.log('Middleware - Mapped role:', mappedRole);
     
     // Define admin roles and departments
     const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'SENIOR_MANAGER'];
@@ -80,11 +131,8 @@ export async function middleware(request: NextRequest) {
     const hasAdminRole = adminRoles.includes(mappedRole);
     const hasAdminDepartment = adminDepartments.includes(userDepartment);
     
-    console.log('Middleware - Admin access check:', { hasAdminRole, hasAdminDepartment });
-    
     // Allow access if user has admin role OR is from admin department
     if (!hasAdminRole && !hasAdminDepartment) {
-      console.log('Middleware - Access denied, redirecting to:', getUserHomePage(userDepartment || 'DEFAULT'));
       // Redirect to user's appropriate home page if no admin access
       const userHomePage = getUserHomePage(userDepartment || 'DEFAULT');
       return NextResponse.redirect(new URL(userHomePage, request.url))

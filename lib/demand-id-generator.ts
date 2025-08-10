@@ -47,7 +47,6 @@ export async function generateDemandId(): Promise<string> {
   
   if (existingDemand) {
     // If ID already exists, try again (this should be very rare)
-    console.warn(`Demand ID ${demandId} already exists, generating new one...`);
     return generateDemandId();
   }
   

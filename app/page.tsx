@@ -12,8 +12,6 @@ export default async function Home() {
     const userRole = session.user.role;
     const userDepartment = session.user.department || session.user.centralDepartment;
     
-    console.log('Root page - User authenticated:', { userRole, userDepartment });
-    
     // Define admin roles and departments
     const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'SENIOR_MANAGER'];
     const adminDepartments = ['IS', 'ADMIN', 'IT'];
@@ -22,12 +20,8 @@ export default async function Home() {
     const { mapRoleToConfigKey } = await import('@/config/app');
     const mappedRole = mapRoleToConfigKey(userRole);
     
-    console.log('Root page - Mapped role:', mappedRole);
-    
     const hasAdminRole = adminRoles.includes(mappedRole);
     const hasAdminDepartment = adminDepartments.includes(userDepartment);
-    
-    console.log('Root page - Admin access check:', { hasAdminRole, hasAdminDepartment });
     
     // If user has admin access, don't redirect - let them choose where to go
     if (hasAdminRole || hasAdminDepartment) {
@@ -57,7 +51,6 @@ export default async function Home() {
     }
     
     // For non-admin users, redirect to their department home page
-    console.log('Root page - Non-admin user, redirecting to:', getUserHomePage(userDepartment || 'UNKNOWN'));
     const userHomePage = getUserHomePage(userDepartment || 'UNKNOWN')
     redirect(userHomePage)
   }

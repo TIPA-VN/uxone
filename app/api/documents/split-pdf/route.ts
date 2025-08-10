@@ -5,6 +5,7 @@ import { join } from "path";
 // import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { shouldCreateNewVersion } from "@/lib/file-comparison-server";
 
 export const runtime = 'nodejs';
 
@@ -109,37 +110,155 @@ export async function POST(req: NextRequest) {
         // Save the page file
         await writeFile(pageFilePath, pdfBytes);
 
-        // Versioning: find max version for same fileName, type, project, department
+        // Enhanced versioning with file comparison for split PDF pages
         let version = 1;
-        if (pageFileName && docType && projectId && department) {
-          const existing = await prisma.$queryRawUnsafe<{ max_version: number }[]>(
-            `SELECT MAX("version") as max_version FROM "documents" WHERE "fileName" = '${pageFileName.replace(/'/g, "''")}' AND (metadata->>'type') = '${docType.replace(/'/g, "''")}' AND "projectId" = '${projectId}' AND "department" = '${department}'`
-          );
-          if (Array.isArray(existing) && existing.length > 0 && existing[0].max_version) {
-            version = Number(existing[0].max_version) + 1;
+        let shouldCreateVersion = true;
+        let versionReason = 'New split page';
+        let identicalFileInfo = null; // Declare at higher scope
+        
+        if (docType && projectId && department) {
+          try {
+            // For PDF pages, we can do content comparison since they're PDFs
+            const shouldCompareContent = true; // PDF pages are always comparable
+            
+            if (shouldCompareContent) {
+                          // Find existing documents with same file extension, project, and department
+            // We compare by actual file type (pdf, doc, etc.) not UI document type
+            const existingDocs = await prisma.document.findMany({
+              where: {
+                projectId: projectId,
+                department: department,
+                // Find documents with the same file extension
+                fileName: {
+                  endsWith: `.${fileExtension}`
+                }
+              },
+              select: {
+                id: true,
+                fileName: true,
+                version: true,
+                filePath: true
+              },
+              orderBy: {
+                version: 'desc'
+              }
+            });
+              
+              if (existingDocs.length > 0) {
+                // Compare the new page with all existing files of the same type/project/department
+                let foundIdenticalFile = false;
+                let identicalFileInfo = null;
+                
+                for (const existingDoc of existingDocs) {
+                  if (existingDoc.filePath) {
+                    const existingFilePath = join(process.cwd(), 'public', existingDoc.filePath);
+                    
+                    try {
+                      const versionDecision = await shouldCreateNewVersion(pageFilePath, existingFilePath);
+                      
+                      if (!versionDecision.shouldVersion) {
+                        // Found an identical file!
+                        foundIdenticalFile = true;
+                        identicalFileInfo = {
+                          doc: existingDoc,
+                          decision: versionDecision
+                        };
+                        break;
+                      }
+                    } catch (comparisonError) {
+                      console.error(`PDF split file comparison failed for ${existingDoc.fileName}:`, comparisonError);
+                      // Continue checking other files
+                    }
+                  }
+                }
+                
+                if (foundIdenticalFile && identicalFileInfo) {
+                  // File is identical to an existing one, don't create new version
+                  shouldCreateVersion = false;
+                  version = identicalFileInfo.doc.version || 1;
+                  versionReason = `File content identical to existing file: ${identicalFileInfo.doc.fileName} (v${version})`;
+                  console.log(`PDF split file comparison: ${pageFileName} is identical to existing file ${identicalFileInfo.doc.fileName} version ${version} - no new version needed`);
+                } else {
+                  // No identical files found, create new version
+                  const latestVersion = existingDocs[0].version || 1;
+                  version = latestVersion + 1;
+                  shouldCreateVersion = true;
+                  versionReason = 'New file with different content';
+                  console.log(`PDF split file comparison: ${pageFileName} has different content, creating new version ${version}`);
+                }
+              }
+            } else {
+              // For non-comparable file types, always create new version
+              versionReason = `File type not suitable for content comparison - creating new version`;
+              console.log(`File type not suitable for content comparison - creating new version`);
+            }
+          } catch (error) {
+            console.error("Error in enhanced PDF split versioning:", error);
+            // Fallback to version 1 if versioning fails
+            version = 1;
+            versionReason = 'Versioning failed, using fallback';
           }
+          
+          // Enhanced debug logging for PDF split versioning
+          console.log(`Enhanced PDF split versioning: pageFileName=${pageFileName}, docType=${docType}, projectId=${projectId}, department=${department}, calculatedVersion=${version}, shouldCreateVersion=${shouldCreateVersion}, reason=${versionReason}`);
         }
 
-        // Save page document to database
-        const pageDoc = await prisma.document.create({
-          data: {
-            fileName: pageFileName,
-            filePath: relativePath,
-            fileType: "application/pdf",
-            size: pdfBytes.length,
-            version,
-            metadata: {
-              type: docType,
-              pageNumber: i + 1,
-              originalFile: file.name,
-              splitFrom: true
-            },
-            ownerId: session.user.id,
-            department,
-            projectId,
-            accessRoles: ["ADMIN", "SENIOR MANAGER", "MANAGER"]
+        // Save page document to database with enhanced versioning
+        let pageDoc;
+        
+        if (shouldCreateVersion) {
+          // Create new document with new version
+          pageDoc = await prisma.document.create({
+            data: {
+              fileName: pageFileName,
+              filePath: relativePath,
+              fileType: "application/pdf",
+              size: pdfBytes.length,
+              version,
+              metadata: {
+                type: docType,
+                pageNumber: i + 1,
+                originalFile: file.name,
+                splitFrom: true
+              },
+              ownerId: session.user.id,
+              department,
+              projectId,
+              accessRoles: ["ADMIN", "SENIOR MANAGER", "MANAGER"]
+            }
+          });
+          
+          console.log(`New PDF split page version created: ${pageDoc.id} with version ${version}`);
+        } else {
+          // File is identical, find existing document
+          // We need to find the existing document that was identified as identical
+          if (identicalFileInfo && identicalFileInfo.doc) {
+            pageDoc = identicalFileInfo.doc;
+            console.log(`PDF split page identical to existing version, returning existing document: ${pageDoc.id}`);
+          } else {
+            // Fallback: create new document if existing one not found
+            pageDoc = await prisma.document.create({
+              data: {
+                fileName: pageFileName,
+                filePath: relativePath,
+                fileType: "application/pdf",
+                size: pdfBytes.length,
+                version,
+                metadata: {
+                  type: docType,
+                  pageNumber: i + 1,
+                  originalFile: file.name,
+                  splitFrom: true
+                },
+                ownerId: session.user.id,
+                department,
+                projectId,
+                accessRoles: ["ADMIN", "SENIOR MANAGER", "MANAGER"]
+              }
+            });
+            console.log(`Fallback: new PDF split page created: ${pageDoc.id}`);
           }
-        });
+        }
 
         pages.push(pageDoc);
       }

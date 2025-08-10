@@ -18,7 +18,7 @@ interface DepartmentTabProps {
   } | undefined;
   project: {
     ownerId?: string;
-    approvalState?: Record<string, string>;
+    approvalState?: Record<string, any>;
   };
   onDocumentAction: () => void;
   onApproval: (action: "approved" | "disapproved") => void;
@@ -37,6 +37,7 @@ export function DepartmentTab({
 }: DepartmentTabProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [uploadResult, setUploadResult] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
   const [meta, setMeta] = useState({ type: "general", description: "" });
   const [docActionStatus, setDocActionStatus] = useState<Record<string, string | null>>({});
@@ -69,6 +70,59 @@ export function DepartmentTab({
     project?.ownerId || ''
   );
 
+  // Check if this department has already been approved
+  const getDepartmentApprovalStatus = () => {
+    if (!project?.approvalState || typeof project.approvalState !== 'object') {
+      return { status: 'PENDING', canApprove: true, canReject: true };
+    }
+
+    const approvalState = project.approvalState as Record<string, any>;
+    const deptApprovals = approvalState[department];
+    
+    if (!deptApprovals) {
+      return { status: 'PENDING', canApprove: true, canReject: true };
+    }
+
+    // Handle both old format (string) and new format (array of logs)
+    if (Array.isArray(deptApprovals)) {
+      if (deptApprovals.length === 0) {
+        return { status: 'PENDING', canApprove: true, canReject: true };
+      }
+      
+      const latestApproval = deptApprovals[deptApprovals.length - 1];
+      const status = latestApproval.status;
+      
+      if (status === 'APPROVED') {
+        return { 
+          status: 'APPROVED', 
+          canApprove: false, 
+          canReject: true,
+          approvedBy: latestApproval.user,
+          approvedAt: latestApproval.timestamp
+        };
+      } else if (status === 'REJECTED') {
+        return { 
+          status: 'REJECTED', 
+          canApprove: true, 
+          canReject: true,
+          rejectedBy: latestApproval.user,
+          rejectedAt: latestApproval.timestamp
+        };
+      }
+    } else {
+      // Handle old string format
+      const status = deptApprovals;
+      if (status === 'APPROVED') {
+        return { status: 'APPROVED', canApprove: false, canReject: true };
+      } else if (status === 'REJECTED') {
+        return { status: 'REJECTED', canApprove: true, canReject: true };
+      }
+    }
+
+    return { status: 'PENDING', canApprove: true, canReject: true };
+  };
+
+  const approvalStatus = getDepartmentApprovalStatus();
 
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -98,7 +152,16 @@ export function DepartmentTab({
       });
       
       if (res.ok) {
-        setUploadStatus("Upload successful!");
+        const result = await res.json();
+        setUploadResult(result);
+        
+        // Show appropriate message based on version decision
+        if (result.versionDecision?.shouldCreateVersion === false) {
+          setUploadStatus(`File uploaded successfully! File is identical to existing version ${result.versionDecision.version} - no new version created.`);
+        } else {
+          setUploadStatus(`Upload successful! New version ${result.versionDecision?.version || result.version} created.`);
+        }
+        
         setFile(null);
         setMeta({ type: "general", description: "" });
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -106,9 +169,11 @@ export function DepartmentTab({
         onDocumentAction();
       } else {
         setUploadStatus("Upload failed.");
+        setUploadResult(null);
       }
     } catch {
       setUploadStatus("Upload failed.");
+      setUploadResult(null);
     } finally {
       setUploading(false);
     }
@@ -218,32 +283,95 @@ export function DepartmentTab({
         {/* Approval Section */}
         {canApprove && (
           <div className="bg-white rounded-lg shadow p-4 border border-yellow-200">
-            <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+            <div className={`rounded-lg p-3 border ${
+              approvalStatus.status === 'APPROVED' 
+                ? 'bg-green-50 border-green-200' 
+                : approvalStatus.status === 'REJECTED'
+                ? 'bg-red-50 border-red-200'
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="text-sm font-medium text-yellow-800">
-                    Department Approval Required
+                  <h3 className={`text-sm font-medium ${
+                    approvalStatus.status === 'APPROVED' 
+                      ? 'text-green-800' 
+                      : approvalStatus.status === 'REJECTED'
+                      ? 'text-red-800'
+                      : 'text-yellow-800'
+                  }`}>
+                    {approvalStatus.status === 'APPROVED' 
+                      ? 'Department Approved' 
+                      : approvalStatus.status === 'REJECTED'
+                      ? 'Department Rejected'
+                      : 'Department Approval Required'
+                    }
                   </h3>
-                  <p className="text-xs text-yellow-700 mt-1">
-                    {user?.role?.toUpperCase() === "ADMIN" 
-                      ? `As an Admin, you can approve or reject this project for the ${department} department.`
-                      : project.ownerId === user?.id
-                      ? `As the project owner, you can approve or reject this project for the ${department} department.`
-                      : `As a Senior Manager of ${department}, you can approve or reject this project.`
+                  <p className={`text-xs mt-1 ${
+                    approvalStatus.status === 'APPROVED' 
+                      ? 'text-green-700' 
+                      : approvalStatus.status === 'REJECTED'
+                      ? 'text-red-700'
+                      : 'text-yellow-700'
+                  }`}>
+                    {approvalStatus.status === 'APPROVED' 
+                      ? `Approved by ${approvalStatus.approvedBy} on ${new Date(approvalStatus.approvedAt).toLocaleDateString()}`
+                      : approvalStatus.status === 'REJECTED'
+                      ? `Rejected by ${approvalStatus.rejectedBy} on ${new Date(approvalStatus.rejectedAt).toLocaleDateString()}`
+                      : user?.role?.toUpperCase() === "ADMIN" 
+                        ? `As an Admin, you can approve or reject this project for the ${department} department.`
+                        : project.ownerId === user?.id
+                        ? `As the project owner, you can approve or reject this project for the ${department} department.`
+                        : `As a Senior Manager of ${department}, you can approve or reject this project.`
                     }
                   </p>
                 </div>
               </div>
+              
+              {/* Approval Status Display */}
+              {approvalStatus.status === 'APPROVED' && (
+                <div className="mb-3 p-2 bg-green-100 border border-green-300 rounded">
+                  <div className="flex items-center text-green-800">
+                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Approved</span>
+                  </div>
+                </div>
+              )}
+              
+              {approvalStatus.status === 'REJECTED' && (
+                <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded">
+                                      <div className="flex items-center text-red-800">
+                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm font-medium">Rejected</span>
+                    </div>
+                </div>
+              )}
+              
               <div className="flex space-x-2">
                 <button
                   onClick={() => onApproval("approved")}
-                  className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                  disabled={!approvalStatus.canApprove}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
+                    approvalStatus.canApprove
+                      ? 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 cursor-pointer'
+                      : 'bg-gray-400 text-white cursor-not-allowed opacity-50'
+                  }`}
+                  title={approvalStatus.canApprove ? 'Approve Project' : 'Already Approved'}
                 >
-                  Approve
+                  {approvalStatus.status === 'APPROVED' ? 'Approved' : 'Approve'}
                 </button>
                 <button
                   onClick={() => onApproval("disapproved")}
-                  className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                  disabled={!approvalStatus.canReject}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
+                    approvalStatus.canReject
+                      ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 cursor-pointer'
+                      : 'bg-gray-400 text-white cursor-not-allowed opacity-50'
+                  }`}
+                  title={approvalStatus.canReject ? 'Reject Project' : 'Cannot Reject'}
                 >
                   Reject
                 </button>
@@ -272,6 +400,10 @@ export function DepartmentTab({
       <div className="md:w-2/3 w-full bg-white rounded-lg shadow p-3 text-sm">
         <div className="mb-3">
           <h3 className="font-semibold mb-2">Upload Document</h3>
+          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+            <p className="font-medium mb-1">ℹ️ Smart Versioning:</p>
+            <p>The system automatically compares uploaded files with existing versions. Identical files won't create duplicate versions.</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Document Type Selection */}
             <div>
@@ -346,6 +478,39 @@ export function DepartmentTab({
               </div>
             )}
 
+            {/* Version Decision Details */}
+            {uploadResult && uploadResult.versionDecision && (
+              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs">
+                <h4 className="font-medium text-blue-800 mb-2">Version Decision Details:</h4>
+                <div className="space-y-1 text-blue-700">
+                  <div className="flex justify-between">
+                    <span>Should Create Version:</span>
+                    <span className={`font-medium ${
+                      uploadResult.versionDecision.shouldCreateVersion ? 'text-green-600' : 'text-blue-600'
+                    }`}>
+                      {uploadResult.versionDecision.shouldCreateVersion ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Version Number:</span>
+                    <span className="font-medium">{uploadResult.versionDecision.version}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Reason:</span>
+                    <span className="font-medium">{uploadResult.versionDecision.reason}</span>
+                  </div>
+                  {uploadResult.versionDecision.similarity !== undefined && (
+                    <div className="flex justify-between">
+                      <span>Similarity:</span>
+                      <span className="font-medium">
+                        {Math.round(uploadResult.versionDecision.similarity * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-2">
               <button
@@ -362,6 +527,7 @@ export function DepartmentTab({
                   setFile(null);
                   setMeta({ type: "general", description: "" });
                   setUploadStatus(null);
+                  setUploadResult(null);
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
                 className="w-1/4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium flex items-center justify-center gap-2"
@@ -382,6 +548,7 @@ export function DepartmentTab({
                   <tr className="border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                     <th className="py-2 px-3 text-left font-medium text-xs w-2/5">File Name</th>
                     <th className="py-2 px-3 text-left font-medium text-xs w-1/5">Type</th>
+                    <th className="py-2 px-3 text-left font-medium text-xs w-1/5">Version</th>
                     <th className="py-2 px-3 text-left font-medium text-xs w-1/5">Uploaded At</th>
                     <th className="py-2 px-3 text-center font-medium text-xs w-1/5">Actions</th>
                     <th className="py-2 px-3 text-center font-medium text-xs w-1/5">Option</th>
@@ -423,6 +590,11 @@ export function DepartmentTab({
                         <td className="py-0.5 px-3 w-1/5">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             {DOCUMENT_TYPES.find(t => t.value === (doc.metadata as { type?: string })?.type)?.label || 'General'}
+                          </span>
+                        </td>
+                        <td className="py-0.5 px-3 w-1/5">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            v{doc.version || 1}
                           </span>
                         </td>
                         <td className="py-0.5 px-3 w-1/5">{new Date(doc.createdAt).toLocaleString()}</td>

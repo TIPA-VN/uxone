@@ -10,7 +10,15 @@ export async function GET(request: NextRequest) {
     const approvalRoute = searchParams.get('approvalRoute');
 
     // Build where clause based on query parameters
-    const where: any = {};
+    const where: {
+      bu?: string;
+      department?: {
+        contains: string;
+        mode: 'insensitive';
+      };
+      account?: number;
+      approvalRoute?: string;
+    } = {};
     
     if (bu) {
       where.bu = bu;

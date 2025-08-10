@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/app/api/notifications/stream/route";
+import { PrismaAudit } from "@/lib/prisma-audit";
 
 export const runtime = 'nodejs';
 
@@ -252,9 +253,17 @@ export async function PATCH(
     if (actualHours !== undefined) updateData.actualHours = actualHours;
     if (tags !== undefined) updateData.tags = tags;
 
-    const updatedTask = await prisma.task.update({
+    // Update task with audit fields automatically
+    const updatedTask = await PrismaAudit.updateAuditFields(
+      prisma,
+      prisma.task,
+      id,
+      updateData
+    );
+
+    // Fetch the updated task with all relationships
+    const taskWithRelations = await prisma.task.findUnique({
       where: { id },
-      data: updateData,
       include: {
         project: {
           select: {
@@ -307,7 +316,7 @@ export async function PATCH(
                 username: true,
                 department: true,
                 departmentName: true,
-              },
+            },
             },
             _count: {
               select: {
@@ -334,9 +343,9 @@ export async function PATCH(
           data: {
             userId: assigneeId,
             title: `Task Reassigned`,
-            message: `You have been assigned the task: "${updatedTask.title}" by ${session.user.name || session.user.username}`,
+            message: `You have been assigned the task: "${taskWithRelations.title}" by ${session.user.name || session.user.username}`,
             type: "info",
-            link: `/lvm/tasks/${updatedTask.id}`,
+            link: `/lvm/tasks/${taskWithRelations.id}`,
           },
         });
         
@@ -371,7 +380,7 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json(updatedTask);
+    return NextResponse.json(taskWithRelations);
   } catch (error) {
     console.error("Error updating task:", error);
     return NextResponse.json(

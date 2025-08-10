@@ -19,7 +19,6 @@ type Task = {
   assignee_department?: string;
   status: 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'COMPLETED' | 'CANCELLED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  requestDate: string;
   dueDate?: string;
   projectId?: string;
   project_name?: string;

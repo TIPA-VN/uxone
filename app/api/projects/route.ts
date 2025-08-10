@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateDocumentNumber } from "@/lib/documentNumberGenerator";
 import { sendNotification } from "@/app/api/notifications/stream/route";
+import { PrismaAudit } from "@/lib/prisma-audit";
 
 // Type definitions for better type safety
 interface ProjectWithCounts {
@@ -307,7 +308,6 @@ export async function POST(request: NextRequest) {
         generatedDocumentNumber = await generateDocumentNumber(documentTemplateId, undefined, session.user.id);
         documentNumber = generatedDocumentNumber.documentNumber;
       } catch (error) {
-        console.error("Error generating document number:", error);
         return NextResponse.json(
           { error: "Failed to generate document number" },
           { status: 400 }
@@ -344,7 +344,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const project = await prisma.project.create({
+    const project = await PrismaAudit.createWithAudit(prisma.project, {
       data: {
         name,
         description,
@@ -467,19 +467,16 @@ export async function POST(request: NextRequest) {
       sendNotification(ownerNotification, currentUser.id);
 
     } catch (error) {
-      console.error("Error creating notifications:", error);
       // Don't fail the project creation if notifications fail
     }
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
-    console.error("Error creating project:", error);
-    
     // Handle specific Prisma errors
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2003') {
       return NextResponse.json(
         { error: "Invalid user reference. Please log in again." },
-        { status: 400 }
+        { status: 500 }
       );
     }
     

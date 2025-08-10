@@ -27,7 +27,7 @@ export default function InvoiceChecker() {
         const data = await response.json();
         setIsConfigured(data.isConfigured);
       } catch (error) {
-        console.error('Failed to check configuration:', error);
+        // Configuration check failed
       }
     };
 
@@ -117,7 +117,6 @@ export default function InvoiceChecker() {
       }
     } catch (err: any) {
       setError('Network error: Unable to connect to the server');
-      console.error('Network error:', err);
     } finally {
       setLoading(false);
     }

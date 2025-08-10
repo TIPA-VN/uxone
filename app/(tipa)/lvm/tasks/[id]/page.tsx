@@ -40,7 +40,6 @@ type Task = {
   };
   status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  requestDate: string;
   dueDate?: string;
   projectId?: string;
   project?: {
@@ -503,8 +502,8 @@ export default function TaskDetailPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-xs font-medium text-gray-700 mb-1">Request Date</h3>
-                    <p className="text-sm text-gray-900">{new Date(task.requestDate).toLocaleDateString()}</p>
+                    <h3 className="text-xs font-medium text-gray-700 mb-1">Created Date</h3>
+                    <p className="text-sm text-gray-900">{new Date(task.createdAt).toLocaleDateString()}</p>
                   </div>
 
                   {task.dueDate && (

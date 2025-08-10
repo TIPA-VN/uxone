@@ -9,7 +9,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       service: 'central-auth'
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Service unavailable' },
       { status: 503 }

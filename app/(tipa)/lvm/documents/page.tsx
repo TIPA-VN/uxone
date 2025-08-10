@@ -36,6 +36,7 @@ export default function DocumentUploadPage() {
   const [accessRoles, setAccessRoles] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [uploadResult, setUploadResult] = useState<any>(null);
   const [docs, setDocs] = useState<Document[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,7 +80,16 @@ export default function DocumentUploadPage() {
       body: formData,
     });
     if (res.ok) {
-      setUploadStatus("Upload successful!");
+      const result = await res.json();
+      setUploadResult(result);
+      
+      // Show appropriate message based on version decision
+      if (result.versionDecision?.shouldCreateVersion === false) {
+        setUploadStatus(`File uploaded successfully! File is identical to existing version ${result.versionDecision.version} - no new version created.`);
+      } else {
+        setUploadStatus(`Upload successful! New version ${result.versionDecision?.version || result.version} created.`);
+      }
+      
       setFile(null);
       setMeta({ type: "", project: "", part: "", description: "" });
       setDepartment("");
@@ -88,6 +98,7 @@ export default function DocumentUploadPage() {
       fetchDocs();
     } else {
       setUploadStatus("Upload failed.");
+      setUploadResult(null);
     }
     setUploading(false);
   };
@@ -95,6 +106,12 @@ export default function DocumentUploadPage() {
   return (
     <div className="max-w-2xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Upload Document</h1>
+      
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+        <p className="font-medium mb-1">ℹ️ Smart Versioning:</p>
+        <p>The system automatically compares uploaded files with existing versions. Identical files won't create duplicate versions.</p>
+      </div>
+      
       <form onSubmit={handleUpload} className="space-y-4 bg-white p-4 rounded shadow">
         <div>
           <label className="block font-medium mb-1">File</label>
@@ -186,6 +203,39 @@ export default function DocumentUploadPage() {
           {uploading ? "Uploading..." : "Upload"}
         </button>
         {uploadStatus && <div className="text-center text-sm mt-2">{uploadStatus}</div>}
+        
+        {/* Version Decision Details */}
+        {uploadResult && uploadResult.versionDecision && (
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+            <h4 className="font-medium text-blue-800 mb-2">Version Decision Details:</h4>
+            <div className="space-y-1 text-blue-700">
+              <div className="flex justify-between">
+                <span>Should Create Version:</span>
+                <span className={`font-medium ${
+                  uploadResult.versionDecision.shouldCreateVersion ? 'text-green-600' : 'text-blue-600'
+                }`}>
+                  {uploadResult.versionDecision.shouldCreateVersion ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Version Number:</span>
+                <span className="font-medium">{uploadResult.versionDecision.version}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Reason:</span>
+                <span className="font-medium">{uploadResult.versionDecision.reason}</span>
+              </div>
+              {uploadResult.versionDecision.similarity !== undefined && (
+                <div className="flex justify-between">
+                  <span>Similarity:</span>
+                  <span className="font-medium">
+                    {Math.round(uploadResult.versionDecision.similarity * 100)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </form>
       <h2 className="text-xl font-bold mt-10 mb-4">Documents</h2>
       <div className="bg-white rounded shadow p-4">
@@ -197,6 +247,7 @@ export default function DocumentUploadPage() {
               <tr className="border-b">
                 <th className="py-2 text-left">File</th>
                 <th className="py-2 text-left">Type</th>
+                <th className="py-2 text-left">Version</th>
                 <th className="py-2 text-left">Project</th>
                 <th className="py-2 text-left">Department</th>
                 <th className="py-2 text-left">Uploaded</th>
@@ -208,6 +259,11 @@ export default function DocumentUploadPage() {
                 <tr key={doc.id} className="border-b">
                   <td className="py-1">{doc.fileName}</td>
                   <td className="py-1">{doc.metadata?.type || ""}</td>
+                  <td className="py-1">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      v{doc.version || 1}
+                    </span>
+                  </td>
                   <td className="py-1">{doc.metadata?.project || ""}</td>
                   <td className="py-1">{doc.department || ""}</td>
                   <td className="py-1">{new Date(doc.createdAt).toLocaleString()}</td>

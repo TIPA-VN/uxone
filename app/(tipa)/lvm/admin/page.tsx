@@ -1,7 +1,5 @@
 "use client";
-import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import {
   Users, 
   Activity, 
@@ -17,7 +15,6 @@ import {
 import { APP_CONFIG } from "@/config/app";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useUsers } from "@/hooks/useUsers";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useActivities } from "@/hooks/useActivities";
@@ -25,7 +22,6 @@ import Link from "next/link";
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   
   // User management hook
   const {

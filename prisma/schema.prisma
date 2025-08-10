@@ -38,6 +38,9 @@ model User {
   assignedTasks            Task[]                    @relation("TaskAssignee")
   createdTasks             Task[]                    @relation("TaskCreator")
   ownedTasks               Task[]                    @relation("TaskOwner")
+  lastUpdatedTasks         Task[]                    @relation("TaskLastUpdatedBy")
+  lastUpdatedProjects      Project[]                 @relation("ProjectLastUpdatedBy")
+  lastUpdatedTickets       Ticket[]                  @relation("TicketLastUpdatedBy")
   ticketAttachments        TicketAttachment[]        @relation("TicketAttachmentUploader")
   ticketComments           TicketComment[]           @relation("TicketCommentAuthor")
   assignedTickets          Ticket[]                  @relation("TicketAssignee")
@@ -77,6 +80,11 @@ model Ticket {
   comments         TicketComment[]
   assignedTo       User?              @relation("TicketAssignee", fields: [assignedToId], references: [id])
   createdBy        User               @relation("TicketCreator", fields: [createdById], references: [id])
+  
+  // Audit fields
+  lastUpdatedBy    String?
+  lastUpdatedById  String?
+  lastUpdatedByUser User?             @relation("TicketLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 
   @@map("tickets")
 }
@@ -177,6 +185,11 @@ model Project {
   members            ProjectMember[]
   owner              User             @relation(fields: [ownerId], references: [id])
   tasks              Task[]
+  
+  // Audit fields
+  lastUpdatedBy      String?
+  lastUpdatedById    String?
+  lastUpdatedByUser  User?            @relation("ProjectLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 
   @@map("projects")
 }
@@ -251,6 +264,11 @@ model Task {
   parentTask        Task?            @relation("SubtaskParent", fields: [parentTaskId], references: [id])
   subtasks          Task[]           @relation("SubtaskParent")
   project           Project?         @relation(fields: [projectId], references: [id])
+  
+  // Audit fields
+  lastUpdatedBy     String?
+  lastUpdatedById   String?
+  lastUpdatedByUser User?            @relation("TaskLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 
   @@map("tasks")
 }

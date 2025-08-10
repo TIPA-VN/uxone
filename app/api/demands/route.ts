@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         
         // If user doesn't exist and it's a test account, create it
         if (!userExists && session.user.id.startsWith('test-account-')) {
-          const testUser = await tx.user.create({
+          await tx.user.create({
             data: {
               id: session.user.id,
               username: session.user.username || session.user.id,
@@ -131,7 +131,11 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     // Build where clause
-    const whereClause: any = {};
+    const whereClause: {
+      status?: string;
+      department?: string;
+      userId?: string;
+    } = {};
     
     if (status) {
       whereClause.status = status;

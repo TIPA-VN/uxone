@@ -48,8 +48,6 @@ const departmentAccounts = [
 ];
 
 async function main() {
-  console.log('🌱 Seeding department accounts...');
-
   // Clear existing data
   await prisma.departmentAccount.deleteMany();
 
@@ -59,13 +57,10 @@ async function main() {
       data: deptAccount,
     });
   }
-
-  console.log(`✅ Seeded ${departmentAccounts.length} department accounts`);
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding department accounts:', e);
     process.exit(1);
   })
   .finally(async () => {

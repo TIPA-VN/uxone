@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PrismaAudit } from "@/lib/prisma-audit";
 
 // GET /api/projects/[id] - Get a specific project
 export async function GET(
@@ -202,8 +203,8 @@ export async function PATCH(
       }
     }
 
-    // Update the project
-    const updatedProject = await prisma.project.update({
+    // Update the project with audit tracking
+    const updatedProject = await PrismaAudit.updateAuditFields(prisma.project, {
       where: { id: projectId },
       data: processedUpdates,
       include: {
@@ -242,7 +243,6 @@ export async function PATCH(
 
     return NextResponse.json(updatedProject);
   } catch (error) {
-    console.error("Error updating project:", error);
     return NextResponse.json(
       { error: "Failed to update project" },
       { status: 500 }
@@ -284,7 +284,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Project deleted successfully" });
   } catch (error) {
-    console.error("Error deleting project:", error);
     return NextResponse.json(
       { error: "Failed to delete project" },
       { status: 500 }

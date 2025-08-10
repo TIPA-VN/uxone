@@ -55,7 +55,6 @@ export class TicketNumberGenerator {
         };
       }
     } catch (error) {
-      console.error('Error loading ticket number configuration:', error);
       // Use default configuration if database fails
     }
   }

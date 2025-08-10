@@ -90,7 +90,11 @@ export async function POST(
 
     // Update demand status
     const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
-    const updateData: any = {
+    const updateData: {
+      status: string;
+      updatedAt: Date;
+      approvedAt?: Date;
+    } = {
       status: newStatus,
       updatedAt: new Date(),
     };

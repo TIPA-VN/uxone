@@ -26,8 +26,6 @@ export async function sendWebhookToTIPA(notification: WebhookNotification): Prom
   const webhookSecret = process.env.WEBHOOK_SECRET || 'tipa-mobile-webhook-secret-2024'
   
   try {
-    console.log(`📤 UXOne: Sending webhook to TIPA Mobile for notification: ${notification.notificationId}`)
-    
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -41,16 +39,12 @@ export async function sendWebhookToTIPA(notification: WebhookNotification): Prom
     const responseData = await response.json()
 
     if (response.ok) {
-      console.log(`✅ UXOne: Webhook sent successfully to TIPA Mobile`)
-      console.log(`📊 UXOne: TIPA Mobile response:`, responseData)
       return {
         success: true,
         notificationId: responseData.notificationId,
         message: responseData.message
       }
     } else {
-      console.error(`❌ UXOne: Webhook failed with status ${response.status}`)
-      console.error(`📊 UXOne: TIPA Mobile error response:`, responseData)
       return {
         success: false,
         error: `HTTP ${response.status}: ${responseData.error || 'Unknown error'}`
@@ -58,7 +52,6 @@ export async function sendWebhookToTIPA(notification: WebhookNotification): Prom
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error(`❌ UXOne: Webhook error:`, errorMessage)
     return {
       success: false,
       error: errorMessage
@@ -108,12 +101,10 @@ export async function sendWebhookWithRetry(
     
     if (attempt < maxRetries) {
       const delay = Math.pow(2, attempt) * 1000 // Exponential backoff: 2s, 4s, 8s
-      console.log(`⏳ UXOne: Retrying webhook in ${delay}ms...`)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
   
-  console.error(`❌ UXOne: Webhook failed after ${maxRetries} attempts`)
   return {
     success: false,
     error: `Failed after ${maxRetries} attempts`
@@ -137,8 +128,6 @@ export async function sendBatchWebhooks(
     errors: [] as string[]
   }
 
-  console.log(`📤 UXOne: Sending batch of ${notifications.length} notifications to TIPA Mobile`)
-
   for (const notification of notifications) {
     try {
       const result = await sendWebhookWithRetry(notification, targetUserId)
@@ -155,8 +144,6 @@ export async function sendBatchWebhooks(
       results.errors.push(`Notification ${notification.id}: ${errorMessage}`)
     }
   }
-
-  console.log(`📊 UXOne: Batch webhook results: ${results.successful} successful, ${results.failed} failed`)
   
   return results
 }

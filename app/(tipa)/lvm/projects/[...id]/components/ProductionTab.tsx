@@ -71,7 +71,18 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
       if (versionDiff !== 0) return versionDiff;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-
+    
+    // Debug logging for versioning issues
+    if (groupedDocuments[filename].length > 1) {
+      console.log(`Multiple versions found for ${filename}:`, 
+        groupedDocuments[filename].map(doc => ({
+          id: doc.id,
+          version: doc.version,
+          createdAt: doc.createdAt,
+          workflowState: doc.workflowState
+        }))
+      );
+    }
   });
 
 
@@ -107,7 +118,7 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
       setSelectedDocument(documentData);
       setViewerOpen(true);
       setDropdownOpen(null);
-    } catch (error) {
+    } catch {
       setErrorMessage('Error opening document viewer. Please try again.');
     } finally {
       setViewingDocs(prev => {
@@ -323,6 +334,17 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
                 <div>Grouped Files: {Object.keys(groupedDocuments).length}</div>
                 <div>User Role: {user?.role}</div>
                 <div>User Department: {user?.department}</div>
+                <div className="mt-2">
+                  <strong>Document Details:</strong>
+                  {filteredDocs.map((doc, index) => (
+                    <div key={doc.id} className="mt-1 p-2 bg-blue-100 rounded text-xs">
+                      <div>File: {doc.fileName}</div>
+                      <div>Version: {doc.version}</div>
+                      <div>Created: {new Date(doc.createdAt).toLocaleString()}</div>
+                      <div>ID: {doc.id}</div>
+                    </div>
+                  ))}
+                </div>
                 <pre className="mt-2 p-2 bg-blue-100 rounded text-xs overflow-auto max-h-32">
                   {JSON.stringify(groupedDocuments, null, 2)}
                 </pre>
@@ -429,7 +451,6 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
                                 <div className="py-1">
                                                                                                           {(() => {
                                       const canAccess = canAccessDocument(versions[0]);
-                                      const isViewing = viewingDocs.has(versions[0].id);
                                       return canAccess;
                                     })() ? (
                                       <>

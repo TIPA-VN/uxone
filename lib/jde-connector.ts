@@ -200,7 +200,6 @@ export class JDEService {
       
       return !!(result.rows && result.rows.length > 0);
     } catch (error) {
-      console.error('JDE Connection test failed:', error);
       return false;
     }
   }
@@ -256,8 +255,6 @@ export class JDEService {
         IMBUY: 'BUYER1' // Default buyer
       }));
     } catch (error) {
-      console.error('Error fetching Item Master from JDE:', error);
-      
       // Fallback to mock data if JDE connection fails
       return this.getMockItemMaster(itemNumber);
     }
