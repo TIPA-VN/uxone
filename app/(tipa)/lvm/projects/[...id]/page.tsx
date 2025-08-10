@@ -276,7 +276,6 @@ export default function ProjectDetailsPage() {
         {/* TASKS Tab */}
         {activeTab === "tasks" && (
           <>
-            {console.log("Rendering TasksTab with projectId:", projectId, "users count:", tasksHook.users.length)}
             <TasksTab
               projectId={projectId}
               tasks={tasksHook.tasks}

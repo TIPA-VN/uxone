@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if this is a fallback authentication session
-    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    const isFallbackAuth = (session.user as { isFallbackAuth?: boolean }).isFallbackAuth;
     if (isFallbackAuth) {
       return NextResponse.json([]);
     }

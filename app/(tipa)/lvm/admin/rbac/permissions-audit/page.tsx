@@ -149,7 +149,7 @@ export default function PermissionsAuditPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/admin/rbac" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-2">
+          <Link href="/lvm/admin/rbac" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-2">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to RBAC
           </Link>

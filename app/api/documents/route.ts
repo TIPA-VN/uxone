@@ -1,10 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { NextRequest } from "next/server";
-import util from 'util';
+import { checkDocumentAccess } from "@/lib/documentAccess";
 
 // Force Node.js runtime for Prisma
 export const runtime = 'nodejs'
@@ -16,35 +15,72 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get('projectId');
   const department = searchParams.get('department');
   const workflowState = searchParams.get('workflowState');
   
-  let docs;
-  if (projectId && department && workflowState) {
-    docs = await prisma.$queryRawUnsafe(
-      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' AND "department" = '${department}' AND "workflowState" = '${workflowState}' ORDER BY "createdAt" DESC`
-    );
-  } else if (projectId && workflowState) {
-    docs = await prisma.$queryRawUnsafe(
-      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' AND "workflowState" = '${workflowState}' ORDER BY "createdAt" DESC`
-    );
-  } else if (projectId && department) {
-    docs = await prisma.$queryRawUnsafe(
-      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' AND "department" = '${department}' ORDER BY "createdAt" DESC`
-    );
-  } else if (projectId) {
-    docs = await prisma.$queryRawUnsafe(
-      `SELECT * FROM "documents" WHERE "projectId" = '${projectId}' ORDER BY "createdAt" DESC`
-    );
-  } else {
-    docs = await prisma.$queryRawUnsafe(
-      `SELECT * FROM "documents" ORDER BY "createdAt" DESC LIMIT 50`
+  try {
+    let docs;
+    
+    if (projectId && department && workflowState) {
+      docs = await prisma.document.findMany({
+        where: {
+          projectId,
+          department,
+          workflowState
+        },
+        include: { project: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    } else if (projectId && workflowState) {
+      docs = await prisma.document.findMany({
+        where: {
+          projectId,
+          workflowState
+        },
+        include: { project: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    } else if (projectId && department) {
+      docs = await prisma.document.findMany({
+        where: {
+          projectId,
+          department
+        },
+        include: { project: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    } else if (projectId) {
+      docs = await prisma.document.findMany({
+        where: { projectId },
+        include: { project: true },
+        orderBy: { createdAt: 'desc' }
+      });
+    } else {
+      // For general document listing, limit to user's accessible documents
+      docs = await prisma.document.findMany({
+        include: { project: true },
+        orderBy: { createdAt: 'desc' },
+        take: 50
+      });
+    }
+    
+    // Filter documents based on user access
+    const accessibleDocs = docs.filter(doc => {
+      const accessResult = checkDocumentAccess(doc, session.user);
+      return accessResult.canAccess;
+    });
+    
+    return NextResponse.json(accessibleDocs);
+  } catch (error) {
+    console.error("Error fetching documents:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch documents" },
+      { status: 500 }
     );
   }
-  
-  return NextResponse.json(docs);
 }
 
 export async function POST(request: Request) {

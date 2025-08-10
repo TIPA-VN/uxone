@@ -5,9 +5,9 @@ import {
   FileText,
   AlertCircle,
   CheckCircle,
-  Clock,
   Download,
   Settings,
+  Play,
 } from "lucide-react";
 
 // Type definitions
@@ -91,6 +91,7 @@ const SOUploadInterface: React.FC = () => {
   }, []);
   const [chunkSize, setChunkSize] = useState<number>(5);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressCleanupRef = useRef<(() => void) | null>(null);
 
@@ -98,223 +99,214 @@ const SOUploadInterface: React.FC = () => {
   const API_BASE_URL: string =
     process.env.NEXT_PUBLIC_API_URL || "http://10.116.2.72:8091";
 
-  const updateProgress = useCallback((updates: Partial<ProgressState>) => {
-    setState((prev) => ({
-      ...prev,
-      progress: { ...prev.progress, ...updates },
-    }));
-  }, []);
-
-  const simulateProgress = useCallback(
-    (totalChunks: number, estimatedTimeMinutes: number) => {
-      const totalTimeMs = estimatedTimeMinutes * 60 * 1000;
-      const chunkDelayMs = 60 * 1000; // 60 seconds between chunks
-      const progressSteps = [
-        "Authenticating",
-        "Processing chunks",
-        "Finalizing",
-      ];
-
-      let currentStep = 0;
-      let currentChunk = 0;
-      const startTime = Date.now();
-
-      updateProgress({
-        isVisible: true,
-        currentStep: 0,
-        totalSteps: progressSteps.length,
-        currentChunk: 0,
-        totalChunks,
-        message: progressSteps[0],
-        percentage: 0,
-        estimatedTimeRemaining: estimatedTimeMinutes,
-      });
-
-      const updateInterval = setInterval(() => {
-        const elapsedTime = Date.now() - startTime;
-        const progressPercentage = Math.min(
-          (elapsedTime / totalTimeMs) * 100,
-          95
-        );
-        const timeRemainingMs = Math.max(totalTimeMs - elapsedTime, 0);
-        const timeRemainingMinutes = Math.round(timeRemainingMs / (1000 * 60));
-
-        // Update current chunk based on elapsed time
-        const expectedChunk = Math.floor(elapsedTime / chunkDelayMs);
-        if (expectedChunk > currentChunk && expectedChunk < totalChunks) {
-          currentChunk = expectedChunk;
-        }
-
-        // Update step based on progress
-        let newStep = currentStep;
-        if (progressPercentage > 10 && currentStep === 0) {
-          newStep = 1; // Processing chunks
-        } else if (progressPercentage > 85 && currentStep === 1) {
-          newStep = 2; // Finalizing
-        }
-
-        if (newStep !== currentStep) {
-          currentStep = newStep;
-        }
-
-        updateProgress({
-          currentStep,
-          currentChunk: Math.min(currentChunk, totalChunks - 1),
-          message: progressSteps[currentStep],
-          percentage: progressPercentage,
-          estimatedTimeRemaining: timeRemainingMinutes,
-        });
-
-        // Stop simulation when processing is complete or time is up
-        if (progressPercentage >= 95 || !state.isProcessing) {
-          clearInterval(updateInterval);
-        }
-      }, 2000); // Update every 2 seconds
-
-      // Clean up interval when component unmounts or processing stops
-      return () => clearInterval(updateInterval);
-    },
-    [updateProgress, state.isProcessing]
-  );
-
+  // CSV parsing function
   const parseCSV = useCallback((csvText: string): CSVData => {
-    const lines = csvText.split("\n").filter((line) => line.trim());
-    if (lines.length === 0) return { headers: [], data: [] };
+    const lines = csvText.trim().split('\n');
+    if (lines.length === 0) {
+      throw new Error('Empty CSV file');
+    }
 
-    const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
-    const data: CSVRow[] = lines.slice(1).map((line) => {
-      const values = line.split(",").map((v) => v.trim().replace(/"/g, ""));
-      const row: CSVRow = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index] || "";
-      });
-      return row;
-    });
+    const headers = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+    const data: CSVRow[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line) {
+        const values = line.split(',').map(value => value.trim().replace(/"/g, ''));
+        const row: CSVRow = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        data.push(row);
+      }
+    }
 
     return { headers, data };
   }, []);
 
-  const extractSONumbers = useCallback(
-    (data: CSVRow[], column: string): string[] => {
-      if (!column || !data.length) return [];
+  // Handle column selection
+  const handleColumnSelect = useCallback((columnName: string) => {
+    updateState({ selectedColumn: columnName });
+    
+    // Extract SO numbers from the selected column
+    const soNumbers = state.csvPreview
+      .map(row => row[columnName])
+      .filter(so => so && so.trim() !== '');
+    
+    updateState({ soNumbers });
+  }, [state.csvPreview, updateState]);
 
-      const numbers = data
-        .map((row) => row[column])
-        .filter((value): value is string => Boolean(value && value.trim()))
-        .map((value) => value.trim());
+  // Handle file upload
+  const handleFileUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = e.target.files?.[0];
+    if (!uploadedFile) return;
 
-      // Remove duplicates using Array.from with Set
-      return Array.from(new Set(numbers));
-    },
-    []
-  );
-
-  const handleColumnSelect = useCallback(
-    (column: string, data?: CSVRow[]) => {
-      updateState({ selectedColumn: column });
-
-      if (data) {
-        const numbers = extractSONumbers(data, column);
-        updateState({ soNumbers: numbers });
-      } else if (state.file) {
-        // Re-read file to get full data
-        const reader = new FileReader();
-        reader.onload = (e: ProgressEvent<FileReader>) => {
-          const csvText = e.target?.result as string;
-          const { data: fullData } = parseCSV(csvText);
-          const numbers = extractSONumbers(fullData, column);
-          updateState({ soNumbers: numbers });
-        };
-        reader.readAsText(state.file);
-      }
-    },
-    [state.file, extractSONumbers, parseCSV, updateState]
-  );
-  // Fix for the handleFileUpload function - add handleColumnSelect to dependencies
-  const handleFileUpload = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const uploadedFile = event.target.files?.[0];
-
+    if (!uploadedFile.name.toLowerCase().endsWith('.csv')) {
       updateState({
-        errors: [],
-        apiResponse: null,
-        status: "idle",
+        errors: ["Please select a CSV file"],
+        uploadStatus: "",
+        status: "error",
       });
+      return;
+    }
 
-      if (!uploadedFile) return;
+    if (uploadedFile.size > 10 * 1024 * 1024) { // 10MB limit
+      updateState({
+        errors: ["File size must be less than 10MB"],
+        uploadStatus: "",
+        status: "error",
+      });
+      return;
+    }
 
-      if (!uploadedFile.name.toLowerCase().endsWith(".csv")) {
+    updateState({
+      file: uploadedFile,
+      errors: [],
+      uploadStatus: "Reading file...",
+      status: "reading",
+    });
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const csvText = event.target?.result as string;
+        const { data } = parseCSV(csvText);
+        
         updateState({
-          errors: ["Please select a valid CSV file"],
-          status: "error",
+          csvPreview: data.slice(0, 10), // Show first 10 rows
+          uploadStatus: `File loaded successfully. ${data.length} rows found.`,
+          status: "idle",
         });
-        return;
-      }
-
-      updateState({
-        file: uploadedFile,
-        uploadStatus: "Reading file...",
-        status: "reading",
-      });
-
-      const reader = new FileReader();
-
-      reader.onload = (e: ProgressEvent<FileReader>) => {
-        try {
-          const csvText = e.target?.result as string;
-          const { headers, data } = parseCSV(csvText);
-
-          if (headers.length === 0) {
-            updateState({
-              errors: ["CSV file appears to be empty"],
-              uploadStatus: "",
-              status: "error",
-            });
-            return;
-          }
-
-          const preview = data.slice(0, 5);
-
-          // Auto-select SO column if found
-          const soColumn = headers.find(
-            (h) =>
-              h.toLowerCase().includes("so") ||
-              h.toLowerCase().includes("sales") ||
-              h.toLowerCase().includes("order")
-          );
-
-          updateState({
-            csvPreview: preview,
-            uploadStatus: "",
-            status: "success",
-          });
-
-          if (soColumn) {
-            handleColumnSelect(soColumn, data);
-          }
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-          updateState({
-            errors: [`Error reading CSV: ${errorMessage}`],
-            uploadStatus: "",
-            status: "error",
-          });
-        }
-      };
-
-      reader.onerror = () => {
+      } catch (error) {
         updateState({
-          errors: ["Error reading file"],
+          errors: [`Error parsing CSV: ${error instanceof Error ? error.message : 'Unknown error'}`],
           uploadStatus: "",
           status: "error",
         });
-      };
+      }
+    };
 
-      reader.readAsText(uploadedFile);
-    },
-    [parseCSV, updateState, handleColumnSelect]
-  ); // Added handleColumnSelect to dependencies
+    reader.onerror = () => {
+      updateState({
+        errors: ["Error reading file"],
+        uploadStatus: "",
+        status: "error",
+      });
+    };
+
+    reader.readAsText(uploadedFile);
+  }, [parseCSV, updateState]);
+
+  // Handle file drop
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      handleFileUpload({ target: { files } } as ChangeEvent<HTMLInputElement>);
+    }
+  }, [handleFileUpload]);
+
+  // Handle file input
+  const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      handleFileUpload(e);
+    }
+  };
+
+  // Progress simulation function
+  const simulateProgress = useCallback((totalChunks: number, estimatedTimeMinutes: number) => {
+    let currentChunk = 0;
+    let currentStep = 0;
+    let interval: NodeJS.Timeout | undefined;
+
+    const updateProgress = () => {
+      if (currentStep === 0) {
+        // Authentication step
+        currentStep = 1;
+        updateState({
+          progress: {
+            isVisible: true,
+            currentStep: 1,
+            totalSteps: 3,
+            currentChunk: 0,
+            totalChunks,
+            message: "Authenticating with API...",
+            percentage: 10,
+            estimatedTimeRemaining: estimatedTimeMinutes,
+          },
+        });
+      } else if (currentStep === 1 && currentChunk < totalChunks) {
+        // Processing chunks
+        currentChunk++;
+        const percentage = 10 + (currentChunk / totalChunks) * 80;
+        const timeRemaining = Math.max(0, estimatedTimeMinutes - (currentChunk / totalChunks) * estimatedTimeMinutes);
+        
+        updateState({
+          progress: {
+            isVisible: true,
+            currentStep: 1,
+            totalSteps: 3,
+            currentChunk: currentChunk - 1,
+            totalChunks,
+            message: `Processing chunk ${currentChunk} of ${totalChunks}...`,
+            percentage,
+            estimatedTimeRemaining: timeRemaining,
+          },
+        });
+      } else if (currentStep === 1 && currentChunk >= totalChunks) {
+        // Finalizing step
+        currentStep = 2;
+        updateState({
+          progress: {
+            isVisible: true,
+            currentStep: 2,
+            totalSteps: 3,
+            currentChunk: totalChunks - 1,
+            totalChunks,
+            message: "Finalizing processing...",
+            percentage: 95,
+            estimatedTimeRemaining: 0,
+          },
+        });
+      } else if (currentStep === 2) {
+        // Complete
+        updateState({
+          progress: {
+            isVisible: true,
+            currentStep: 2,
+            totalSteps: 3,
+            currentChunk: totalChunks - 1,
+            totalChunks,
+            message: "Processing completed successfully!",
+            percentage: 100,
+            estimatedTimeRemaining: 0,
+          },
+        });
+        
+        // Clear interval
+        clearInterval(interval);
+        return;
+      }
+    };
+
+    // Start progress updates
+    interval = setInterval(updateProgress, 1000);
+    
+    // Return cleanup function
+    return () => {
+      clearInterval(interval);
+    };
+  }, [updateState]);
+
+  // Update progress helper
+  const updateProgress = useCallback((updates: Partial<ProgressState>) => {
+    updateState({
+      progress: { ...state.progress, ...updates },
+    });
+  }, [state.progress, updateState]);
 
   const submitToAPI = async (): Promise<void> => {
     if (state.soNumbers.length === 0) {
@@ -456,15 +448,7 @@ const SOUploadInterface: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const getStatusIcon = () => {
-    if (state.isProcessing)
-      return <Clock className="w-5 h-5 text-blue-500 animate-spin" />;
-    if (state.errors.length > 0)
-      return <AlertCircle className="w-5 h-5 text-red-500" />;
-    if (state.apiResponse)
-      return <CheckCircle className="w-5 h-5 text-green-500" />;
-    return null;
-  };
+
 
   const handleChunkSizeChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const value = parseInt(e.target.value) || 5;
@@ -475,48 +459,32 @@ const SOUploadInterface: React.FC = () => {
     state.csvPreview.length > 0 ? Object.keys(state.csvPreview[0]) : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <FileText className="w-8 h-8 text-blue-600" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Sales Order CSV Processor
-                </h1>
-                <p className="text-gray-600">
-                  Upload CSV files to process sales orders
-                </p>
-              </div>
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={downloadTemplate}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                type="button"
-              >
-                <Download className="w-4 h-4" />
-                <span>Template</span>
-              </button>
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                type="button"
-              >
-                <Settings className="w-4 h-4" />
-                <span>Settings</span>
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Work Order Generator
+          </h1>
+          <p className="text-gray-600">
+            Upload CSV files and generate Work Orders from Sales Orders
+          </p>
         </div>
 
         {/* Settings Panel */}
-        {showSettings && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Processing Settings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Processing Settings</h2>
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              {showSettings ? "Hide" : "Show"} Settings
+            </button>
+          </div>
+
+          {showSettings && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
               <div>
                 <label
                   htmlFor="chunkSize"
@@ -531,7 +499,7 @@ const SOUploadInterface: React.FC = () => {
                   max="20"
                   value={chunkSize}
                   onChange={handleChunkSizeChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Number of SO numbers per processing batch
@@ -549,196 +517,124 @@ const SOUploadInterface: React.FC = () => {
                   type="text"
                   value={API_BASE_URL}
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Configured API base URL
                 </p>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Progress Bar */}
-        {state.progress.isVisible && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-              <Clock className="w-5 h-5 text-blue-500 animate-spin" />
-              <span>Processing Sales Orders</span>
-            </h2>
+        {/* File Upload Section */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Upload CSV File</h2>
 
-            <div className="space-y-4">
-              {/* Main Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{state.progress.message}</span>
-                  <span>{Math.round(state.progress.percentage)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${Math.min(state.progress.percentage, 100)}%`,
-                    }}
-                  ></div>
-                </div>
-              </div>
-
-              {/* Step Progress */}
-              <div className="flex items-center space-x-4">
-                {["Authenticating", "Processing chunks", "Finalizing"].map(
-                  (step, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                          index < state.progress.currentStep
-                            ? "bg-green-500 text-white"
-                            : index === state.progress.currentStep
-                            ? "bg-blue-500 text-white"
-                            : "bg-gray-200 text-gray-500"
-                        }`}
-                      >
-                        {index < state.progress.currentStep ? "✓" : index + 1}
-                      </div>
-                      <span
-                        className={`text-sm ${
-                          index <= state.progress.currentStep
-                            ? "text-gray-900"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {step}
-                      </span>
-                      {index < 2 && (
-                        <div
-                          className={`w-8 h-0.5 ${
-                            index < state.progress.currentStep
-                              ? "bg-green-500"
-                              : "bg-gray-200"
-                          }`}
-                        ></div>
-                      )}
-                    </div>
-                  )
-                )}
-              </div>
-
-              {/* Chunk Progress */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <div className="font-medium text-blue-700">Current Chunk</div>
-                  <div className="text-blue-600">
-                    {state.progress.currentChunk + 1} of{" "}
-                    {state.progress.totalChunks}
-                  </div>
-                </div>
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <div className="font-medium text-green-700">SO Numbers</div>
-                  <div className="text-green-600">
-                    {state.soNumbers.length} total
-                  </div>
-                </div>
-                <div className="bg-purple-50 p-3 rounded-lg">
-                  <div className="font-medium text-purple-700">
-                    Time Remaining
-                  </div>
-                  <div className="text-purple-600">
-                    {state.progress.estimatedTimeRemaining > 0
-                      ? `~${state.progress.estimatedTimeRemaining} min`
-                      : "Almost done!"}
-                  </div>
-                </div>
-                <div className="bg-orange-50 p-3 rounded-lg">
-                  <div className="font-medium text-orange-700">Chunk Size</div>
-                  <div className="text-orange-600">{chunkSize} SO numbers</div>
-                </div>
-              </div>
-
-              {/* Cancel Button */}
-              <div className="flex justify-center">
-                <button
-                  onClick={resetForm}
-                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  type="button"
-                >
-                  Cancel Processing
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* File Upload */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Upload CSV File</h2>
-
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <div className="space-y-2">
-              <p className="text-lg font-medium text-gray-700">
-                {state.file
-                  ? state.file.name
-                  : "Drop your CSV file here or click to browse"}
-              </p>
-              <p className="text-sm text-gray-500">
-                CSV files only, up to 10MB
-              </p>
-            </div>
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              dragActive
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300 hover:border-gray-400"
+            }`}
+            onDragEnter={() => setDragActive(true)}
+            onDragLeave={() => setDragActive(false)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+          >
+            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-lg font-medium text-gray-900 mb-2">
+              Drop your CSV file here, or click to browse
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              CSV files only, up to 10MB. Select the column containing SO numbers.
+            </p>
             <input
               ref={fileInputRef}
               type="file"
               accept=".csv"
-              onChange={handleFileUpload}
+              onChange={handleFileInput}
               className="hidden"
+              id="file-upload"
             />
-            <div className="mt-4 space-x-3">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                type="button"
+            <div className="space-x-3">
+              <label
+                htmlFor="file-upload"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
               >
                 Choose File
+              </label>
+              <button
+                onClick={downloadTemplate}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Template
               </button>
-              {state.file && (
-                <button
-                  onClick={resetForm}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  type="button"
-                >
-                  Clear
-                </button>
-              )}
             </div>
           </div>
 
-          {/* Status Messages */}
-          {(state.uploadStatus || state.errors.length > 0) && (
-            <div className="mt-4 p-4 rounded-lg border">
-              <div className="flex items-center space-x-2">
-                {getStatusIcon()}
-                <div className="flex-1">
-                  {state.uploadStatus && (
-                    <p className="text-sm font-medium text-gray-700">
-                      {state.uploadStatus}
-                    </p>
-                  )}
-                  {state.errors.map((error, index) => (
-                    <p key={index} className="text-sm text-red-600">
-                      {error}
-                    </p>
-                  ))}
+          {state.file && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 text-gray-400 mr-2" />
+                  <span className="text-sm font-medium">{state.file.name}</span>
+                  <span className="text-sm text-gray-500 ml-2">
+                    ({(state.file.size / 1024).toFixed(1)} KB)
+                  </span>
                 </div>
+                <button
+                  onClick={resetForm}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Clear
+                </button>
               </div>
             </div>
           )}
         </div>
 
+        {/* Status Messages */}
+        {(state.uploadStatus || state.errors.length > 0) && (
+          <div className={`rounded-lg p-4 mb-6 ${
+            state.errors.length > 0 
+              ? "bg-red-50 border border-red-200" 
+              : "bg-blue-50 border border-blue-200"
+          }`}>
+            <div className="flex items-center">
+              {state.errors.length > 0 ? (
+                <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+              ) : (
+                <CheckCircle className="h-5 w-5 text-blue-500 mr-2" />
+              )}
+              <div className="flex-1">
+                {state.uploadStatus && (
+                  <p className={`text-sm font-medium ${
+                    state.errors.length > 0 ? "text-red-800" : "text-blue-800"
+                  }`}>
+                    {state.uploadStatus}
+                  </p>
+                )}
+                {state.errors.map((error, index) => (
+                  <p key={index} className="text-sm text-red-700 mt-1">
+                    {error}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Column Selection */}
         {csvHeaders.length > 0 && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">
-              Select SO Number Column
-            </h2>
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Select SO Number Column</h2>
+              <div className="text-sm text-gray-500">
+                <span className="font-medium">{state.csvPreview.length}</span> records loaded
+              </div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               {csvHeaders.map((header) => (
                 <button
@@ -749,7 +645,6 @@ const SOUploadInterface: React.FC = () => {
                       ? "border-blue-500 bg-blue-50 text-blue-700"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
-                  type="button"
                 >
                   {header}
                 </button>
@@ -760,15 +655,15 @@ const SOUploadInterface: React.FC = () => {
             {state.csvPreview.length > 0 && (
               <div className="overflow-x-auto">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">
-                  Preview (first 5 rows):
+                  Data Preview
                 </h3>
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       {csvHeaders.map((header) => (
                         <th
                           key={header}
-                          className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
                           {header}
                         </th>
@@ -776,15 +671,15 @@ const SOUploadInterface: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {state.csvPreview.map((row, index) => (
+                    {state.csvPreview.slice(0, 5).map((row, index) => (
                       <tr key={index}>
                         {csvHeaders.map((header) => (
                           <td
                             key={header}
-                            className={`px-3 py-2 whitespace-nowrap ${
+                            className={`px-6 py-4 whitespace-nowrap text-sm ${
                               header === state.selectedColumn
-                                ? "bg-blue-50 font-medium"
-                                : ""
+                                ? "bg-blue-50 font-medium text-blue-900"
+                                : "text-gray-900"
                             }`}
                           >
                             {row[header]}
@@ -794,19 +689,41 @@ const SOUploadInterface: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+                {state.csvPreview.length > 5 && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Showing first 5 of {state.csvPreview.length} records
+                  </p>
+                )}
               </div>
             )}
+
+            <div className="mt-4">
+              <button
+                onClick={submitToAPI}
+                disabled={!state.selectedColumn || state.isProcessing}
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Play className="h-5 w-5 mr-2" />
+                {state.isProcessing ? "Processing..." : "Start Processing"}
+              </button>
+            </div>
           </div>
         )}
 
         {/* SO Numbers Summary */}
         {state.soNumbers.length > 0 && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">
-              Extracted SO Numbers ({state.soNumbers.length} total)
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-40 overflow-y-auto">
-              {state.soNumbers.map((so, index) => (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">
+                Extracted SO Numbers ({state.soNumbers.length} total)
+              </h2>
+              <div className="text-sm text-gray-500">
+                <span className="font-medium">{state.soNumbers.length}</span> SO numbers ready for processing
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-40 overflow-y-auto mb-6">
+              {state.soNumbers.slice(0, 24).map((so, index) => (
                 <div
                   key={index}
                   className="px-3 py-2 bg-gray-100 rounded text-sm font-mono text-center"
@@ -814,18 +731,79 @@ const SOUploadInterface: React.FC = () => {
                   {so}
                 </div>
               ))}
+              {state.soNumbers.length > 24 && (
+                <div className="px-3 py-2 bg-blue-100 rounded text-sm font-medium text-blue-700 text-center">
+                  +{state.soNumbers.length - 24} more
+                </div>
+              )}
             </div>
 
-            <div className="mt-6 flex justify-center">
+            <div className="flex justify-center">
               <button
                 onClick={submitToAPI}
                 disabled={state.isProcessing}
-                className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-                type="button"
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                <Play className="h-5 w-5 mr-2" />
                 {state.isProcessing
                   ? "Processing..."
-                  : `Process ${state.soNumbers.length} SO Numbers`}
+                  : `Generate Work Orders for ${state.soNumbers.length} SO Numbers`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Processing Progress */}
+        {state.progress.isVisible && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Processing Progress</h2>
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${state.progress.percentage}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              {Math.round(state.progress.percentage)}% complete - {state.progress.message}
+            </p>
+
+            {/* Progress Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-blue-700">Current Chunk</div>
+                <div className="text-lg font-bold text-blue-600">
+                  {state.progress.currentChunk + 1} of {state.progress.totalChunks}
+                </div>
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-green-700">Total SO Numbers</div>
+                <div className="text-lg font-bold text-green-600">
+                  {state.soNumbers.length}
+                </div>
+              </div>
+              <div className="bg-purple-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-purple-700">Chunk Size</div>
+                <div className="text-lg font-bold text-purple-600">
+                  {chunkSize}
+                </div>
+              </div>
+              <div className="bg-orange-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-orange-700">Time Remaining</div>
+                <div className="text-lg font-bold text-orange-600">
+                  {state.progress.estimatedTimeRemaining > 0
+                    ? `~${Math.round(state.progress.estimatedTimeRemaining)} min`
+                    : "Almost done!"}
+                </div>
+              </div>
+            </div>
+
+            {/* Cancel Button */}
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={resetForm}
+                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Cancel Processing
               </button>
             </div>
           </div>
@@ -833,33 +811,46 @@ const SOUploadInterface: React.FC = () => {
 
         {/* API Response */}
         {state.apiResponse && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <span>Processing Started Successfully</span>
-            </h2>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Status:</span>{" "}
-                  {state.apiResponse.status}
-                </div>
-                <div>
-                  <span className="font-medium">SO Numbers Processed:</span>{" "}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                Processing Started Successfully
+              </h2>
+            </div>
+            
+            {/* Stats Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">
                   {state.apiResponse.total_so_numbers_received}
                 </div>
-                <div>
-                  <span className="font-medium">Estimated Time:</span>{" "}
-                  {state.apiResponse.estimated_processing_time_minutes} minutes
-                </div>
-                <div>
-                  <span className="font-medium">Chunk Size Used:</span>{" "}
+                <div className="text-sm text-gray-600">SO Numbers Processed</div>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">
                   {chunkSize}
                 </div>
+                <div className="text-sm text-gray-600">Chunk Size Used</div>
               </div>
-              <div className="mt-3">
-                <span className="font-medium">Message:</span>{" "}
-                {state.apiResponse.message}
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">
+                  {state.apiResponse.estimated_processing_time_minutes}
+                </div>
+                <div className="text-sm text-gray-600">Estimated Time (min)</div>
+              </div>
+              <div className="bg-emerald-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-emerald-600">
+                  {state.apiResponse.status}
+                </div>
+                <div className="text-sm text-gray-600">Status</div>
+              </div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="text-sm">
+                <span className="font-medium text-green-800">Message:</span>{" "}
+                <span className="text-green-700">{state.apiResponse.message}</span>
               </div>
             </div>
           </div>

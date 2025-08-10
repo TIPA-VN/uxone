@@ -39,6 +39,9 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFileType, setSelectedFileType] = useState<string>("all");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [downloadingDocs, setDownloadingDocs] = useState<Set<string>>(new Set());
+  const [viewingDocs, setViewingDocs] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Filter documents based on search and file type
@@ -62,8 +65,18 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
 
   // Sort versions within each group (newest first)
   Object.keys(groupedDocuments).forEach(filename => {
-    groupedDocuments[filename].sort((a, b) => (b.version || 1) - (a.version || 1));
+    groupedDocuments[filename].sort((a, b) => {
+      // Sort by version first, then by creation date if versions are the same
+      const versionDiff = (b.version || 1) - (a.version || 1);
+      if (versionDiff !== 0) return versionDiff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
   });
+
+
+
+
 
   // Click outside detection for dropdown
   useEffect(() => {
@@ -73,26 +86,63 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
       }
     };
     if (dropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('click', handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [dropdownOpen]);
 
   const handleViewDoc = (doc: Document) => {
-    setSelectedDocument({
-      fileName: doc.fileName,
-      filePath: `/api/documents/${doc.id}/view`,
-      documentId: doc.id
-    });
-    setViewerOpen(true);
-    setDropdownOpen(null);
+    try {
+      setErrorMessage(null);
+      setViewingDocs(prev => new Set(prev).add(doc.id));
+      
+      const documentData = {
+        fileName: doc.fileName,
+        filePath: `/api/documents/${doc.id}/view`,
+        documentId: doc.id
+      };
+      
+      setSelectedDocument(documentData);
+      setViewerOpen(true);
+      setDropdownOpen(null);
+    } catch (error) {
+      setErrorMessage('Error opening document viewer. Please try again.');
+    } finally {
+      setViewingDocs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(doc.id);
+        return newSet;
+      });
+    }
   };
 
-  const handleDownloadDoc = (doc: Document) => {
-    window.open(`/api/documents/${doc.id}/download`, '_blank');
-    setDropdownOpen(null);
+  const handleDownloadDoc = async (doc: Document) => {
+    try {
+      setErrorMessage(null);
+      setDownloadingDocs(prev => new Set(prev).add(doc.id));
+      
+      const downloadUrl = `/api/documents/${doc.id}/download`;
+      
+      // Test if the download endpoint is accessible
+      const response = await fetch(downloadUrl, { method: 'HEAD' });
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+      }
+      
+      // Open download in new window
+      window.open(downloadUrl, '_blank');
+      setDropdownOpen(null);
+    } catch (error) {
+      setErrorMessage(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setDownloadingDocs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(doc.id);
+        return newSet;
+      });
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -144,11 +194,16 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
     const documentType = (doc.metadata as { type?: string })?.type as string;
     const isRestricted = isRestrictedDocumentType(documentType);
     
+    // Always allow access to production documents for now (they're read-only)
+    if (doc.workflowState === "production") {
+      return true;
+    }
+    
     if (!isRestricted) return true;
     
     const userRole = user?.role?.toUpperCase();
     const isAdmin = userRole === "ADMIN";
-    const isSeniorManager = userRole === "SENIOR MANAGER" || userRole === "SENIOR_MANAGER";
+    const isSeniorManager = userRole === "SENIOR MANAGER" || userRole === "SENIOR MANAGER";
     
     return isAdmin || isSeniorManager;
   };
@@ -238,6 +293,43 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
       {/* Document List - Table Format */}
       <Card className="bg-gradient-to-r from-slate-50 to-gray-50 border-slate-200">
         <CardContent className="p-4">
+          {/* Error Message Display */}
+          {errorMessage && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-800">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">{errorMessage}</span>
+                <button
+                  onClick={() => setErrorMessage(null)}
+                  className="ml-auto text-red-600 hover:text-red-800"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Debug Panel - Only show in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <details className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <summary className="cursor-pointer text-blue-800 font-medium">Debug Info</summary>
+              <div className="mt-2 text-xs text-blue-700 space-y-1">
+                <div>Total Production Docs: {productionDocs.length}</div>
+                <div>Filtered Docs: {filteredDocs.length}</div>
+                <div>Grouped Files: {Object.keys(groupedDocuments).length}</div>
+                <div>User Role: {user?.role}</div>
+                <div>User Department: {user?.department}</div>
+                <pre className="mt-2 p-2 bg-blue-100 rounded text-xs overflow-auto max-h-32">
+                  {JSON.stringify(groupedDocuments, null, 2)}
+                </pre>
+              </div>
+            </details>
+          )}
+          
           {Object.keys(groupedDocuments).length === 0 ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-gradient-to-r from-slate-100 to-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -293,11 +385,24 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
                         <td className="py-2 px-3">
                           <div className="flex items-center gap-1">
                             <GitBranch className="w-3 h-3 text-emerald-500" />
-                            <span className="font-medium text-xs text-gray-700">v{versions[0].version}</span>
+                            <span className="font-medium text-xs text-gray-700">v{versions[0].version || 1}</span>
                             <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-200 text-xs px-1 py-0">
                               Latest
                             </Badge>
+                            {versions.length > 1 && (
+                              <Badge variant="outline" className="text-xs text-gray-600 border-gray-300">
+                                {versions.length} versions
+                              </Badge>
+                            )}
+                            <span className="text-xs text-gray-500 ml-1">
+                              {new Date(versions[0].createdAt).toLocaleDateString()}
+                            </span>
                           </div>
+                          {versions.length > 1 && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Previous: v{versions[versions.length - 1].version || 1} ({new Date(versions[versions.length - 1].createdAt).toLocaleDateString()})
+                            </div>
+                          )}
                         </td>
                         <td className="py-2 px-3">
                           <span className="text-sm text-gray-700">{versions[0].department}</span>
@@ -322,29 +427,61 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
                             {dropdownOpen === versions[0].id && (
                               <div className="absolute right-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                                 <div className="py-1">
-                                  {canAccessDocument(versions[0]) ? (
-                                    <>
-                                      <button
+                                                                                                          {(() => {
+                                      const canAccess = canAccessDocument(versions[0]);
+                                      const isViewing = viewingDocs.has(versions[0].id);
+                                      return canAccess;
+                                    })() ? (
+                                      <>
+                                                                              <button
                                         onClick={() => handleViewDoc(versions[0])}
-                                        className="flex items-center gap-1 w-full px-2 py-1 text-xs text-blue-700 hover:bg-blue-50 transition-colors"
+                                        disabled={viewingDocs.has(versions[0].id)}
+                                        className="flex items-center gap-1 w-full px-2 py-1 text-xs text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        <Eye className="w-3 h-3" />
-                                        View
+                                        {viewingDocs.has(versions[0].id) ? (
+                                          <>
+                                            <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Opening...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Eye className="w-3 h-3" />
+                                            View
+                                          </>
+                                        )}
                                       </button>
                                       <button
                                         onClick={() => handleDownloadDoc(versions[0])}
-                                        className="flex items-center gap-1 w-full px-2 py-1 text-xs text-green-700 hover:bg-green-50 transition-colors"
+                                        disabled={downloadingDocs.has(versions[0].id)}
+                                        className="flex items-center gap-1 w-full px-2 py-1 text-xs text-green-700 hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        <Download className="w-3 h-3" />
-                                        Download
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <div className="flex items-center gap-1 w-full px-2 py-1 text-xs text-gray-500 bg-gray-50">
-                                      <Eye className="w-3 h-3" />
-                                      Restricted
-                                    </div>
-                                  )}
+                                        {downloadingDocs.has(versions[0].id) ? (
+                                          <>
+                                            <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Downloading...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Download className="w-3 h-3" />
+                                            Download
+                                          </>
+                                        )}
+                                                                              </button>
+                                        
+
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center gap-1 w-full px-2 py-1 text-xs text-gray-500 bg-gray-50">
+                                        <Eye className="w-3 h-3" />
+                                        Restricted
+                                      </div>
+                                    )}
                                 </div>
                               </div>
                             )}
@@ -361,7 +498,7 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
       </Card>
 
       {/* Document Viewer Modal */}
-      {viewerOpen && selectedDocument && (
+              {viewerOpen && selectedDocument && (
         <SimpleDocumentViewer
           fileName={selectedDocument.fileName}
           filePath={selectedDocument.filePath}

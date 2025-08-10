@@ -141,7 +141,7 @@ export default function TeamManagementPage() {
   });
 
       // Check if user has team management access using centralized RBAC
-    const hasTeamAccess = user && canAccessFeature(user.role as any, "teamManagement");
+    const hasTeamAccess = user && canAccessFeature(user.role as string, "teamManagement");
   
   // Check if user is a manager or above (has edit permissions)
   const isManagerOrAbove = user && [
@@ -210,7 +210,7 @@ export default function TeamManagementPage() {
         estimatedHours,
         efficiency,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching team data:', error);
       
       // Handle specific error types

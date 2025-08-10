@@ -69,11 +69,7 @@ export function DepartmentTab({
     project?.ownerId || ''
   );
 
-  // Check if approval is still possible (not already approved/rejected)
-  const approvalState = project?.approvalState || {};
-  const canPerformApproval = canApprove && 
-    approvalState[department] !== "APPROVED" && 
-    approvalState[department] !== "REJECTED";
+
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,11 +202,11 @@ export function DepartmentTab({
     };
 
     if (dropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('click', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [dropdownOpen]);
 
@@ -406,7 +402,7 @@ export function DepartmentTab({
                       const canDeleteDoc = isProjectOwner && !isProduction;
                       
                       // Check if user can access this document type
-                      const documentType = (doc.metadata as any)?.type as string;
+                      const documentType = (doc.metadata as { type?: string })?.type || '';
                       const isRestricted = isRestrictedDocumentType(documentType);
                       const userRole = user?.role?.toUpperCase();
                       const isAdmin = userRole === "ADMIN";
@@ -426,7 +422,7 @@ export function DepartmentTab({
                         </td>
                         <td className="py-0.5 px-3 w-1/5">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {DOCUMENT_TYPES.find(t => t.value === (doc.metadata as any)?.type)?.label || 'General'}
+                            {DOCUMENT_TYPES.find(t => t.value === (doc.metadata as { type?: string })?.type)?.label || 'General'}
                           </span>
                         </td>
                         <td className="py-0.5 px-3 w-1/5">{new Date(doc.createdAt).toLocaleString()}</td>

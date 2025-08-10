@@ -14,7 +14,7 @@ interface Tool {
 const tools: Tool[] = [
   {
     id: 'so_request',
-    name: 'Change Request Date',
+    name: 'Change Request Dates',
     description: 'Change the request date of work orders',
     icon: Calculator,
   },

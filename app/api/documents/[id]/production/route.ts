@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { checkDocumentAccess } from "@/lib/documentAccess";
 
 export const runtime = 'nodejs';
 
@@ -29,6 +30,14 @@ export async function PATCH(
 
     if (!document) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    }
+
+    // Check document access using the access control system
+    const accessResult = checkDocumentAccess(document, session.user);
+    if (!accessResult.canAccess) {
+      return NextResponse.json({ 
+        error: accessResult.reason || "Not authorized to access this document" 
+      }, { status: 403 });
     }
 
     // Document found

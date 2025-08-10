@@ -110,7 +110,7 @@ export default function TicketDetailPage() {
   // Convert to task state
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [converting, setConverting] = useState(false);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; description?: string }[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedTaskAssigneeId, setSelectedTaskAssigneeId] = useState<string>("");
   const [taskPriority, setTaskPriority] = useState<string>("");
@@ -347,7 +347,7 @@ export default function TicketDetailPage() {
     const categoryConfig = categoryOptions.find(c => c.value === category);
     if (!categoryConfig) return <MessageSquare className="w-4 h-4" />;
     
-    switch (categoryConfig.icon as any) {
+    switch (categoryConfig.icon as string) {
       case 'User': return <User className="w-4 h-4" />;
       case 'AlertCircle': return <AlertCircle className="w-4 h-4" />;
       case 'Plus': return <Plus className="w-4 h-4" />;

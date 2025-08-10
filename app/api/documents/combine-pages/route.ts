@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { PDFDocument } from "pdf-lib";
+import { checkDocumentAccess } from "@/lib/documentAccess";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,14 +25,61 @@ export async function POST(req: NextRequest) {
     // Ensure projectId is a string
     const projectIdStr = Array.isArray(projectId) ? projectId[0] : String(projectId);
 
-    // Get all source documents
+    // Check if user has access to this project
+    const project = await prisma.project.findUnique({
+      where: { id: projectIdStr },
+      select: { 
+        id: true, 
+        ownerId: true, 
+        departments: true,
+        members: { select: { userId: true } }
+      }
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Check project access
+    const hasProjectAccess = 
+      project.ownerId === session.user.id ||
+      project.members.some(member => member.userId === session.user.id) ||
+      project.departments.includes(session.user.department || "");
+
+    if (!hasProjectAccess) {
+      return NextResponse.json({ error: "Access denied to this project" }, { status: 403 });
+    }
+
+    // Get all source documents with project info for access control
     const pages = await prisma.document.findMany({
       where: {
         id: { in: pageIds },
         projectId: projectIdStr,
         department,
       },
+      include: { project: true }
     });
+
+    if (pages.length === 0) {
+      return NextResponse.json({ error: "No valid pages found" }, { status: 404 });
+    }
+
+    // Check access to each document
+    for (const page of pages) {
+      const accessResult = checkDocumentAccess(page, session.user);
+      if (!accessResult.canAccess) {
+        return NextResponse.json({ 
+          error: `Access denied to document ${page.fileName}: ${accessResult.reason}` 
+        }, { status: 403 });
+      }
+
+      // Prevent combining production documents
+      if (page.workflowState === "production") {
+        return NextResponse.json({ 
+          error: `Cannot combine production document ${page.fileName}` 
+        }, { status: 400 });
+      }
+    }
 
     // Sort pages by pageNumber if available
     pages.sort((a, b) => {
@@ -66,13 +114,16 @@ export async function POST(req: NextRequest) {
         filePath: `/uploads/projects/${projectIdStr}/${combinedFileName}`,
         projectId: projectIdStr,
         department,
-        fileType: "pdf",
+        fileType: "application/pdf",
         size: pdfBytes.length,
         metadata: {
           type: "combined_pdf",
           description: `Combined PDF from ${pages.length} pages`,
+          combinedFrom: pageIds,
+          combinedAt: new Date().toISOString()
         },
         ownerId: session.user.id,
+        workflowState: "draft"
       },
     });
 

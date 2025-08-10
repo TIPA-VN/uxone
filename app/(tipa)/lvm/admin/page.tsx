@@ -12,9 +12,7 @@ import {
   FileText,
   Mail,
   Code,
-  BarChart3,
-  Clock,
-  CheckCircle
+  Clock
 } from "lucide-react";
 import { APP_CONFIG } from "@/config/app";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useUsers } from "@/hooks/useUsers";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useActivities } from "@/hooks/useActivities";
+import Link from "next/link";
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -44,9 +43,6 @@ export default function AdminDashboard() {
     activities,
   } = useActivities(10);
 
-  // State for quick actions
-  const [isLoading, setIsLoading] = useState(false);
-
   // Authentication is now handled by middleware for /lvm/admin routes
   // No need for client-side redirects
 
@@ -67,32 +63,6 @@ export default function AdminDashboard() {
 
   const userRole = session.user.role;
   const roleConfig = APP_CONFIG.roles[userRole as keyof typeof APP_CONFIG.roles];
-
-  // Quick action handlers
-  const handleQuickAction = (action: 'users' | 'roles' | 'rbac' | 'departments' | 'settings') => {
-    setIsLoading(true);
-    // Simulate loading
-    setTimeout(() => {
-      setIsLoading(false);
-      switch (action) {
-        case 'users':
-          router.push('/lvm/admin/users');
-          break;
-        case 'roles':
-          router.push('/lvm/admin/roles');
-          break;
-        case 'rbac':
-          router.push('/lvm/admin/rbac');
-          break;
-        case 'departments':
-          router.push('/lvm/admin/departments');
-          break;
-        case 'settings':
-          router.push('/lvm/admin/settings');
-          break;
-      }
-    }, 500);
-  };
 
   // Get system statistics
   const getSystemStats = () => {
@@ -199,178 +169,88 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Settings className="w-5 h-5 mr-2" />
-              Quick Actions
-            </CardTitle>
-            <CardDescription>
-              Access common administrative functions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className="h-20 flex flex-col items-center justify-center"
-                onClick={() => handleQuickAction('users')}
-                disabled={isLoading}
-              >
-                <Users className="w-6 h-6 mb-2" />
-                <span className="text-sm">User Management</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="h-20 flex flex-col items-center justify-center"
-                onClick={() => handleQuickAction('roles')}
-                disabled={isLoading}
-              >
-                <UserCheck className="w-6 h-6 mb-2" />
-                <span className="text-sm">Role Management</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="h-20 flex flex-col items-center justify-center"
-                onClick={() => handleQuickAction('rbac')}
-                disabled={isLoading}
-              >
-                <Shield className="w-6 h-6 mb-2" />
-                <span className="text-sm">RBAC System</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="h-20 flex flex-col items-center justify-center"
-                onClick={() => handleQuickAction('departments')}
-                disabled={isLoading}
-              >
-                <Building2 className="w-6 h-6 mb-2" />
-                <span className="text-sm">Departments</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2" />
-              System Status
-            </CardTitle>
-            <CardDescription>
-              Current system health and performance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Database Connection</span>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Connected
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Authentication Service</span>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Active
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">File Storage</span>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Available
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Email Service</span>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Operational
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Clock className="w-5 h-5 mr-2" />
-            Recent System Activity
-          </CardTitle>
-          <CardDescription>
-            Latest administrative actions and system events
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* activitiesLoading is not defined, assuming it's a placeholder for a loading state */}
-          {/* For now, we'll just show a placeholder message */}
-          <div className="text-center py-8 text-gray-500">
-            <Activity className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>No recent activity</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Admin Tools Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Settings className="w-5 h-5 mr-2" />
-            Available Admin Tools
-          </CardTitle>
-          <CardDescription>
-            Complete list of administrative functions and their purposes
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-                      { icon: Users, label: "User Management", description: "Create, edit, and manage user accounts", href: "/lvm/admin/users" },
-        { icon: UserCheck, label: "Role Management", description: "Define user roles and permissions", href: "/lvm/admin/roles" },
-        { icon: Shield, label: "RBAC System", description: "Advanced access control management", href: "/lvm/admin/rbac" },
-        { icon: Building2, label: "Departments", description: "Organizational structure management", href: "/lvm/admin/departments" },
-        { icon: Code, label: "Department Codes", description: "Department coding and classification", href: "/lvm/admin/department-codes" },
-        { icon: FileText, label: "Document Templates", description: "Template management system", href: "/lvm/admin/document-templates" },
-        { icon: Mail, label: "Email Webhook Test", description: "Test email integration", href: "/lvm/admin/email-webhook-test" },
-        { icon: Settings, label: "System Settings", description: "Global configuration options", href: "/lvm/admin/settings" }
-            ].map((tool) => (
-              <div key={tool.label} className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-gray-100">
-                    <tool.icon className="w-5 h-5 text-gray-600" />
+      {/* Admin Tools and Recent Activity - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Admin Tools - 3/5 width */}
+        <div className="lg:col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Settings className="w-5 h-5 mr-2" />
+                Administrative Tools
+              </CardTitle>
+              <CardDescription>
+                Access all administrative functions and system management tools
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { icon: Users, label: "User Management", description: "Create, edit, and manage user accounts", href: "/lvm/admin/users" },
+                  { icon: UserCheck, label: "Role Management", description: "Define user roles and permissions", href: "/lvm/admin/roles" },
+                  { icon: Shield, label: "RBAC System", description: "Advanced access control management", href: "/lvm/admin/rbac" },
+                  { icon: Building2, label: "Departments", description: "Organizational structure management", href: "/lvm/admin/departments" },
+                  { icon: Code, label: "Department Codes", description: "Department coding and classification", href: "/lvm/admin/department-codes" },
+                  { icon: FileText, label: "Document Templates", description: "Template management system", href: "/lvm/admin/document-templates" },
+                  { icon: Mail, label: "Email Webhook Test", description: "Test email integration", href: "/lvm/admin/email-webhook-test" },
+                  { icon: Settings, label: "System Settings", description: "Global configuration options", href: "/lvm/admin/settings" }
+                ].map((tool) => (
+                  <div key={tool.label} className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                    <Link href={tool.href} className="block">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <tool.icon className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900">{tool.label}</h3>
+                          <p className="text-sm text-gray-600">{tool.description}</p>
+                        </div>
+                      </div>
+                    </Link>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{tool.label}</h3>
-                    <p className="text-sm text-gray-600">{tool.description}</p>
-                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Activity - 2/5 width */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Recent System Activity
+              </CardTitle>
+              <CardDescription>
+                Latest administrative actions and system events
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {activities && activities.length > 0 ? (
+                <div className="space-y-3">
+                  {activities.slice(0, 5).map((activity, index) => (
+                    <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="p-2 rounded-lg bg-blue-100">
+                        <Activity className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{activity.message}</p>
+                        <p className="text-xs text-gray-500">{activity.timestamp}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-3"
-                  onClick={() => router.push(tool.href)}
-                >
-                  Access Tool
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Activity className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>No recent activity</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 } 

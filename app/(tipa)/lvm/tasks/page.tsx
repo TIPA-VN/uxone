@@ -45,10 +45,8 @@ export default function TasksPage() {
     try {
       const res = await fetch("/api/users");
       const data = await res.json();
-      console.log("Users API response:", data);
       const usersData = data.users || data;
       setUsers(usersData);
-      console.log("Set users:", usersData);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
@@ -61,10 +59,8 @@ export default function TasksPage() {
     try {
       const res = await fetch("/api/projects");
       const data = await res.json();
-      console.log("Projects API response:", data);
       const projectsData = Array.isArray(data) ? data : data.projects || [];
       setProjects(projectsData);
-      console.log("Set projects:", projectsData);
     } catch (error) {
       console.error("Error fetching projects:", error);
     } finally {
@@ -78,11 +74,7 @@ export default function TasksPage() {
     fetchProjects();
   }, [fetchUsers, fetchProjects]);
 
-  // Debug: Log current state
-  useEffect(() => {
-    console.log("Current users state:", users);
-    console.log("Current projects state:", projects);
-  }, [users, projects]);
+
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

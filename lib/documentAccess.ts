@@ -14,6 +14,11 @@ export function checkDocumentAccess(
   document: Document & { project?: { ownerId: string } | null },
   user: { id: string; role?: string; department?: string }
 ): DocumentAccessResult {
+  // Always allow access to production documents for now (they're read-only)
+  if (document.workflowState === "production") {
+    return { canAccess: true };
+  }
+  
   // Get document type from metadata
   const documentType = (document.metadata as any)?.type as string;
   

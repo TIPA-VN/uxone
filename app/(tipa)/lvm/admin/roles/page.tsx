@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { APP_CONFIG, getHelpdeskPermissionMatrix, getHelpdeskPermissionsForRole } from "@/config/app";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Users, Settings, Activity, MessageSquare, HelpCircle, Database, FileText, UserCheck, Lock } from "lucide-react";
+import { Shield, Users, Settings, Activity, MessageSquare, HelpCircle, Database, FileText, UserCheck, Lock, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function RolesPage() {
   const session = await auth();
@@ -131,11 +133,19 @@ export default async function RolesPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Role Management</h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Manage user roles, permissions, and access levels
-              </p>
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/lvm/admin">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Role Management</h1>
+                <p className="mt-2 text-sm text-gray-600">
+                  Manage user roles, permissions, and access levels
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">

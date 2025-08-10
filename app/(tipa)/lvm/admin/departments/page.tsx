@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   Users,
   Settings,
-  Activity
+  Activity,
+  ArrowLeft
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
 
 // Types
 type UIDepartment = {
@@ -406,11 +408,19 @@ export default function DepartmentsPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Department Management</h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Manage organizational departments and their configurations
-              </p>
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/lvm/admin">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Department Management</h1>
+                <p className="mt-2 text-sm text-gray-600">
+                  Manage organizational departments and their configurations
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">

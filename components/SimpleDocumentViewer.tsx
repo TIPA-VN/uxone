@@ -45,6 +45,7 @@ export const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
   };
 
   const handleOpenInNewTab = () => {
+    // filePath is the API endpoint, so we can use it directly
     window.open(filePath, '_blank');
   };
 
@@ -124,6 +125,7 @@ export const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
                   <p className="text-gray-600 mb-4">Failed to load image</p>
+                  <p className="text-sm text-gray-500 mb-4">API endpoint: {filePath}</p>
                   <button
                     onClick={handleOpenInNewTab}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -184,8 +186,12 @@ export const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
                         transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
                         cursor: isDragging ? 'grabbing' : scale > 1 ? 'grab' : 'default'
                       }}
-                      onError={() => setImageError(true)}
-                      onLoad={() => setIsLoading(false)}
+                      onError={(e) => {
+                        setImageError(true);
+                      }}
+                      onLoad={() => {
+                        setIsLoading(false);
+                      }}
                     />
                     {isLoading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
@@ -246,11 +252,16 @@ export const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
               src={`${filePath}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
               title="PDF Preview"
               className="w-full h-full border-0"
-              onError={() => {
+              onError={(e) => {
                 // Fallback to download if iframe fails
                 handleDownload();
               }}
+              onLoad={() => {
+              }}
             />
+            <div className="text-xs text-gray-500 p-2 text-center">
+              API endpoint: {filePath}
+            </div>
           </div>
         </div>
       </div>
@@ -282,7 +293,7 @@ export const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
               onClick={onClose}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
               title="Close"
-            >
+              >
               <X className="w-5 h-5" />
             </button>
           </div>

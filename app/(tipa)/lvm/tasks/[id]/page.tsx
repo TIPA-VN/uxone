@@ -146,7 +146,7 @@ export default function TaskDetailPage() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   
   // Sub-task state
-  const [subtasks, setSubtasks] = useState<any[]>([]);
+  const [subtasks, setSubtasks] = useState<Task[]>([]);
   const [showCreateSubtask, setShowCreateSubtask] = useState(false);
   const [creatingSubtask, setCreatingSubtask] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -213,7 +213,6 @@ export default function TaskDetailPage() {
         const data = await res.json();
         // Handle paginated response from users API
         const userList = data.users || data;
-        console.log("Fetched users for subtask assignment:", userList);
         setUsers(userList);
       } else {
         console.error('Error fetching users:', res.status, res.statusText);
@@ -266,7 +265,7 @@ export default function TaskDetailPage() {
       } else {
         const errorData = await res.json();
         if (errorData.error === "Cannot complete task with incomplete sub-tasks") {
-          alert(`Cannot complete task. Please complete the following sub-tasks first:\n${errorData.incompleteSubtasks.map((st: any) => `- ${st.title}`).join('\n')}`);
+          alert(`Cannot complete task. Please complete the following sub-tasks first:\n${errorData.incompleteSubtasks.map((st: { title: string }) => `- ${st.title}`).join('\n')}`);
         } else {
           alert(errorData.error || "Failed to update task status");
         }
@@ -630,7 +629,7 @@ export default function TaskDetailPage() {
                           </label>
                           <select
                             value={subtaskForm.priority}
-                            onChange={(e) => setSubtaskForm(prev => ({ ...prev, priority: e.target.value as any }))}
+                            onChange={(e) => setSubtaskForm(prev => ({ ...prev, priority: e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' }))}
                             className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
                           >
                             <option value="LOW">Low</option>

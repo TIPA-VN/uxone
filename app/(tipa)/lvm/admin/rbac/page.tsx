@@ -18,7 +18,8 @@ import {
   Lock,
   Eye,
   CheckCircle,
-  Info
+  Info,
+  ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
 
@@ -153,21 +154,29 @@ export default async function RBACPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">RBAC Management</h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Comprehensive Role-Based Access Control management system
-              </p>
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/lvm/admin">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">RBAC Management</h1>
+                <p className="mt-2 text-sm text-gray-600">
+                  Comprehensive Role-Based Access Control management system
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <Button asChild variant="outline">
-                <Link href="/admin/roles">
+                <Link href="/lvm/admin/roles">
                   <Shield className="w-4 h-4 mr-2" />
                   View Roles
                 </Link>
               </Button>
               <Button asChild>
-                <Link href="/admin/users">
+                <Link href="/lvm/admin/users">
                   <Users className="w-4 h-4 mr-2" />
                   Manage Users
                 </Link>
@@ -304,19 +313,19 @@ export default async function RBACPage() {
                   <h4 className="font-medium text-gray-900 mb-3">Quick Actions</h4>
                   <div className="flex flex-wrap gap-3">
                     <Button asChild variant="outline" size="sm">
-                      <Link href="/admin/roles">
+                      <Link href="/lvm/admin/roles">
                         <Eye className="w-4 h-4 mr-2" />
                         View All Roles
                       </Link>
                     </Button>
                     <Button asChild variant="outline" size="sm">
-                      <Link href="/admin/users">
+                      <Link href="/lvm/admin/users">
                         <Users className="w-4 h-4 mr-2" />
                         Manage Users
                       </Link>
                     </Button>
                     <Button asChild variant="outline" size="sm">
-                      <Link href="/admin/departments">
+                      <Link href="/lvm/admin/departments">
                         <Settings className="w-4 h-4 mr-2" />
                         Department Settings
                       </Link>
@@ -406,7 +415,7 @@ export default async function RBACPage() {
                 </div>
                 <div className="mt-4 text-center">
                   <Button asChild variant="outline">
-                    <Link href="/admin/roles">
+                    <Link href="/lvm/admin/roles">
                       View Complete Matrix
                     </Link>
                   </Button>
@@ -535,7 +544,7 @@ export default async function RBACPage() {
                     {categoryRoles.length > 6 && (
                       <div className="mt-4 text-center">
                         <Button asChild variant="outline" size="sm">
-                          <Link href="/admin/roles">
+                          <Link href="/lvm/admin/roles">
                             View All {category} Roles
                           </Link>
                         </Button>
@@ -567,7 +576,7 @@ export default async function RBACPage() {
                     This component provides detailed permission analysis, risk assessment, and security insights.
                   </p>
                   <Button asChild>
-                    <Link href="/admin/rbac/permissions-audit">
+                    <Link href="/lvm/admin/rbac/permissions-audit">
                       <Shield className="w-4 h-4 mr-2" />
                       Open Permissions Audit
                     </Link>

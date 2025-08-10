@@ -25,6 +25,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Check if user has access to this project
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { 
+        id: true, 
+        ownerId: true, 
+        departments: true,
+        members: { select: { userId: true } }
+      }
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Check project access
+    const hasProjectAccess = 
+      project.ownerId === session.user.id ||
+      project.members.some(member => member.userId === session.user.id) ||
+      project.departments.includes(session.user.department || "");
+
+    if (!hasProjectAccess) {
+      return NextResponse.json({ error: "Access denied to this project" }, { status: 403 });
+    }
+
     // Check if file is a PDF
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json({ error: "File must be a PDF" }, { status: 400 });
@@ -77,70 +102,69 @@ export async function POST(req: NextRequest) {
         newPdfDoc.addPage(copiedPage);
 
         const pdfBytes = await newPdfDoc.save();
-      const pageFileName = `${baseFileName}_page_${i + 1}.pdf`;
-      const pageFilePath = join(uploadDir, pageFileName);
-      const relativePath = `/uploads/projects/${projectId}/pages/${pageFileName}`;
+        const pageFileName = `${baseFileName}_page_${i + 1}.pdf`;
+        const pageFilePath = join(uploadDir, pageFileName);
+        const relativePath = `/uploads/projects/${projectId}/pages/${pageFileName}`;
 
-      // Save the page file
-      await writeFile(pageFilePath, pdfBytes);
+        // Save the page file
+        await writeFile(pageFilePath, pdfBytes);
 
-      // Versioning: find max version for same fileName, type, project, department
-      let version = 1;
-      if (pageFileName && docType && projectId && department) {
-        const existing = await prisma.$queryRawUnsafe<{ max_version: number }[]>(
-          `SELECT MAX("version") as max_version FROM "documents" WHERE "fileName" = '${pageFileName.replace(/'/g, "''")}' AND (metadata->>'type') = '${docType.replace(/'/g, "''")}' AND "projectId" = '${projectId}' AND "department" = '${department}'`
-        );
-        if (Array.isArray(existing) && existing.length > 0 && existing[0].max_version) {
-          version = Number(existing[0].max_version) + 1;
+        // Versioning: find max version for same fileName, type, project, department
+        let version = 1;
+        if (pageFileName && docType && projectId && department) {
+          const existing = await prisma.$queryRawUnsafe<{ max_version: number }[]>(
+            `SELECT MAX("version") as max_version FROM "documents" WHERE "fileName" = '${pageFileName.replace(/'/g, "''")}' AND (metadata->>'type') = '${docType.replace(/'/g, "''")}' AND "projectId" = '${projectId}' AND "department" = '${department}'`
+          );
+          if (Array.isArray(existing) && existing.length > 0 && existing[0].max_version) {
+            version = Number(existing[0].max_version) + 1;
+          }
         }
+
+        // Save page document to database
+        const pageDoc = await prisma.document.create({
+          data: {
+            fileName: pageFileName,
+            filePath: relativePath,
+            fileType: "application/pdf",
+            size: pdfBytes.length,
+            version,
+            metadata: {
+              type: docType,
+              pageNumber: i + 1,
+              originalFile: file.name,
+              splitFrom: true
+            },
+            ownerId: session.user.id,
+            department,
+            projectId,
+            accessRoles: ["ADMIN", "SENIOR MANAGER", "MANAGER"]
+          }
+        });
+
+        pages.push(pageDoc);
       }
 
-      // Save page document to database
-      const pageDoc = await prisma.document.create({
-        data: {
-          fileName: pageFileName,
-          filePath: relativePath,
-          fileType: 'pdf',
-          size: pdfBytes.length,
-          version: version,
-          metadata: {
-            type: docType,
-            description: `Page ${i + 1} of ${pageCount}`,
-            originalFile: file.name,
-            pageNumber: i + 1,
-            totalPages: pageCount,
-            isSplitPage: true
-          },
-          ownerId: session.user.id,
-          department: department,
-          projectId: projectId,
-          workflowState: "draft"
-        }
+      return NextResponse.json({ 
+        success: true, 
+        message: `PDF split into ${pageCount} pages`,
+        pages: pages.map(page => ({
+          id: page.id,
+          fileName: page.fileName,
+          filePath: page.filePath
+        }))
       });
 
-      pages.push({
-        id: pageDoc.id,
-        fileName: pageFileName,
-        filePath: relativePath,
-        pageNumber: i + 1,
-        size: pdfBytes.length
-      });
-    }
     } catch (error) {
+      console.error('Error splitting PDF:', error);
       return NextResponse.json({ 
-        error: "PDF-LIB library not installed. Please run 'npm install pdf-lib' to enable PDF splitting functionality." 
+        error: "Failed to split PDF" 
       }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
-      originalFile: file.name,
-      totalPages: pageCount,
-      pages: pages
-    });
-
   } catch (error) {
-    console.error('Error splitting PDF:', error);
-    return NextResponse.json({ error: "Failed to split PDF" }, { status: 500 });
+    console.error('Error in split-pdf route:', error);
+    return NextResponse.json({ 
+      error: "Internal server error" 
+    }, { status: 500 });
   }
 } 

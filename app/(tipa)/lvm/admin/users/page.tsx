@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { DataTable } from "./data-table";
 import { columns } from "./columns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, UserX, Activity } from "lucide-react";
+import { Users, UserCheck, UserX, Activity, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function UsersPage() {
   const session = await auth();
@@ -43,11 +45,19 @@ export default async function UsersPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Manage user accounts, roles, and permissions
-              </p>
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/lvm/admin">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+                <p className="mt-2 text-sm text-gray-600">
+                  Manage user accounts, roles, and permissions
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
