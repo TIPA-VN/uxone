@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { 
   Plus, 
   Search, 
@@ -51,6 +52,7 @@ interface Ticket {
 
 export default function TicketsPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,20 +60,59 @@ export default function TicketsPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
+  // Get user's department and role
+  const userDepartment = session?.user?.department || session?.user?.centralDepartment;
+  const userRole = session?.user?.role;
+  
+  // Check if user is IS department or admin
+  const isISDepartment = userDepartment === 'IS';
+  const isAdmin = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'SENIOR_MANAGER'].includes(userRole || '');
+  const canSeeAllTickets = isISDepartment || isAdmin;
+
   useEffect(() => {
-    fetchTickets();
-  }, []);
+    if (sessionStatus === 'loading') {
+      return; // Wait for session to load
+    }
+    
+    if (sessionStatus === 'unauthenticated') {
+      setTickets([]);
+      setLoading(false);
+      return;
+    }
+    
+    if (session) {
+      fetchTickets();
+    }
+  }, [session, sessionStatus, userDepartment, canSeeAllTickets]);
 
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/tickets');
+      
+      // Build API URL with department filter
+      let apiUrl = "/api/tickets";
+      if (!canSeeAllTickets && userDepartment) {
+        apiUrl += `?department=${encodeURIComponent(userDepartment)}`;
+      }
+
+      console.log('🔍 Tickets page - Fetching tickets from:', apiUrl);
+      console.log('🔍 Tickets page - User department:', userDepartment);
+      console.log('🔍 Tickets page - Can see all tickets:', canSeeAllTickets);
+
+      const response = await fetch(apiUrl);
       if (response.ok) {
         const data = await response.json();
-        setTickets(data);
+        // The API returns { tickets: [...] }, so we need to extract the tickets array
+        if (data.tickets && Array.isArray(data.tickets)) {
+          setTickets(data.tickets);
+        } else {
+          console.error('Invalid tickets data format:', data);
+          setTickets([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching tickets:', error);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -107,7 +148,8 @@ export default function TicketsPage() {
     }
   };
 
-  const filteredTickets = tickets.filter(ticket => {
+  // Ensure tickets is an array before filtering
+  const filteredTickets = Array.isArray(tickets) ? tickets.filter(ticket => {
     const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -116,7 +158,17 @@ export default function TicketsPage() {
     const matchesCategory = categoryFilter === 'all' || ticket.category === categoryFilter;
     
     return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
-  });
+  }) : [];
+
+  // Show loading state while session is loading
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="ml-2 text-gray-600">Loading session...</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -132,7 +184,12 @@ export default function TicketsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Helpdesk Tickets</h1>
-          <p className="text-gray-600">Manage and track support tickets</p>
+          <p className="text-gray-600">
+            {canSeeAllTickets 
+              ? "Manage and track all support tickets"
+              : `Manage and track ${userDepartment} department tickets`
+            }
+          </p>
         </div>
         <Button 
           onClick={() => router.push('/lvm/helpdesk/tickets/new')}

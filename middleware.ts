@@ -1,7 +1,8 @@
 import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getUserHomePage, mapRoleToConfigKey } from '@/config/app'
+import { mapRoleToConfigKey } from '@/config/app'
+import { getUserAppropriateHomePage } from '@/lib/department-utils'
 import { RequestContextManager } from './lib/logging/request-context';
 
 export async function middleware(request: NextRequest) {
@@ -86,10 +87,13 @@ export async function middleware(request: NextRequest) {
       const userDepartment = session.user.department || session.user.centralDepartment;
       const userRole = session.user.role;
       
+      console.log('🔍 PROC ACCESS CHECK:', { userDepartment, userRole, path: request.nextUrl.pathname });
+      
       // Only allow access if user is from PROC department or is ADMIN
       if (userDepartment !== 'PROC' && userRole !== 'ADMIN') {
         // Redirect to user's appropriate home page based on their department
-        const userHomePage = getUserHomePage(userDepartment || 'DEFAULT');
+        const userHomePage = getUserAppropriateHomePage(userDepartment || 'DEFAULT', userRole || 'STAFF');
+        console.log('🔍 PROC REDIRECT:', { userDepartment, userRole, userHomePage });
         return NextResponse.redirect(new URL(userHomePage, request.url))
       }
     }
@@ -138,7 +142,7 @@ export async function middleware(request: NextRequest) {
     // Allow access if user has admin role OR is from admin department
     if (!hasAdminRole && !hasAdminDepartment) {
       // Redirect to user's appropriate home page if no admin access
-      const userHomePage = getUserHomePage(userDepartment || 'DEFAULT');
+      const userHomePage = getUserAppropriateHomePage(userDepartment || 'DEFAULT', userRole || 'STAFF');
       return NextResponse.redirect(new URL(userHomePage, request.url))
     }
   }

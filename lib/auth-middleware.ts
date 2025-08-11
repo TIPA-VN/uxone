@@ -57,6 +57,12 @@ export async function authenticateUser(emp_code: string, password: string) {
         // Map emp_pos to role
         const role = mapPositionToRole(centralApiData.emp_pos)
         
+        // Import department mapping
+        const { getUXOneDepartmentCode } = require('@/config/department-mapping');
+        
+        // Map legacy department to UXOne code
+        const mappedDepartment = getUXOneDepartmentCode(centralApiData.emp_dept);
+        
         // Create new user in UXOne database
         user = await uxonePrisma.user.create({
           data: {
@@ -64,9 +70,9 @@ export async function authenticateUser(emp_code: string, password: string) {
             emp_code: centralApiData.emp_code, // Store emp_code for TIPA Mobile and services
             name: centralApiData.emp_name,
             email: centralApiData.email || `${centralApiData.emp_code}@tipa.co.th`,
-            department: centralApiData.emp_dept || 'OPS', // Use emp_dept from central API
-            centralDepartment: centralApiData.emp_dept,
-            departmentName: centralApiData.emp_dept_name,
+            department: mappedDepartment, // Use mapped UXOne department code
+            centralDepartment: centralApiData.emp_dept, // Store original legacy department
+            departmentName: centralApiData.emp_dept_name, // Store display name
             role: role, // Use mapped role from emp_pos
             isActive: true
           }
@@ -83,9 +89,9 @@ export async function authenticateUser(emp_code: string, password: string) {
             emp_code: centralApiData.emp_code, // Update emp_code for TIPA Mobile and services
             name: centralApiData.emp_name,
             email: centralApiData.email || `${centralApiData.emp_code}@tipa.co.th`,
-            department: centralApiData.emp_dept || user.department, // Update department from central API
-            centralDepartment: centralApiData.emp_dept,
-            departmentName: centralApiData.emp_dept_name,
+            department: mappedDepartment, // Update with mapped UXOne department code
+            centralDepartment: centralApiData.emp_dept, // Store original legacy department
+            departmentName: centralApiData.emp_dept_name, // Store display name
             role: role, // Use mapped role from emp_pos
             isActive: true,
             updatedAt: new Date()

@@ -1,7 +1,7 @@
 
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { getUserHomePage } from '@/config/app'
+import { getUserAppropriateHomePage } from '@/lib/department-utils'
 
 export default async function Home() {
   const session = await auth()
@@ -51,7 +51,8 @@ export default async function Home() {
     }
     
     // For non-admin users, redirect to their department home page
-    const userHomePage = getUserHomePage(userDepartment || 'UNKNOWN')
+    const userHomePage = getUserAppropriateHomePage(userDepartment || 'UNKNOWN', userRole || 'STAFF')
+    console.log('🔍 ROOT PAGE REDIRECT:', { userDepartment, userRole, userHomePage })
     redirect(userHomePage)
   }
   

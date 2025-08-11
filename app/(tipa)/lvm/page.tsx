@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { getUserHomePage } from '@/config/app'
+import { getUserAppropriateHomePage } from '@/lib/department-utils'
 
 const HomePage = async () => {
   const session = await auth()
@@ -24,7 +24,9 @@ const HomePage = async () => {
     // If user has admin access, don't redirect - let them stay on LVM page
     if (!(hasAdminRole || hasAdminDepartment)) {
       // Redirect to user's department-specific home page
-      const userHomePage = getUserHomePage(userDepartment || 'UNKNOWN')
+      const userHomePage = getUserAppropriateHomePage(userDepartment || 'UNKNOWN', userRole || 'STAFF')
+      
+      console.log('🔍 LVM PAGE REDIRECT:', { userDepartment, userRole, userHomePage })
       
       // If the user's department has a specific home page, redirect there
       if (userHomePage !== '/lvm') {

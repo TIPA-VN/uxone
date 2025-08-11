@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     const priority = searchParams.get('priority');
     const category = searchParams.get('category');
     const assignedTo = searchParams.get('assignedTo');
+    const department = searchParams.get('department');
 
     // Build where clause
     const where: any = {};
@@ -31,7 +32,31 @@ export async function GET(req: NextRequest) {
     if (assignedTo && assignedTo !== 'all') {
       where.assignedToId = assignedTo;
     }
+    
+    // Filter by department if specified
+    if (department && department !== 'all') {
+      console.log('🔍 Filtering tickets by department:', department);
+      where.OR = [
+        // Filter by tickets created by users from the specified department
+        {
+          createdBy: {
+            department: department
+          }
+        },
+        // Filter by tickets assigned to users from the specified department
+        {
+          assignedTo: {
+            department: department
+          }
+        }
+      ];
+      console.log('🔍 Where clause for department filter:', JSON.stringify(where, null, 2));
+    } else {
+      console.log('🔍 No department filter applied - showing all tickets');
+    }
 
+    console.log('🔍 Executing Prisma query with where clause:', JSON.stringify(where, null, 2));
+    
     const tickets = await prisma.ticket.findMany({
       where,
       include: {
@@ -59,6 +84,14 @@ export async function GET(req: NextRequest) {
         createdAt: 'desc',
       },
     });
+
+    console.log('🔍 Found tickets:', tickets.length);
+    if (tickets.length > 0) {
+      console.log('🔍 Sample ticket departments:', {
+        createdBy: tickets[0].createdBy?.department || 'N/A',
+        assignedTo: tickets[0].assignedTo?.department || 'N/A'
+      });
+    }
 
     // Transform the data to match the expected format
     const transformedTickets = tickets.map(ticket => ({

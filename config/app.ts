@@ -1689,6 +1689,21 @@ export const getDepartmentHomePage = (departmentCode: string): string => {
 };
 
 export const getUserHomePage = (userDepartment: string): string => {
+  // Import the new department mapping system
+  const { getDepartmentHomePage: getMappedDepartmentHomePage } = require('./department-mapping');
+  
+  // Try the new mapping system first
+  try {
+    const mappedHomePage = getMappedDepartmentHomePage(userDepartment);
+    if (mappedHomePage && mappedHomePage !== '/lvm') {
+      return mappedHomePage;
+    }
+  } catch (error) {
+    // Fallback to old system if new mapping fails
+    console.warn('New department mapping failed, falling back to old system:', error);
+  }
+  
+  // Fallback to old mapping system
   const mappedDepartment = mapUserDepartmentToCode(userDepartment);
   return getDepartmentHomePage(mappedDepartment);
 };
