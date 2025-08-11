@@ -6,3 +6,68 @@
 [08/11/2025, 00:15:25] [INFO] [DATABASE] | OPERATION: create | TABLE: DocumentNumber | RECORD_ID: cme6lnfjv0002apvzzp8w69r5 | QUERY: create on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 36ms
 [08/11/2025, 00:15:25] [INFO] [DATABASE] | OPERATION: create | TABLE: Project | RECORD_ID: cme6lnflf0004apvz8bw4izs5 | QUERY: create on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 44ms
 [08/11/2025, 00:15:25] [INFO] [DATABASE] | OPERATION: update | TABLE: DocumentNumber | RECORD_ID: cme6lnfjv0002apvzzp8w69r5 | QUERY: update on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 41ms
+[08/11/2025, 00:35:12] [INFO] [DATABASE] | OPERATION: update | TABLE: Project | RECORD_ID: cme6m3ljz0004lz0hvtoa33qi | QUERY: update on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 42ms
+[08/11/2025, 01:49:00] [INFO] [DATABASE] | OPERATION: create | TABLE: Project | RECORD_ID: cme6ozsda0001ap1n6y6rh4dn | QUERY: create on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 47ms
+[08/11/2025, 02:08:22] [INFO] [DATABASE] | OPERATION: updateMany | TABLE: Project | QUERY: updateMany on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 125ms
+[08/11/2025, 02:08:23] [INFO] [DATABASE] | OPERATION: updateMany | TABLE: Project | QUERY: updateMany on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 22ms
+[08/11/2025, 02:08:25] [INFO] [DATABASE] | OPERATION: updateMany | TABLE: Project | QUERY: updateMany on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 27ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskDependency | QUERY: deleteMany on TaskDependency | AFFECTED_ROWS: 1 | EXECUTION_TIME: 23ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskAttachment | QUERY: deleteMany on TaskAttachment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 23ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskComment | QUERY: deleteMany on TaskComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 20ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Task | QUERY: deleteMany on Task | AFFECTED_ROWS: 1 | EXECUTION_TIME: 14ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectComment | QUERY: deleteMany on ProjectComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 21ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectMember | QUERY: deleteMany on ProjectMember | AFFECTED_ROWS: 1 | EXECUTION_TIME: 21ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Note | QUERY: deleteMany on Note | AFFECTED_ROWS: 1 | EXECUTION_TIME: 22ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Document | QUERY: deleteMany on Document | AFFECTED_ROWS: 1 | EXECUTION_TIME: 20ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: DocumentNumber | QUERY: deleteMany on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 21ms
+[08/11/2025, 02:28:59] [INFO] [DATABASE] | OPERATION: delete | TABLE: Project | RECORD_ID: cme6ozsda0001ap1n6y6rh4dn | QUERY: delete on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 33ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskDependency | QUERY: deleteMany on TaskDependency | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskAttachment | QUERY: deleteMany on TaskAttachment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 11ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskComment | QUERY: deleteMany on TaskComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 13ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Task | QUERY: deleteMany on Task | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectComment | QUERY: deleteMany on ProjectComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 9ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectMember | QUERY: deleteMany on ProjectMember | AFFECTED_ROWS: 1 | EXECUTION_TIME: 13ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Note | QUERY: deleteMany on Note | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Document | QUERY: deleteMany on Document | AFFECTED_ROWS: 1 | EXECUTION_TIME: 11ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: DocumentNumber | QUERY: deleteMany on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 20ms
+[08/11/2025, 02:29:06] [INFO] [DATABASE] | OPERATION: delete | TABLE: Project | RECORD_ID: cme6lnflf0004apvz8bw4izs5 | QUERY: delete on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 18ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskDependency | QUERY: deleteMany on TaskDependency | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskAttachment | QUERY: deleteMany on TaskAttachment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 11ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskComment | QUERY: deleteMany on TaskComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Task | QUERY: deleteMany on Task | AFFECTED_ROWS: 1 | EXECUTION_TIME: 9ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectComment | QUERY: deleteMany on ProjectComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectMember | QUERY: deleteMany on ProjectMember | AFFECTED_ROWS: 1 | EXECUTION_TIME: 11ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Note | QUERY: deleteMany on Note | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Document | QUERY: deleteMany on Document | AFFECTED_ROWS: 1 | EXECUTION_TIME: 11ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: DocumentNumber | QUERY: deleteMany on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 16ms
+[08/11/2025, 02:29:22] [INFO] [DATABASE] | OPERATION: delete | TABLE: Project | RECORD_ID: cme6m3ljz0004lz0hvtoa33qi | QUERY: delete on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 16ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskDependency | QUERY: deleteMany on TaskDependency | AFFECTED_ROWS: 1 | EXECUTION_TIME: 22ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskAttachment | QUERY: deleteMany on TaskAttachment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 25ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskComment | QUERY: deleteMany on TaskComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 22ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Task | QUERY: deleteMany on Task | AFFECTED_ROWS: 1 | EXECUTION_TIME: 28ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectComment | QUERY: deleteMany on ProjectComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectMember | QUERY: deleteMany on ProjectMember | AFFECTED_ROWS: 1 | EXECUTION_TIME: 11ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Note | QUERY: deleteMany on Note | AFFECTED_ROWS: 1 | EXECUTION_TIME: 16ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Document | QUERY: deleteMany on Document | AFFECTED_ROWS: 1 | EXECUTION_TIME: 22ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: DocumentNumber | QUERY: deleteMany on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 14ms
+[08/11/2025, 02:29:29] [INFO] [DATABASE] | OPERATION: delete | TABLE: Project | RECORD_ID: cme1i2qv8000fi3qfvnu6uf8g | QUERY: delete on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 16ms
+[08/11/2025, 02:29:31] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskDependency | QUERY: deleteMany on TaskDependency | AFFECTED_ROWS: 1 | EXECUTION_TIME: 21ms
+[08/11/2025, 02:29:31] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskAttachment | QUERY: deleteMany on TaskAttachment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 22ms
+[08/11/2025, 02:29:31] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: TaskComment | QUERY: deleteMany on TaskComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 22ms
+[08/11/2025, 02:29:31] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Task | QUERY: deleteMany on Task | AFFECTED_ROWS: 1 | EXECUTION_TIME: 23ms
+[08/11/2025, 02:29:31] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectComment | QUERY: deleteMany on ProjectComment | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:32] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: ProjectMember | QUERY: deleteMany on ProjectMember | AFFECTED_ROWS: 1 | EXECUTION_TIME: 13ms
+[08/11/2025, 02:29:32] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Note | QUERY: deleteMany on Note | AFFECTED_ROWS: 1 | EXECUTION_TIME: 10ms
+[08/11/2025, 02:29:32] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: Document | QUERY: deleteMany on Document | AFFECTED_ROWS: 1 | EXECUTION_TIME: 15ms
+[08/11/2025, 02:29:32] [INFO] [DATABASE] | OPERATION: deleteMany | TABLE: DocumentNumber | QUERY: deleteMany on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 15ms
+[08/11/2025, 02:29:32] [INFO] [DATABASE] | OPERATION: delete | TABLE: Project | RECORD_ID: cme2du2i00004lzplfqrfbzpd | QUERY: delete on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 17ms
+[08/11/2025, 02:59:17] [INFO] [DATABASE] | OPERATION: update | TABLE: DocumentTemplate | RECORD_ID: cme1hkhj30005i3qf79dq5cme | QUERY: update on DocumentTemplate | AFFECTED_ROWS: 1 | EXECUTION_TIME: 34ms
+[08/11/2025, 02:59:17] [INFO] [DATABASE] | OPERATION: create | TABLE: DocumentNumber | RECORD_ID: cme6ri6gj0007apb78ekb3i2t | QUERY: create on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 34ms
+[08/11/2025, 02:59:17] [INFO] [DATABASE] | OPERATION: create | TABLE: Project | RECORD_ID: cme6ri6hy0009apb77jiiieho | QUERY: create on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 34ms
+[08/11/2025, 02:59:17] [INFO] [DATABASE] | OPERATION: update | TABLE: DocumentNumber | RECORD_ID: cme6ri6gj0007apb78ekb3i2t | QUERY: update on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 41ms
+[08/11/2025, 03:06:13] [INFO] [DATABASE] | OPERATION: update | TABLE: DocumentTemplate | RECORD_ID: cme6paej60001apno4qxhdhf0 | QUERY: update on DocumentTemplate | AFFECTED_ROWS: 1 | EXECUTION_TIME: 34ms
+[08/11/2025, 03:06:13] [INFO] [DATABASE] | OPERATION: create | TABLE: DocumentNumber | RECORD_ID: cme6rr39l0002apeebemkbt3w | QUERY: create on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 35ms
+[08/11/2025, 03:06:13] [INFO] [DATABASE] | OPERATION: create | TABLE: Project | RECORD_ID: cme6rr3b20004apeeu1oe95ld | QUERY: create on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 33ms
+[08/11/2025, 03:06:13] [INFO] [DATABASE] | OPERATION: update | TABLE: DocumentNumber | RECORD_ID: cme6rr39l0002apeebemkbt3w | QUERY: update on DocumentNumber | AFFECTED_ROWS: 1 | EXECUTION_TIME: 37ms
+[08/11/2025, 03:37:15] [INFO] [DATABASE] | OPERATION: update | TABLE: Project | RECORD_ID: cme6rr3b20004apeeu1oe95ld | QUERY: update on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 42ms
+[08/11/2025, 03:37:37] [INFO] [DATABASE] | OPERATION: update | TABLE: Project | RECORD_ID: cme6rr3b20004apeeu1oe95ld | QUERY: update on Project | AFFECTED_ROWS: 1 | EXECUTION_TIME: 45ms

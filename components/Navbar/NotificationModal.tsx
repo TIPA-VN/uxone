@@ -296,6 +296,8 @@ export function NotificationModal({
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
               <input
+                id="notification-search"
+                name="notification-search"
                 type="text"
                 placeholder="Search notifications..."
                 value={searchTerm}

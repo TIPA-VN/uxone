@@ -66,6 +66,8 @@ const Navbar = () => {
       <div className="hidden md:flex items-center gap-2 bg-slate-50 text-xs rounded-full ring-[1.5px] ring-gray-400 px-2">
         <Image src="/images/search.png" alt="Search" width={14} height={14} />
         <input
+          id="navbar-search"
+          name="navbar-search"
           type="text"
           placeholder="Search..."
           className="w-[200px] p-2 bg-transparent outline-none"

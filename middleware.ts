@@ -43,13 +43,17 @@ export async function middleware(request: NextRequest) {
       });
     }
 
-    // Add CORS headers to all service API responses
-    const response = NextResponse.next();
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+    // Add CORS headers only to API routes, not to page routes
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      const response = NextResponse.next();
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+      return response;
+    }
     
-    return response;
+    // For non-API routes, just continue without adding CORS headers
+    return NextResponse.next();
   }
 
   // Protect all routes under /lvm

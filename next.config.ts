@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     // your project has TypeScript errors.
     ignoreBuildErrors: true,
   },
+  // Enable compression for better performance
+  compress: true,
   // Ensure server-side modules are not bundled for client
   webpack: (config, { isServer }) => {
     if (!isServer) {

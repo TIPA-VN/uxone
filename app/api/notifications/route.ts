@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendNotification } from "./stream/route";
 import { sendWebhookWithRetry } from "@/lib/webhook-sender";
+import { setCompressionHeaders } from "@/lib/compression";
 
 export const runtime = 'nodejs'
 
@@ -32,7 +33,8 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json(notifications);
+    const response = NextResponse.json(notifications);
+    return setCompressionHeaders(response);
   } catch (error) {
     console.error('Error fetching notifications:', error);
     

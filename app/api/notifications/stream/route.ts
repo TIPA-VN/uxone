@@ -12,28 +12,6 @@ const clients: { userId: string | null; res: ResponseWriter }[] = [];
 
 export async function GET(req: NextRequest) {
   try {
-    // Check if this is a test request
-    const url = new URL(req.url);
-    if (url.searchParams.get('test') === 'true') {
-      console.log('SSE: Test connection request');
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(encoder.encode('data: {"type":"test","message":"SSE connection working"}\n\n'));
-          setTimeout(() => controller.close(), 1000);
-        },
-      });
-      
-      return new Response(stream, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
-          "X-Accel-Buffering": "no",
-        },
-      });
-    }
-
     const session = await auth();
     const userId = session?.user?.id || null;
 
@@ -41,8 +19,6 @@ export async function GET(req: NextRequest) {
       console.error('SSE: Unauthenticated user attempt to connect');
       return new Response('Unauthorized', { status: 401 });
     }
-
-    console.log(`SSE: User ${userId} (${session.user.username}) connecting to stream`);
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -66,7 +42,6 @@ export async function GET(req: NextRequest) {
 
         // Add client to list
         clients.push({ userId, res });
-        console.log(`SSE: Client ${userId} added, total clients: ${clients.length}`);
 
         // Send initial heartbeat
         res.write('data: {"type":"heartbeat"}\n\n');
@@ -76,7 +51,6 @@ export async function GET(req: NextRequest) {
           const idx = clients.findIndex((c) => c.res === res);
           if (idx !== -1) {
             clients.splice(idx, 1);
-            console.log(`SSE: Client ${userId} disconnected, remaining clients: ${clients.length}`);
           }
           res.close();
         });

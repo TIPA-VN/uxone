@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { generateDocumentNumber } from "@/lib/documentNumberGenerator";
 import { sendNotification } from "@/app/api/notifications/stream/route";
 import { PrismaAudit } from "@/lib/prisma-audit";
+import { setCompressionHeaders } from "@/lib/compression";
 
 // Type definitions for better type safety
 interface ProjectWithCounts {
@@ -238,10 +239,12 @@ export async function GET(request: NextRequest) {
         })
       );
 
-      return NextResponse.json(projectsWithKPI);
+      const response = NextResponse.json(projectsWithKPI);
+      return setCompressionHeaders(response);
     }
 
-    return NextResponse.json(projectsWithTaskCounts);
+    const response = NextResponse.json(projectsWithTaskCounts);
+    return setCompressionHeaders(response);
   } catch (error) {
     console.error("Error fetching projects:", error);
     
@@ -372,8 +375,6 @@ export async function POST(request: NextRequest) {
 
     // Create notifications for project creation
     try {
-      console.log('Creating notifications for project:', project.id);
-      
       // 1. Notify department heads/managers of involved departments
       const departmentUsers = await prisma.user.findMany({
         where: {
@@ -383,8 +384,6 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, name: true, username: true, department: true },
       });
-      
-      console.log('Found department users:', departmentUsers.length);
 
       // 2. Notify team members (excluding the owner who will get a different notification)
       const teamMemberIds = teamMembers.filter((id: string) => id !== currentUser.id);
@@ -392,8 +391,6 @@ export async function POST(request: NextRequest) {
         where: { id: { in: teamMemberIds } },
         select: { id: true, name: true, username: true },
       }) : [];
-      
-      console.log('Found team member users:', teamMemberUsers.length);
 
       // 3. Create notifications for department heads
       for (const deptUser of departmentUsers) {
@@ -409,7 +406,6 @@ export async function POST(request: NextRequest) {
               },
             });
             sendNotification(notification, deptUser.id);
-            console.log('Created notification for department user:', deptUser.id);
           } catch (notifError) {
             console.error('Failed to create notification for department user:', deptUser.id, notifError);
           }
@@ -429,7 +425,6 @@ export async function POST(request: NextRequest) {
             },
           });
           sendNotification(notification, member.id);
-          console.log('Created notification for team member:', member.id);
         } catch (notifError) {
           console.error('Failed to create notification for team member:', member.id, notifError);
         }
@@ -447,12 +442,10 @@ export async function POST(request: NextRequest) {
           },
         });
         sendNotification(ownerNotification, currentUser.id);
-        console.log('Created notification for project owner:', currentUser.id);
       } catch (notifError) {
         console.error('Failed to create notification for project owner:', currentUser.id, notifError);
       }
 
-      console.log('All notifications created successfully');
     } catch (error) {
       // Don't fail the project creation if notifications fail
       console.error('Error in notification creation process:', error);
@@ -460,15 +453,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
-    // Enhanced error logging
     console.error("Error creating project:", error);
-    console.error("Error details:", {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace',
-      code: (error as any)?.code,
-      meta: (error as any)?.meta,
-    });
     
     // Handle specific Prisma errors
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2003') {
@@ -476,33 +461,6 @@ export async function POST(request: NextRequest) {
         { error: "Invalid user reference. Please log in again." },
         { status: 500 }
       );
-    }
-    
-    // Handle other Prisma validation errors
-    if (error && typeof error === 'object' && 'code' in error) {
-      const prismaError = error as any;
-      switch (prismaError.code) {
-        case 'P2002':
-          return NextResponse.json(
-            { error: "A project with this name already exists" },
-            { status: 400 }
-          );
-        case 'P2003':
-          return NextResponse.json(
-            { error: "Invalid reference. Please check your input data." },
-            { status: 400 }
-          );
-        case 'P2025':
-          return NextResponse.json(
-            { error: "Record not found. Please refresh and try again." },
-            { status: 400 }
-          );
-        default:
-          return NextResponse.json(
-            { error: `Database error: ${prismaError.message || 'Unknown error'}` },
-            { status: 500 }
-          );
-      }
     }
     
     return NextResponse.json(

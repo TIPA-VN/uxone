@@ -77,6 +77,13 @@ const adminNavItems: AdminNavItem[] = [
     badge: "Content"
   },
   {
+    href: "/lvm/admin/project-management",
+    label: "Project Management",
+    icon: Database,
+    description: "Manage and delete projects safely",
+    badge: "Danger"
+  },
+  {
     href: "/lvm/admin/email-webhook-test",
     label: "Email Webhook Test",
     icon: Mail,

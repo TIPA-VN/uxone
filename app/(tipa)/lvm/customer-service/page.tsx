@@ -400,6 +400,8 @@ export default function CustomerServiceHomePage() {
                   <div className="flex-1 relative">
                     <Search className="w-4 h-4 text-slate-400 absolute ml-3 mt-3" />
                     <input
+                      id="ticket-search"
+                      name="ticket-search"
                       type="text"
                       placeholder="Search tickets..."
                       className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"

@@ -60,7 +60,6 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     reset,
     getValues,
@@ -246,6 +245,7 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
               Title *
             </label>
             <input
+              id="announcement-title"
               {...register("title", { required: "Title is required" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
               placeholder="Enter announcement title..."
@@ -261,6 +261,7 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
               Message *
             </label>
             <textarea
+              id="announcement-message"
               {...register("message", { required: "Message is required" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"
               rows={3}
@@ -277,6 +278,7 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
               Link (Optional)
             </label>
             <input
+              id="announcement-link"
               {...register("link")}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
               placeholder="https://example.com"
@@ -293,6 +295,7 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
                 {DEPARTMENTS.map((dept) => (
                   <label key={dept.value} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
                     <input
+                      id={`dept-${dept.value}`}
                       type="checkbox"
                       value={dept.value}
                       {...register("departments", { 
@@ -318,6 +321,7 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
               </label>
               {/* Search input */}
               <input
+                id="user-search"
                 type="text"
                 placeholder="Search by username or department..."
                 className="w-full px-2 py-1 mb-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
@@ -331,6 +335,7 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
                   filteredUserOptions.map((user) => (
                     <label key={user.value} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50">
                       <input
+                        id={`user-${user.value}`}
                         type="checkbox"
                         value={user.value}
                         checked={selectedUsers.includes(user.value)}

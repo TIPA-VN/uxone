@@ -30,7 +30,7 @@ export async function generateDocumentNumber(
   const currentYear = new Date().getFullYear();
 
   // Use transaction to ensure atomicity
-  const result = await prisma.$transaction(async (tx: any) => {
+  const result = await prisma.$transaction(async (tx) => {
     // Get the template and lock it for update
     const template = await tx.documentTemplate.findUnique({
       where: { id: templateId },

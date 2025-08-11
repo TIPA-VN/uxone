@@ -97,41 +97,19 @@ export function useNotifications() {
 
       evtSource.onerror = (error) => {
         console.error('SSE connection error:', error);
-        console.error('SSE connection state:', evtSource?.readyState);
-        console.error('SSE connection URL:', evtSource?.url);
         
-        // Close the connection and fall back to polling
+        // Close the connection
         if (evtSource) {
           evtSource.close();
           evtSource = null;
         }
-        
-        // Fall back to polling every 30 seconds if SSE fails
-        const pollInterval = setInterval(() => {
-          fetchNotifications();
-        }, 30000);
-        
-        // Clean up polling on unmount
-        return () => {
-          clearInterval(pollInterval);
-        };
       };
 
       evtSource.onopen = () => {
-        console.log('SSE connection opened successfully');
+        // Connection opened successfully
       };
     } catch (error) {
       console.error('Failed to create SSE connection:', error);
-      
-      // Fall back to polling every 30 seconds if SSE creation fails
-      const pollInterval = setInterval(() => {
-        fetchNotifications();
-      }, 30000);
-      
-      // Clean up polling on unmount
-      return () => {
-        clearInterval(pollInterval);
-      };
     }
 
     return () => {

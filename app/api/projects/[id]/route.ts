@@ -204,45 +204,16 @@ export async function PATCH(
     }
 
     // Update the project with audit tracking
-    const updatedProject = await PrismaAudit.updateAuditFields(prisma.project, {
-      where: { id: projectId },
-      data: processedUpdates,
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            department: true,
-            departmentName: true,
-          },
-        },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                department: true,
-                departmentName: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            tasks: true,
-            documents: true,
-            comments: true,
-            members: true,
-          },
-        },
-      },
-    });
+    const updatedProject = await PrismaAudit.updateAuditFields(
+      prisma,
+      prisma.project,
+      projectId,
+      processedUpdates
+    );
 
     return NextResponse.json(updatedProject);
   } catch (error) {
+    console.error("Error updating project:", error);
     return NextResponse.json(
       { error: "Failed to update project" },
       { status: 500 }
@@ -283,7 +254,7 @@ export async function DELETE(
     });
 
     return NextResponse.json({ message: "Project deleted successfully" });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to delete project" },
       { status: 500 }

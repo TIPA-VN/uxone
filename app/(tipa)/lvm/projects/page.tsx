@@ -30,9 +30,10 @@ export default function ProjectsPage() {
     projects, 
     loading, 
     createProject 
+    
   } = useProjects();
 
-  const [documentTemplates, setDocumentTemplates] = useState<Array<{ id: string; name: string }>>([]);
+  const [documentTemplates, setDocumentTemplates] = useState<Array<{ id: string; templateName: string; prefix: string }>>([]);
 
   // Get active departments for the form
   const activeDepartments = getActiveDepartments();
@@ -107,6 +108,8 @@ export default function ProjectsPage() {
     {
       key: "project",
       header: "Project",
+      sortable: true,
+      sortKey: "name",
       render: (project: Project) => (
         <div className="flex items-center">
           <div className="flex-shrink-0">
@@ -123,11 +126,6 @@ export default function ProjectsPage() {
             >
               {project.name}
             </Link>
-            {project.documentNumber && (
-              <p className="text-xs text-gray-600 mt-0.5 font-mono">
-                {project.documentNumber}
-              </p>
-            )}
             {project.description && (
               <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                 {project.description}
@@ -138,8 +136,44 @@ export default function ProjectsPage() {
       )
     },
     {
+      key: "documentNumber",
+      header: "Document #",
+      sortable: true,
+      sortKey: "documentNumber",
+      render: (project: Project) => (
+        <div className="text-sm">
+          {project.documentNumber ? (
+            <span className="font-mono text-gray-700 bg-gray-100 px-2 py-1 rounded text-xs">
+              {project.documentNumber}
+            </span>
+          ) : (
+            <span className="text-gray-400 text-xs">Not assigned</span>
+          )}
+        </div>
+      )
+    },
+    {
+      key: "documentTemplate",
+      header: "Template",
+      sortable: true,
+      sortKey: "documentTemplate",
+      render: (project: Project) => (
+        <div className="text-sm">
+          {project.documentTemplate ? (
+            <span className="text-gray-700 bg-blue-100 px-2 py-1 rounded text-xs">
+              {documentTemplates.find(t => t.id === project.documentTemplate)?.templateName || 'Unknown'}
+            </span>
+          ) : (
+            <span className="text-gray-400 text-xs">None</span>
+          )}
+        </div>
+      )
+    },
+    {
       key: "status",
       header: "Status",
+      sortable: true,
+      sortKey: "status",
       render: (project: Project) => (
         <div className="flex items-center">
           <StatusBadge status={project.status || "UNKNOWN"} size="sm" />
@@ -162,6 +196,7 @@ export default function ProjectsPage() {
       key: "actions",
       header: "Actions",
       className: "text-right",
+      sortable: false,
       render: (project: Project) => (
         <div className="relative">
           <button
@@ -294,13 +329,34 @@ export default function ProjectsPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
                   <option value="">Select a document template</option>
-                  {documentTemplates.map((template: { id: string; name: string }) => (
+                  {documentTemplates.map((template: { id: string; templateName: string; prefix: string }) => (
                     <option key={template.id} value={template.id}>
-                      {template.templateName}
+                      {template.templateName} ({template.prefix})
                     </option>
                   ))}
                 </select>
               </div>
+
+              {documentTemplate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Document Number Preview
+                  </label>
+                  <div className="px-3 py-2 bg-blue-50 border border-blue-300 rounded-lg text-sm text-blue-700 font-mono">
+                    {(() => {
+                      const template = documentTemplates.find(t => t.id === documentTemplate);
+                      if (template) {
+                        const currentYear = new Date().getFullYear();
+                        return `${template.prefix}-${currentYear}-[XXX]`;
+                      }
+                      return 'Template not found';
+                    })()}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Document number will be automatically generated when project is created
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                 <button
@@ -332,8 +388,8 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {/* Projects List - Two Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Projects List - Two Sections - Vertical Layout */}
+        <div className="space-y-6">
           {/* Projects I Own */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
@@ -346,7 +402,7 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-visible pb-16">
+            <div className="overflow-x-auto overflow-y-visible pb-8">
               {myProjects.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -368,6 +424,9 @@ export default function ProjectsPage() {
                   columns={projectColumns}
                   loading={loading}
                   emptyMessage="No owned projects"
+                  searchable={true}
+                  searchPlaceholder="Search owned projects by name, document number, or status..."
+                  searchKeys={['name', 'description', 'documentNumber', 'status']}
                 />
               )}
             </div>
@@ -385,7 +444,7 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-visible pb-16">
+            <div className="overflow-x-auto overflow-y-visible pb-8">
               {projectsIBelongTo.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -400,6 +459,9 @@ export default function ProjectsPage() {
                   columns={projectColumns}
                   loading={loading}
                   emptyMessage="No projects to review"
+                  searchable={true}
+                  searchPlaceholder="Search projects by name, document number, or status..."
+                  searchKeys={['name', 'description', 'documentNumber', 'status']}
                 />
               )}
             </div>

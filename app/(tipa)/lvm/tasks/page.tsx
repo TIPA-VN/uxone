@@ -128,6 +128,8 @@ export default function TasksPage() {
       key: "task",
       header: "Task",
       className: "w-1/3 max-w-xs",
+      sortable: true,
+      sortKey: "title",
       render: (task: Task) => (
         <div className="flex items-center min-w-0">
           <div className="flex-shrink-0">
@@ -152,6 +154,8 @@ export default function TasksPage() {
       key: "assignee",
       header: "Assignee",
       className: "w-1/6",
+      sortable: true,
+      sortKey: "assignee.name",
       render: (task: Task) => (
         <div className="flex items-center min-w-0">
           <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -170,6 +174,8 @@ export default function TasksPage() {
       key: "project",
       header: "Project",
       className: "w-1/6",
+      sortable: true,
+      sortKey: "project.name",
       render: (task: Task) => (
         <div className="text-sm text-gray-900 truncate">
           {task.project?.name || 'No Project'}
@@ -180,6 +186,8 @@ export default function TasksPage() {
       key: "status",
       header: "Status",
       className: "w-20",
+      sortable: true,
+      sortKey: "status",
       render: (task: Task) => (
         <StatusBadge status={task.status} size="sm" />
       )
@@ -188,6 +196,8 @@ export default function TasksPage() {
       key: "priority",
       header: "Priority",
       className: "w-20",
+      sortable: true,
+      sortKey: "priority",
       render: (task: Task) => (
         <PriorityBadge priority={task.priority} size="sm" />
       )
@@ -196,6 +206,8 @@ export default function TasksPage() {
       key: "dueDate",
       header: "Due Date",
       className: "w-24",
+      sortable: true,
+      sortKey: "dueDate",
       render: (task: Task) => (
         <div className="text-sm text-gray-900">
           {task.dueDate ? (
@@ -212,6 +224,7 @@ export default function TasksPage() {
       key: "actions",
       header: "Actions",
       className: "text-right",
+      sortable: false,
       render: (task: Task) => (
         <div className="relative">
           <button
@@ -286,6 +299,8 @@ export default function TasksPage() {
                     Task Title *
                   </label>
                   <input
+                    id="task-title"
+                    name="task-title"
                     type="text"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
@@ -299,6 +314,8 @@ export default function TasksPage() {
                     Description
                   </label>
                   <textarea
+                    id="task-description"
+                    name="task-description"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
@@ -352,6 +369,8 @@ export default function TasksPage() {
                     Due Date
                   </label>
                   <input
+                    id="task-due-date"
+                    name="task-due-date"
                     type="date"
                     value={dueDate}
                     onChange={e => setDueDate(e.target.value)}
@@ -390,6 +409,8 @@ export default function TasksPage() {
                     {activeDepartments.map(d => (
                       <label key={d.value} className="flex items-center space-x-2 cursor-pointer">
                         <input
+                          id={`dept-${d.value}`}
+                          name={`dept-${d.value}`}
                           type="checkbox"
                           value={d.value}
                           checked={false} // This state is no longer managed
@@ -452,6 +473,9 @@ export default function TasksPage() {
                 columns={taskColumns}
                 loading={loading}
                 emptyMessage="No tasks available"
+                searchable={true}
+                searchPlaceholder="Search tasks by title, assignee, project, status, or priority..."
+                searchKeys={['title', 'description', 'status', 'priority']}
               />
             </div>
           </div>

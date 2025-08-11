@@ -15,6 +15,7 @@ import {
   BarChart3,
   Shield,
   Ticket,
+  Database,
 } from "lucide-react";
 
 import {
@@ -316,14 +317,14 @@ export default function ISHomePage() {
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <Link href="/lvm/projects">
+          <Link href="/lvm/admin/project-management">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <MessageSquare className="h-5 w-5 text-teal-600" />
-                <span>IT Projects</span>
+                <Database className="h-5 w-5 text-red-600" />
+                <span>Project Management</span>
               </CardTitle>
               <CardDescription>
-                Manage IT projects and initiatives
+                Admin tool for managing and deleting projects safely
               </CardDescription>
             </CardHeader>
           </Link>
