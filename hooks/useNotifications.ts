@@ -61,48 +61,83 @@ export function useNotifications() {
     fetchNotifications();
 
     // Real-time SSE connection
-    const evtSource = new EventSource("/api/notifications/stream");
+    let evtSource: EventSource | null = null;
     
-    evtSource.onmessage = (event) => {
-      try {
-        const notif = JSON.parse(event.data);
-        if (notif.type === 'heartbeat') return;
-        if (!notif.id) {
-          return;
+    try {
+      evtSource = new EventSource("/api/notifications/stream");
+      
+      evtSource.onmessage = (event) => {
+        try {
+          const notif = JSON.parse(event.data);
+          if (notif.type === 'heartbeat') return;
+          if (!notif.id) {
+            return;
+          }
+          
+          setNotifications((prev) => {
+            // Handle notification updates (read status changes)
+            if (notif.type === 'notification_update') {
+              return prev.map((n) => 
+                n.id === notif.id ? { ...n, read: notif.read, hidden: notif.hidden } : n
+              );
+            }
+            
+            // Handle new notifications
+            // Avoid duplicates by id
+            if (prev.some((n) => n.id === notif.id)) {
+              return prev;
+            }
+            
+            return [notif, ...prev];
+          });
+        } catch (error) {
+          console.error('Error handling SSE message:', error);
+        }
+      };
+
+      evtSource.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        console.error('SSE connection state:', evtSource?.readyState);
+        console.error('SSE connection URL:', evtSource?.url);
+        
+        // Close the connection and fall back to polling
+        if (evtSource) {
+          evtSource.close();
+          evtSource = null;
         }
         
-        setNotifications((prev) => {
-          // Handle notification updates (read status changes)
-          if (notif.type === 'notification_update') {
-            return prev.map((n) => 
-              n.id === notif.id ? { ...n, read: notif.read, hidden: notif.hidden } : n
-            );
-          }
-          
-          // Handle new notifications
-          // Avoid duplicates by id
-          if (prev.some((n) => n.id === notif.id)) {
-            return prev;
-          }
-          
-          return [notif, ...prev];
-        });
-      } catch (error) {
-        console.error('Error handling SSE message:', error);
-      }
-    };
+        // Fall back to polling every 30 seconds if SSE fails
+        const pollInterval = setInterval(() => {
+          fetchNotifications();
+        }, 30000);
+        
+        // Clean up polling on unmount
+        return () => {
+          clearInterval(pollInterval);
+        };
+      };
 
-    evtSource.onerror = (error) => {
-      console.error('SSE connection error:', error);
-      evtSource.close();
-    };
-
-    evtSource.onopen = () => {
-      // Connection opened
-    };
+      evtSource.onopen = () => {
+        console.log('SSE connection opened successfully');
+      };
+    } catch (error) {
+      console.error('Failed to create SSE connection:', error);
+      
+      // Fall back to polling every 30 seconds if SSE creation fails
+      const pollInterval = setInterval(() => {
+        fetchNotifications();
+      }, 30000);
+      
+      // Clean up polling on unmount
+      return () => {
+        clearInterval(pollInterval);
+      };
+    }
 
     return () => {
-      evtSource.close();
+      if (evtSource) {
+        evtSource.close();
+      }
     };
   }, []); // Remove checkNotificationSupport from dependencies
 

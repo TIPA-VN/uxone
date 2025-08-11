@@ -40,7 +40,10 @@ export default function SignInPage() {
         const response = await fetch('/api/auth/session');
         const sessionData = await response.json();
         
-        if (sessionData?.user?.department) {
+        if (sessionData?.user?.role === 'ADMIN' || sessionData?.user?.role === 'GENERAL_DIRECTOR') {
+          // Admin users go to admin panel regardless of department
+          router.push('/lvm/admin');
+        } else if (sessionData?.user?.department) {
           const { getUserHomePage } = await import('@/config/app');
           const userHomePage = getUserHomePage(sessionData.user.department);
           router.push(userHomePage);

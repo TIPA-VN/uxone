@@ -28,8 +28,8 @@ export const SidebarLinks = [
         icon: <ImBooks />,
       },
       {
-        route: "/lvm/cs",
-        label: "Customer Care",
+        route: "/lvm/customer-service",
+        label: "Customer Service",
         icon: <RiCustomerService2Fill />,
       },
       {
