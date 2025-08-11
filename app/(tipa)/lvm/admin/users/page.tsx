@@ -1,43 +1,99 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { canAccessPage } from "@/config/app";
-import { redirect } from "next/navigation";
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { redirect } from 'next/navigation';
 import { DataTable } from "./data-table";
 import { columns } from "./columns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, UserX, Activity, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { canAccessPage } from "@/config/app";
 
-export default async function UsersPage() {
-  const session = await auth();
-  
-  if (!session?.user) {
-    redirect("/auth/signin");
-  }
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: string | null;
+  department: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  const userRole = session.user.role as keyof typeof import('@/config/app').APP_CONFIG.roles;
-  
-  if (!canAccessPage(userRole, 'admin')) {
-    redirect("/");
-  }
+interface UserStats {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  recentUsers: number;
+}
 
-  const users = await prisma.user.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
+export default function UsersPage() {
+  const { data: session, status } = useSession();
+  const [users, setUsers] = useState<User[]>([]);
+  const [stats, setStats] = useState<UserStats>({
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    recentUsers: 0,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Calculate user statistics
-  const totalUsers = users.length;
-  const activeUsers = users.filter(user => user.role !== null).length;
-  const inactiveUsers = users.filter(user => user.role === null).length;
-  const recentUsers = users.filter(user => {
-    const userDate = new Date(user.createdAt);
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return userDate > thirtyDaysAgo;
-  }).length;
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (!session?.user) {
+      redirect("/auth/signin");
+    }
+
+    const userRole = session.user.role as keyof typeof import('@/config/app').APP_CONFIG.roles;
+    
+    if (!canAccessPage(userRole, 'admin')) {
+      redirect("/");
+    }
+
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/admin/users');
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        const data = await response.json();
+        setUsers(data.users);
+        setStats(data.stats);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch users');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [session, status]);
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error: {error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -77,7 +133,7 @@ export default async function UsersPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalUsers}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
                 </div>
               </div>
             </CardContent>
@@ -90,7 +146,7 @@ export default async function UsersPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{activeUsers}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.activeUsers}</p>
                 </div>
               </div>
             </CardContent>
@@ -103,7 +159,7 @@ export default async function UsersPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Inactive Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{inactiveUsers}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.inactiveUsers}</p>
                 </div>
               </div>
             </CardContent>
@@ -116,7 +172,7 @@ export default async function UsersPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">New Users (30d)</p>
-                  <p className="text-2xl font-bold text-gray-900">{recentUsers}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.recentUsers}</p>
                 </div>
               </div>
             </CardContent>

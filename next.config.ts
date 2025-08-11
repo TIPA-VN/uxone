@@ -21,12 +21,22 @@ const nextConfig: NextConfig = {
         net: false,
         tls: false,
         crypto: false,
+        stream: false,
+        'readable-stream': false,
       };
+      
+      // Exclude Winston and related packages from client bundles
+      config.externals = config.externals || [];
+      config.externals.push({
+        winston: 'winston',
+        'winston-transport': 'winston-transport',
+        'readable-stream': 'readable-stream',
+      });
     }
     return config;
   },
   // Updated: Use serverExternalPackages instead of deprecated experimental option
-  serverExternalPackages: ['bcryptjs'],
+  serverExternalPackages: ['bcryptjs', 'winston', 'winston-transport'],
 };
 
 export default nextConfig;

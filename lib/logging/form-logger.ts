@@ -1,6 +1,11 @@
 import { logger } from './logger';
 import { UserActionLog } from './types';
 
+// Ensure this logger is only used on the server side
+if (typeof window !== 'undefined') {
+  throw new Error('Form logger cannot be used on the client side');
+}
+
 /**
  * Enhanced form logging utilities for specific form operations
  */

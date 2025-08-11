@@ -10,6 +10,12 @@ import {
   LogLevel 
 } from './types';
 import { getLogConfig, getLogFilePath, sanitizeData, formatLogEntry } from './config';
+import path from 'path';
+
+// Ensure this logger is only used on the server side
+if (typeof window !== 'undefined') {
+  throw new Error('Winston logger cannot be used on the client side');
+}
 
 class UXOneLogger {
   private userActionLogger!: winston.Logger;

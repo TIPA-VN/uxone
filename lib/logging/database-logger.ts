@@ -1,6 +1,11 @@
 import { logger } from './logger';
 import { DatabaseLog } from './types';
 
+// Ensure this logger is only used on the server side
+if (typeof window !== 'undefined') {
+  throw new Error('Database logger cannot be used on the client side');
+}
+
 /**
  * Simple database logging utilities that focus on essential operations
  */
