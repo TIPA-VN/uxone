@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50"); // Increased limit to get more users
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || ""; // active, inactive, all
+    const department = searchParams.get("department") || ""; // Filter by department
 
     const skip = (page - 1) * limit;
 
@@ -45,6 +46,14 @@ export async function GET(request: NextRequest) {
       where.isActive = true;
     } else if (status === "inactive") {
       where.isActive = false;
+    }
+
+    if (department) {
+      where.OR = [
+        { department: { equals: department, mode: 'insensitive' } },
+        { centralDepartment: { equals: department, mode: 'insensitive' } },
+        { departmentName: { equals: department, mode: 'insensitive' } }
+      ];
     }
 
     // Get total count for pagination

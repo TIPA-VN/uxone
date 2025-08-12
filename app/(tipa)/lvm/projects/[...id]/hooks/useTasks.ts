@@ -6,6 +6,7 @@ export function useTasks(projectId: string) {
   const [users, setUsers] = useState<User[]>([]);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
+  const [project, setProject] = useState<any>(null);
   const [taskForm, setTaskForm] = useState<TaskForm>({
     title: "",
     description: "",
@@ -30,25 +31,60 @@ export function useTasks(projectId: string) {
     }
   }, [projectId]);
 
+  const fetchProject = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await fetch(`/api/projects/${projectId}`);
+      if (res.ok) {
+        const projectData = await res.json();
+        setProject(projectData);
+        return projectData;
+      }
+    } catch (error) {
+      console.error("Error fetching project:", error);
+    }
+  }, [projectId]);
+
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await fetch("/api/users");
+      // First get the project to see which departments are involved
+      const projectData = await fetchProject();
       
-      if (res.ok) {
-        const data = await res.json();
-        // Handle paginated response from users API
-        const userList = data.users || data;
-        
-        setUsers(userList);
-      } else {
-        console.error("Users API error:", res.status, res.statusText);
-        const errorData = await res.text();
-        console.error("Users API error response:", errorData);
+      if (!projectData?.departments) {
+        // Fallback: fetch all users if no project data
+        const res = await fetch("/api/users?limit=1000&page=1");
+        if (res.ok) {
+          const data = await res.json();
+          setUsers(data.users || data);
+        }
+        return;
       }
+
+      // Fetch users from the project's departments
+      const departmentUsers: User[] = [];
+      for (const dept of projectData.departments) {
+        try {
+          const res = await fetch(`/api/users?department=${dept}&limit=1000&page=1`);
+          if (res.ok) {
+            const data = await res.json();
+            const deptUsers = data.users || data;
+            // Add users from this department (avoid duplicates)
+            deptUsers.forEach((user: User) => {
+              if (!departmentUsers.find(u => u.id === user.id)) {
+                departmentUsers.push(user);
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error fetching users for department ${dept}:`, error);
+        }
+      }
+      
+      setUsers(departmentUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
-  }, []);
+  }, [fetchProject]);
 
   useEffect(() => {
     fetchTasks();

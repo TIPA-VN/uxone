@@ -467,15 +467,15 @@ export default function TasksPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <div className="min-w-full">
+            <div className="min-w-full max-h-80 overflow-y-auto">
               <DataTable
                 data={tasks}
                 columns={taskColumns}
                 loading={loading}
                 emptyMessage="No tasks available"
                 searchable={true}
-                searchPlaceholder="Search tasks by title, assignee, project, status, or priority..."
-                searchKeys={['title', 'description', 'status', 'priority']}
+                searchPlaceholder="Search by title, description, status, priority, assignee, project, or owner..."
+                searchKeys={['title', 'description', 'status', 'priority', 'assignee.name', 'assignee.username', 'project.name', 'owner.name', 'owner.username']}
               />
             </div>
           </div>

@@ -17,35 +17,27 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("Project approval API called");
     const session = await auth();
-    console.log("Session:", session?.user?.id, session?.user?.department, session?.user?.role);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    console.log("Project ID:", id);
     const { department, action } = await req.json() as ApprovalRequest;
-    console.log("Request body:", { department, action });
     let actionUpper = action?.toUpperCase?.() || '';
     // Accept both 'approved'/'disapproved' and 'APPROVED'/'REJECTED'
     if (actionUpper === 'DISAPPROVED') actionUpper = 'REJECTED';
     if (actionUpper === 'APPROVED') actionUpper = 'APPROVED';
-    console.log("Action upper:", actionUpper);
 
     if (!department || !["APPROVED", "REJECTED"].includes(actionUpper)) {
-      console.log("Invalid request - department:", department, "actionUpper:", actionUpper);
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
     // Fetch project with owner
-    console.log("Fetching project with ID:", id);
     const project = await prisma.project.findUnique({
       where: { id },
       include: { owner: true }
     });
-    console.log("Project found:", !!project, "Project departments:", project?.departments);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
@@ -81,14 +73,12 @@ export async function PATCH(
     };
 
     // Update project - only update approvalState, not the project status
-    console.log("Updating project with approvalState:", JSON.stringify(approvalState));
     const updated = await prisma.project.update({
       where: { id: project.id },
       data: {
         approvalState
       },
     });
-    console.log("Project updated successfully");
 
     // Create notification
     try {

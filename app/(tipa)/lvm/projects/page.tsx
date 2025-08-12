@@ -425,8 +425,8 @@ export default function ProjectsPage() {
                   loading={loading}
                   emptyMessage="No owned projects"
                   searchable={true}
-                  searchPlaceholder="Search owned projects by name, document number, or status..."
-                  searchKeys={['name', 'description', 'documentNumber', 'status']}
+                  searchPlaceholder="Search owned projects by name, description, document number, status, or owner..."
+                  searchKeys={['name', 'description', 'documentNumber', 'status', 'owner.name', 'owner.username', 'owner.department']}
                 />
               )}
             </div>
@@ -460,8 +460,8 @@ export default function ProjectsPage() {
                   loading={loading}
                   emptyMessage="No projects to review"
                   searchable={true}
-                  searchPlaceholder="Search projects by name, document number, or status..."
-                  searchKeys={['name', 'description', 'documentNumber', 'status']}
+                  searchPlaceholder="Search projects by name, description, document number, status, or owner..."
+                  searchKeys={['name', 'description', 'documentNumber', 'status', 'owner.name', 'owner.username', 'owner.department']}
                 />
               )}
             </div>

@@ -19,7 +19,7 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void;
   searchable?: boolean;
   searchPlaceholder?: string;
-  searchKeys?: (keyof T)[]; // Keys to search in
+  searchKeys?: (keyof T | string)[]; // Keys to search in (supports nested paths)
 }
 
 export const DataTable = <T extends Record<string, any>>({
@@ -47,9 +47,26 @@ export const DataTable = <T extends Record<string, any>>({
     return data.filter(item => {
       if (searchKeys.length > 0) {
         return searchKeys.some(key => {
-          const value = item[key];
-          if (value == null) return false;
-          return String(value).toLowerCase().includes(searchLower);
+          // Handle nested object paths (e.g., 'assignee.name')
+          if (typeof key === 'string' && key.includes('.')) {
+            const keys = key.split('.');
+            let value: any = item;
+            for (const k of keys) {
+              if (value && typeof value === 'object' && k in value) {
+                value = value[k];
+              } else {
+                value = null;
+                break;
+              }
+            }
+            if (value == null) return false;
+            return String(value).toLowerCase().includes(searchLower);
+          } else {
+            // Handle direct properties
+            const value = item[key as keyof T];
+            if (value == null) return false;
+            return String(value).toLowerCase().includes(searchLower);
+          }
         });
       }
       
@@ -150,9 +167,10 @@ export const DataTable = <T extends Record<string, any>>({
           </div>
           {searchTerm && (
             <div className="mt-2 text-xs text-gray-500">
-              Showing {filteredData.length} of {data.length} results
+              Showing {sortedData.length} of {filteredData.length} results
             </div>
           )}
+
         </div>
       )}
 

@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
 
     // Add completed task counts to each project
     const projectsWithTaskCounts = await Promise.all(
-      projects.map(async (project: ProjectWithCounts) => {
+      projects.map(async (project: any) => {
         const completedTasksCount = await prisma.task.count({
           where: {
             projectId: project.id,

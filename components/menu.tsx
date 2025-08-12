@@ -27,6 +27,11 @@ const menuItems = [
     icon: <IoHome size={22} />,
   },
   {
+    route: "/lvm/dashboard",
+    label: "Dashboard",
+    icon: <MdSpaceDashboard size={22} />,
+  },
+  {
     route: "/lvm/projects",
     label: "Projects",
     icon: <ImBooks size={22} />,

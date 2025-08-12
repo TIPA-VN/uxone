@@ -43,10 +43,10 @@ export function TasksTab({
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
   // Click outside handling for dropdowns
-  const dropdownRef = useClickOutside(dropdownOpen !== null, () => setDropdownOpen(null));
+  const dropdownRef = useClickOutside<HTMLDivElement>(dropdownOpen !== null, () => setDropdownOpen(null));
   
   // Click outside handling for create task form
-  const createTaskFormRef = useClickOutside(showCreateTask, () => setShowCreateTask(false));
+  const createTaskFormRef = useClickOutside<HTMLDivElement>(showCreateTask, () => setShowCreateTask(false));
 
   // Keyboard escape handler for dropdowns
   useEffect(() => {
@@ -70,18 +70,18 @@ export function TasksTab({
   // Filter users to only show assignable users for assignment
   const assignableUsers = users.filter(u => {
     // Show users with roles that can be assigned tasks
-    const assignableRoles = ['MANAGER', 'SENIOR_MANAGER', 'DEVELOPER', 'SUPPORT', 'ADMIN'];
+    const assignableRoles = [
+      'MANAGER', 'SENIOR_MANAGER', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER',
+      'DEVELOPER', 'SUPPORT', 'ADMIN', 'ENGINEER', 'SENIOR_SPECIALIST', 'STAFF'
+    ];
     const hasValidRole = assignableRoles.includes(u.role?.toUpperCase() || '');
     const isActive = u.isActive !== false;
     
     return hasValidRole && isActive;
   });
 
-  // Temporary: show all users for debugging
-  const allUsers = users.filter(u => u.isActive !== false);
-
   // Fallback: if no assignable users found, show all active users
-  const displayUsers = assignableUsers.length > 0 ? assignableUsers : allUsers;
+  const displayUsers = assignableUsers.length > 0 ? assignableUsers : users.filter(u => u.isActive !== false);
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
