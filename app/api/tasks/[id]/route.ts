@@ -186,24 +186,67 @@ export async function PATCH(
       tags,
     } = body;
 
-    // Verify task access (owner, assignee, or creator)
+    // Verify task access (owner, assignee, creator, or senior manager of same department)
     const existingTask = await prisma.task.findFirst({
       where: {
         id,
-        OR: [
-          { ownerId: session.user.id },
-          { assigneeId: session.user.id },
-          { creatorId: session.user.id },
-        ],
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            department: true,
+          },
+        },
+        assignee: {
+          select: {
+            id: true,
+            department: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            department: true,
+          },
+        },
       },
     });
 
     if (!existingTask) {
       return NextResponse.json(
-        { error: "Task not found or access denied" },
+        { error: "Task not found" },
         { status: 404 }
       );
     }
+
+    // Check access: user can access if they are owner, assignee, creator, or senior manager of same department
+    const userDepartment = session.user.department || session.user.centralDepartment;
+    const userRole = session.user.role;
+    const isSeniorManager = userRole === 'SENIOR_MANAGER';
+    const isAdmin = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2'].includes(userRole || '');
+    
+    const hasDirectAccess = existingTask.ownerId === session.user.id || 
+                           existingTask.assigneeId === session.user.id || 
+                           existingTask.creatorId === session.user.id;
+    
+    const hasDepartmentAccess = isSeniorManager && userDepartment && (
+      existingTask.owner?.department === userDepartment ||
+      existingTask.assignee?.department === userDepartment ||
+      existingTask.creator?.department === userDepartment
+    );
+    
+    const hasAdminAccess = isAdmin;
+
+    if (!hasDirectAccess && !hasDepartmentAccess && !hasAdminAccess) {
+      console.log(`❌ Access denied for task update ${id}: user ${session.user.id} (${userRole}, ${userDepartment}) cannot access task from department ${existingTask.owner?.department || existingTask.assignee?.department || existingTask.creator?.department}`);
+      return NextResponse.json(
+        { error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
+    console.log(`✅ Access granted for task update ${id}: user ${session.user.id} (${userRole}, ${userDepartment})`);
 
     // Validate parent task exists if provided
     if (parentTaskId) {

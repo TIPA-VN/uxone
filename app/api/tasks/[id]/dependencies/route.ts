@@ -19,26 +19,75 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log(`🔍 Fetching dependencies for task ${id}, user: ${session.user.id}`);
+
     // Check if user has access to the task
     const task = await prisma.task.findFirst({
       where: {
         id,
-        OR: [
-          { ownerId: session.user.id },
-          { assigneeId: session.user.id },
-          { creatorId: session.user.id },
-        ],
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            department: true,
+          },
+        },
+        assignee: {
+          select: {
+            id: true,
+            department: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            department: true,
+          },
+        },
       },
     });
 
     if (!task) {
+      console.log(`❌ Task ${id} not found for user ${session.user.id}`);
       return NextResponse.json(
-        { error: "Task not found or access denied" },
+        { error: "Task not found" },
         { status: 404 }
       );
     }
 
+    // Check access: user can access if they are owner, assignee, creator, or senior manager of same department
+    const userDepartment = session.user.department || session.user.centralDepartment;
+    const userRole = session.user.role;
+    const isSeniorManager = userRole === 'SENIOR_MANAGER';
+    const isAdmin = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2'].includes(userRole || '');
+    
+    const hasDirectAccess = task.ownerId === session.user.id || 
+                           task.assigneeId === session.user.id || 
+                           task.creatorId === session.user.id;
+    
+    const hasDepartmentAccess = isSeniorManager && userDepartment && (
+      task.owner?.department === userDepartment ||
+      task.assignee?.department === userDepartment ||
+      task.creator?.department === userDepartment
+    );
+    
+    const hasAdminAccess = isAdmin;
+
+    if (!hasDirectAccess && !hasDepartmentAccess && !hasAdminAccess) {
+      console.log(`❌ Access denied for task ${id}: user ${session.user.id} (${userRole}, ${userDepartment}) cannot access task from department ${task.owner?.department || task.assignee?.department || task.creator?.department}`);
+      return NextResponse.json(
+        { error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
+    console.log(`✅ Access granted for task ${id}: user ${session.user.id} (${userRole}, ${userDepartment})`);
+
+    console.log(`✅ Task ${id} found, proceeding to fetch dependencies`);
+
     // Fetch dependencies (tasks that this task depends on)
+    console.log(`🔍 Fetching dependencies for task ${id}`);
     const dependencies = await prisma.taskDependency.findMany({
       where: { dependentTaskId: id },
       include: {
@@ -62,7 +111,10 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
+    console.log(`📊 Found ${dependencies.length} dependencies`);
+
     // Fetch blocking tasks (tasks that depend on this task)
+    console.log(`🔍 Fetching blocking tasks for task ${id}`);
     const blockingTasks = await prisma.taskDependency.findMany({
       where: { dependencyTaskId: id },
       include: {
@@ -86,10 +138,12 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({
+    console.log(`📊 Found ${blockingTasks.length} blocking tasks`);
+
+    const response = {
       dependencies: dependencies.map(d => ({
         id: d.id,
-        dependencyTask: d.dependencyTask,
+        blockingTask: d.dependencyTask,
         createdAt: d.createdAt,
       })),
       blockingTasks: blockingTasks.map(d => ({
@@ -97,7 +151,10 @@ export async function GET(
         dependentTask: d.dependentTask,
         createdAt: d.createdAt,
       })),
-    });
+    };
+
+    console.log(`✅ Successfully returning dependencies data:`, response);
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Error fetching task dependencies:", error);
     return NextResponse.json(

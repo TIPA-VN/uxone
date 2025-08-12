@@ -128,10 +128,22 @@ const getPriorityColor = (priority: string) => {
   }
 };
 
+// Type guard to ensure subtask is properly typed
+const isValidSubtask = (subtask: any): subtask is Task => {
+  return subtask && 
+         typeof subtask.id === 'string' && 
+         typeof subtask.title === 'string' && 
+         typeof subtask.status === 'string' && 
+         typeof subtask.priority === 'string';
+};
+
 export default function TaskDetailPage() {
   const params = useParams();
   const { data: session } = useSession();
   const user = session?.user;
+  
+  console.log(`🔍 TaskDetailPage - User session:`, user);
+  console.log(`🔍 TaskDetailPage - Task ID from params:`, params.id);
   
   const [task, setTask] = useState<Task | null>(null);
   const [comments, setComments] = useState<TaskComment[]>([]);
@@ -161,16 +173,18 @@ export default function TaskDetailPage() {
 
   const fetchTask = useCallback(async () => {
     try {
+      console.log(`🔍 Fetching task ${taskId}`);
       const res = await fetch(`/api/tasks/${taskId}`);
       if (res.ok) {
         const taskData = await res.json();
+        console.log(`✅ Task fetched successfully:`, taskData);
         setTask(taskData);
       } else {
-        console.error('Error fetching task:', res.status);
+        console.error(`❌ Error fetching task ${taskId}:`, res.status, res.statusText);
         setTask(null);
       }
     } catch (error) {
-      console.error('Error fetching task:', error);
+      console.error(`❌ Error fetching task ${taskId}:`, error);
       setTask(null);
     }
   }, [taskId]);
@@ -198,10 +212,18 @@ export default function TaskDetailPage() {
   const fetchSubtasks = useCallback(async () => {
     try {
       const res = await fetch(`/api/tasks/${taskId}/subtasks`);
-      const data = await res.json();
-      setSubtasks(data);
+      if (res.ok) {
+        const data = await res.json();
+        // Handle different API response structures
+        const subtaskList = Array.isArray(data) ? data : (data.subtasks || data.data || []);
+        setSubtasks(subtaskList);
+      } else {
+        console.error('Error fetching subtasks:', res.status, res.statusText);
+        setSubtasks([]);
+      }
     } catch (error) {
       console.error('Error fetching subtasks:', error);
+      setSubtasks([]);
     }
   }, [taskId]);
 
@@ -690,47 +712,49 @@ export default function TaskDetailPage() {
                 )}
 
                 {/* Sub-tasks List */}
-                {subtasks.length === 0 ? (
+                {!subtasks || subtasks.length === 0 ? (
                   <p className="text-xs text-gray-500 text-center py-3">No sub-tasks</p>
                 ) : (
                   <div className="space-y-2">
-                    {subtasks.map((subtask) => (
-                      <div key={subtask.id} className="flex items-center justify-between p-2 border border-gray-200 rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          {getStatusIcon(subtask.status)}
-                          <div>
-                            <Link
-                              href={`/lvm/tasks/${subtask.id}`}
-                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                            >
-                              {subtask.title}
-                            </Link>
-                            <div className="flex items-center space-x-2 text-xs text-gray-500">
-                              <span className="flex items-center">
-                                <User className="w-3 h-3 mr-1" />
-                                {subtask.assignee?.name || 'Unassigned'}
-                              </span>
-                              <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(subtask.priority)}`}>
-                                {subtask.priority}
-                              </span>
-                              {subtask.dueDate && (
+                    {subtasks
+                      .filter(isValidSubtask)
+                      .map((subtask) => (
+                        <div key={subtask.id} className="flex items-center justify-between p-2 border border-gray-200 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            {getStatusIcon(subtask.status)}
+                            <div>
+                              <Link
+                                href={`/lvm/tasks/${subtask.id}`}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              >
+                                {subtask.title}
+                              </Link>
+                              <div className="flex items-center space-x-2 text-xs text-gray-500">
                                 <span className="flex items-center">
-                                  <Calendar className="w-3 h-3 mr-1" />
-                                  {new Date(subtask.dueDate).toLocaleDateString()}
+                                  <User className="w-3 h-3 mr-1" />
+                                  {subtask.assignee?.name || 'Unassigned'}
                                 </span>
-                              )}
+                                <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(subtask.priority)}`}>
+                                  {subtask.priority}
+                                </span>
+                                {subtask.dueDate && (
+                                  <span className="flex items-center">
+                                    <Calendar className="w-3 h-3 mr-1" />
+                                    {new Date(subtask.dueDate).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          <Link
+                            href={`/lvm/tasks/${subtask.id}`}
+                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                            title="View sub-task"
+                          >
+                            <Eye className="w-3 h-3" />
+                          </Link>
                         </div>
-                        <Link
-                          href={`/lvm/tasks/${subtask.id}`}
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors cursor-pointer"
-                          title="View sub-task"
-                        >
-                          <Eye className="w-3 h-3" />
-                        </Link>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </div>
