@@ -97,7 +97,7 @@ export function DepartmentTab({
           status: 'APPROVED', 
           canApprove: false, 
           canReject: true,
-          approvedBy: latestApproval.user,
+          approvedBy: latestApproval.user?.name || latestApproval.user?.username || latestApproval.user || 'Unknown User',
           approvedAt: latestApproval.timestamp
         };
       } else if (status === 'REJECTED') {
@@ -105,7 +105,7 @@ export function DepartmentTab({
           status: 'REJECTED', 
           canApprove: true, 
           canReject: true,
-          rejectedBy: latestApproval.user,
+          rejectedBy: latestApproval.user?.name || latestApproval.user?.username || latestApproval.user || 'Unknown User',
           rejectedAt: latestApproval.timestamp
         };
       }

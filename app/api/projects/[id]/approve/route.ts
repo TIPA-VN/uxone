@@ -17,28 +17,35 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log("Project approval API called");
     const session = await auth();
+    console.log("Session:", session?.user?.id, session?.user?.department, session?.user?.role);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
+    console.log("Project ID:", id);
     const { department, action } = await req.json() as ApprovalRequest;
+    console.log("Request body:", { department, action });
     let actionUpper = action?.toUpperCase?.() || '';
     // Accept both 'approved'/'disapproved' and 'APPROVED'/'REJECTED'
     if (actionUpper === 'DISAPPROVED') actionUpper = 'REJECTED';
     if (actionUpper === 'APPROVED') actionUpper = 'APPROVED';
+    console.log("Action upper:", actionUpper);
 
     if (!department || !["APPROVED", "REJECTED"].includes(actionUpper)) {
-      
+      console.log("Invalid request - department:", department, "actionUpper:", actionUpper);
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
     // Fetch project with owner
+    console.log("Fetching project with ID:", id);
     const project = await prisma.project.findUnique({
       where: { id },
       include: { owner: true }
     });
+    console.log("Project found:", !!project, "Project departments:", project?.departments);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
@@ -47,20 +54,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Not authorized for this department" }, { status: 403 });
     }
 
-    // Prevent approval/disapproval if project is released
-    if (project.released) {
-      return NextResponse.json({ error: "Project is already released and cannot be modified." }, { status: 403 });
-    }
-
-    // Ensure approvalState is always initialized as an object
+    // Check if this department has already approved/disapproved this project
     const currentState = !project.approvalState
       ? {}
       : typeof project.approvalState === "object"
         ? project.approvalState
         : JSON.parse(String(project.approvalState) || '{}');
+    
+    const departmentApprovals = currentState[department] || [];
+    if (departmentApprovals.length > 0) {
+      return NextResponse.json({ error: "This department has already provided approval feedback for this project." }, { status: 403 });
+    }
 
     // Log all approvals/rejects as an array per department
-    const prevLogs = Array.isArray(currentState[department]) ? currentState[department] : [];
+    const prevLogs = departmentApprovals;
     const approvalState = {
       ...currentState,
       [department]: [
@@ -73,22 +80,15 @@ export async function PATCH(
       ]
     };
 
-    // Calculate new status
-    const departmentList = project.departments as string[];
-    // For new log format, get latest status for each department
-    const getLatestStatus = (logs: any) => Array.isArray(logs) && logs.length > 0 ? logs[logs.length - 1].status : logs;
-    const allApproved = departmentList.every(d => getLatestStatus(approvalState[d]) === "APPROVED");
-    const anyDisapproved = departmentList.some(d => getLatestStatus(approvalState[d]) === "REJECTED");
-    const status = allApproved ? "APPROVED" : anyDisapproved ? "REJECTED" : "PENDING";
-
-    // Update project
+    // Update project - only update approvalState, not the project status
+    console.log("Updating project with approvalState:", JSON.stringify(approvalState));
     const updated = await prisma.project.update({
       where: { id: project.id },
       data: {
-        approvalState,
-        ...(status === "APPROVED" ? { released: true, releasedAt: new Date() } : {})
+        approvalState
       },
     });
+    console.log("Project updated successfully");
 
     // Create notification
     try {
@@ -96,7 +96,7 @@ export async function PATCH(
         data: {
           userId: project.ownerId,
           title: `Project ${actionUpper === "APPROVED" ? "Approved" : "Disapproved"} by ${department.charAt(0).toUpperCase() + department.slice(1)}`,
-          message: `${department.charAt(0).toUpperCase() + department.slice(1)} has ${actionUpper} project "${project.name}"${status === "APPROVED" ? ". All approvals complete!" : ""}`,
+          message: `${department.charAt(0).toUpperCase() + department.slice(1)} has ${actionUpper} project "${project.name}".`,
           type: actionUpper === "APPROVED" ? "success" : "warning",
           link: `/lvm/projects/${project.id}`,
         },
@@ -111,8 +111,25 @@ export async function PATCH(
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Project approval error:", error);
+    
+    // Handle specific Prisma errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'P2002') {
+        return NextResponse.json({ 
+          error: "Database constraint violation",
+          details: "A unique constraint was violated during the update."
+        }, { status: 400 });
+      }
+      if (error.code === 'P2025') {
+        return NextResponse.json({ 
+          error: "Project not found",
+          details: "The project could not be found for updating."
+        }, { status: 404 });
+      }
+    }
+    
     return NextResponse.json(
-      { error: "Failed to process approval" },
+      { error: "Failed to process approval", details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
