@@ -1,6 +1,7 @@
 // Application Configuration
 // Centralized configuration for departments, roles, RBAC, and other app settings
 
+
 // Type definitions for better type safety
 type Permission = string;
 type RoleName = 
@@ -60,25 +61,30 @@ export const APP_CONFIG = {
     FM: "/lvm/facility-management", // Facility Management - Infrastructure
     CS: "/lvm/customer-service",   // Customer Service - Support
     RD: "/lvm/research-development", // Research & Development - R&D
+    DES: "/lvm/production-engineering", // Production Engineering - Product design
     MKT: "/lvm/marketing",         // Marketing - Marketing activities
     SALES: "/lvm/sales",           // Sales - Sales management
     OPS: "/lvm/operations",        // Operations - Operations management
-    ADMIN: "/lvm/admin",                // Administration - Admin panel
+    ADMIN: "/lvm/admin",           // Administration - Admin panel
+    MFG: "/lvm/manufacturing",     // Manufacturing - General manufacturing operations
+    ME: "/lvm/manufacturing-engineering", // Manufacturing Engineering - Process design
+    ACC: "/lvm/accounting",        // Accounting - Financial operations
+    INV: "/lvm/inventory",         // Inventory - Inventory management
     DEFAULT: "/lvm"                // Default fallback
   },
 
   // Department Codes Mapping (for backward compatibility and quick lookups)
   departmentCodes: {
     LOG: "Logistics (LOG)",
-    PROC: "Procurement", 
-    PC: "Production Planning",
-    QA: "Quality Assurance",
-    QC: "Quality Control",
-    PM: "Production Maintenance",
-    FM: "Facility Management",
-    HR: "Human Resources",
-    CS: "Customer Service",
-    IS: "Information Systems",
+    PROC: "Procurement (PR)", 
+    PC: "Production Planning (PC)",
+    QA: "Quality Assurance (QA)",
+    QC: "Quality Control (QC)",
+    PM: "Production Maintenance (PM)",
+    FM: "Facility Management (FM)",
+    HR: "Human Resources (HRA)",
+    CS: "Customer Service (CS)",
+    IS: "Information Systems (IS)",
     HELPDESK: "Helpdesk",
     SALES: "Sales",
     "LVM-EXPAT": "LVM EXPATS"
@@ -97,7 +103,7 @@ export const APP_CONFIG = {
     },
     {
       value: "PROC",
-      label: "Procurement",
+      label: "Procurement (PR)",
       code: "PROC", 
       color: "bg-green-500",
       description: "Purchasing and procurement operations",
@@ -106,7 +112,7 @@ export const APP_CONFIG = {
     },
     {
       value: "PC",
-      label: "Production Planning",
+      label: "Production Planning (PC)",
       code: "PC",
       color: "bg-purple-500",
       description: "Production planning and scheduling",
@@ -115,7 +121,7 @@ export const APP_CONFIG = {
     },
     {
       value: "QA",
-      label: "Quality Assurance",
+      label: "Quality Assurance (QA)",
       code: "QA",
       color: "bg-yellow-500",
       description: "Quality assurance and testing",
@@ -124,7 +130,7 @@ export const APP_CONFIG = {
     },
     {
       value: "QC",
-      label: "Quality Control",
+      label: "Quality Control (QC)",
       code: "QC",
       color: "bg-orange-500",
       description: "Quality control and inspection",
@@ -133,7 +139,7 @@ export const APP_CONFIG = {
     },
     {
       value: "PM",
-      label: "Production Maintenance",
+      label: "Production Maintenance (PM)",
       code: "PM",
       color: "bg-red-500",
       description: "Production equipment maintenance",
@@ -142,7 +148,7 @@ export const APP_CONFIG = {
     },
     {
       value: "FM",
-      label: "Facility Management",
+      label: "Facility Management (FM)",
       code: "FM",
       color: "bg-indigo-500",
       description: "Facility and infrastructure management",
@@ -151,7 +157,7 @@ export const APP_CONFIG = {
     },
     {
       value: "HR",
-      label: "Human Resources",
+      label: "Human Resources (HRA)",
       code: "HR",
       color: "bg-pink-500",
       description: "Human resources and personnel management",
@@ -160,7 +166,7 @@ export const APP_CONFIG = {
     },
     {
       value: "CS",
-      label: "Customer Service",
+      label: "Customer Service (CS)",
       code: "CS",
       color: "bg-teal-500",
       description: "Customer service and support",
@@ -169,21 +175,12 @@ export const APP_CONFIG = {
     },
     {
       value: "IS",
-      label: "Information Systems",
+      label: "Information Systems (IS)",
       code: "IS",
       color: "bg-cyan-500",
       description: "IT and information systems management",
       isActive: true,
       sortOrder: 10
-    },
-    {
-      value: "HELPDESK",
-      label: "Helpdesk",
-      code: "HELPDESK",
-      color: "bg-violet-500",
-      description: "Technical support and helpdesk services",
-      isActive: true,
-      sortOrder: 11
     },
     {
       value: "SALES",
@@ -192,16 +189,52 @@ export const APP_CONFIG = {
       color: "bg-emerald-500",
       description: "Sales and business development",
       isActive: true,
+      sortOrder: 11
+    },
+    {
+      value: "MFG",
+      label: "Manufacturing (MFG)",
+      code: "MFG",
+      color: "bg-blue-600",
+      description: "General manufacturing operations",
+      isActive: true,
       sortOrder: 12
     },
     {
-      value: "LVM-EXPAT",
-      label: "LVM EXPATS",
-      code: "LVM-EXPAT",
-      color: "bg-gray-500",
-      description: "LVM Expatriate team",
+      value: "ME",
+      label: "Manufacturing Engineering (ME)",
+      code: "ME",
+      color: "bg-green-600",
+      description: "Manufacturing engineering and process design",
       isActive: true,
       sortOrder: 13
+    },
+    {
+      value: "ACC",
+      label: "Accounting (ACC)",
+      code: "ACC",
+      color: "bg-yellow-600",
+      description: "Accounting and financial operations",
+      isActive: true,
+      sortOrder: 14
+    },
+    {
+      value: "INV",
+      label: "Inventory (MFG4)",
+      code: "INV",
+      color: "bg-orange-600",
+      description: "Inventory management and control",
+      isActive: true,
+      sortOrder: 15
+    },
+    {
+      value: "RD",
+      label: "Research & Development (RD)",
+      code: "RD",
+      color: "bg-indigo-600",
+      description: "Research and development",
+      isActive: true,
+      sortOrder: 16
     }
   ] as const,
 
@@ -834,7 +867,8 @@ export const APP_CONFIG = {
           "MANAGER", "MANAGER_2", "ASSISTANT_MANAGER", "ASSISTANT_MANAGER_2",
           "SUPERVISOR", "SUPERVISOR_2", "LINE_LEADER",
           "CHIEF_SPECIALIST", "TECHNICAL_SPECIALIST", "SENIOR_SPECIALIST", "SENIOR_SPECIALIST_2",
-          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN"
+          "SPECIALIST", "SPECIALIST_2", "SENIOR_ENGINEER", "ENGINEER", "TECHNICIAN",
+          "SENIOR_ASSOCIATE", "ASSOCIATE", "SENIOR_STAFF", "STAFF", "SENIOR_OPERATOR"
         ] as RoleName[],
         PUT: [
           "GENERAL_DIRECTOR", "GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER", "ASSISTANT_GENERAL_MANAGER_2",
@@ -1013,7 +1047,21 @@ export const APP_CONFIG = {
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ],
-    uploadPath: "/uploads"
+    uploadPath: "/uploads",
+    // Custom upload directory options
+    customDirectories: {
+      // Use environment variables or relative paths for Edge Runtime compatibility
+      tasks: process.env.UPLOAD_TASKS_DIR || "uploads/tasks",
+      projects: process.env.UPLOAD_PROJECTS_DIR || "uploads/projects",
+      documents: process.env.UPLOAD_DOCUMENTS_DIR || "uploads/documents",
+      // Add more custom directories as needed
+      temp: process.env.UPLOAD_TEMP_DIR || "uploads/temp",
+      archive: process.env.UPLOAD_ARCHIVE_DIR || "uploads/archive",
+    },
+    // Serve files from custom directories
+    serveFromCustom: true,
+    // Custom file serving endpoint
+    customServeEndpoint: "/api/files/serve"
   },
 
   // Helpdesk Configuration
@@ -1432,7 +1480,7 @@ export const canAccessApi = (userRole: Role, endpoint: keyof typeof APP_CONFIG.r
 
 export const getRolesByLevel = (minLevel: number) => {
   return Object.entries(APP_CONFIG.roles)
-    .filter(([_, role]) => role.level >= minLevel)
+    .filter(([, role]) => role.level >= minLevel)
     .map(([key, role]) => ({ key, ...role }));
 };
 
@@ -1466,14 +1514,14 @@ export const getDepartmentsSorted = () => {
 };
 
 export const getAvailableColors = () => {
-  const usedColors = new Set(APP_CONFIG.departments.map(dept => dept.color));
+  const usedColors = new Set<string>(APP_CONFIG.departments.map(dept => dept.color));
   const allColors = [
     'bg-blue-500', 'bg-blue-600', 'bg-green-500', 'bg-green-600', 'bg-emerald-500',
     'bg-purple-500', 'bg-violet-500', 'bg-indigo-500', 'bg-red-500', 'bg-rose-500',
     'bg-pink-500', 'bg-yellow-500', 'bg-orange-500', 'bg-amber-500', 'bg-gray-500',
-    'bg-slate-500', 'bg-zinc-500', 'bg-teal-500', 'bg-cyan-500'
+    'bg-slate-500', 'bg-zinc-500', 'bg-teal-500', 'bg-teal-500'
   ] as const;
-  return allColors.filter(color => !usedColors.has(color as any));
+  return allColors.filter(color => !usedColors.has(color));
 };
 
 export const validateDepartmentData = (dept: Partial<Department>) => {
@@ -1550,7 +1598,7 @@ export const validateDepartmentConfig = () => {
   const codes = new Set<string>();
   const values = new Set<string>();
   
-  APP_CONFIG.departments.forEach((dept, index) => {
+  APP_CONFIG.departments.forEach((dept) => {
     if (codes.has(dept.code)) {
       errors.push(`Duplicate department code: ${dept.code}`);
     }
@@ -1689,20 +1737,6 @@ export const getDepartmentHomePage = (departmentCode: string): string => {
 };
 
 export const getUserHomePage = (userDepartment: string): string => {
-  // Import the new department mapping system
-  const { getDepartmentHomePage: getMappedDepartmentHomePage } = require('./department-mapping');
-  
-  // Try the new mapping system first
-  try {
-    const mappedHomePage = getMappedDepartmentHomePage(userDepartment);
-    if (mappedHomePage && mappedHomePage !== '/lvm') {
-      return mappedHomePage;
-    }
-  } catch (error) {
-    // Fallback to old system if new mapping fails
-    console.warn('New department mapping failed, falling back to old system:', error);
-  }
-  
   // Fallback to old mapping system
   const mappedDepartment = mapUserDepartmentToCode(userDepartment);
   return getDepartmentHomePage(mappedDepartment);
@@ -1724,7 +1758,7 @@ export const getHelpdeskPermissionMatrix = () => APP_CONFIG.helpdesk.permissionM
 export const getHelpdeskPermissionsForRole = (userRole: string) => {
   const matrix = APP_CONFIG.helpdesk.permissionMatrix;
   
-  for (const [level, config] of Object.entries(matrix)) {
+  for (const [, config] of Object.entries(matrix)) {
     if ((config.roles as readonly string[]).includes(userRole)) {
       return config.permissions;
     }

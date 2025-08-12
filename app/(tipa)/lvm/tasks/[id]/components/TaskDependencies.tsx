@@ -70,7 +70,6 @@ export default function TaskDependencies({ taskId, canEdit }: TaskDependenciesPr
         const data = await res.json();
         setDependencies(data);
       } else if (res.status === 404) {
-        console.log(`Task ${taskId} not found or access denied for dependencies`);
         setDependencies({ dependencies: [], blockingTasks: [] });
       } else {
         console.error(`Error fetching dependencies: ${res.status} ${res.statusText}`);

@@ -159,6 +159,25 @@ export const PATCH = withRBAC(async (
       }
     }
 
+    // Validate assignedToId if it's being updated
+    if (assignedToId !== undefined && assignedToId !== null) {
+      // If assignedToId is being set to null/empty, that's fine (unassigning)
+      if (assignedToId !== '') {
+        // Check if the assigned user exists
+        const assignedUser = await prisma.user.findUnique({
+          where: { id: assignedToId },
+          select: { id: true }
+        });
+        
+        if (!assignedUser) {
+          return NextResponse.json({ 
+            error: "Invalid assignedToId: User not found",
+            details: `User with ID ${assignedToId} does not exist in the database`
+          }, { status: 400 });
+        }
+      }
+    }
+
     // Update ticket
     const updatedTicket = await prisma.ticket.update({
       where: { id },
@@ -203,6 +222,17 @@ export const PATCH = withRBAC(async (
     return NextResponse.json(updatedTicket);
   } catch (error) {
     console.error('Error updating ticket:', error);
+    
+    // Handle specific Prisma errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'P2003') {
+        return NextResponse.json({ 
+          error: "Foreign key constraint failed",
+          details: "The assignedToId references a user that doesn't exist. Please check the user ID and try again."
+        }, { status: 400 });
+      }
+    }
+    
     return NextResponse.json(
       { error: "Failed to update ticket" },
       { status: 500 }

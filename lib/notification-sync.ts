@@ -35,7 +35,7 @@ export async function syncNotificationsEnhanced(userId: string): Promise<SyncSta
     })
 
     syncStatus.totalNotifications = tipaNotifications.length
-    console.log(`📊 Found ${tipaNotifications.length} notifications in TIPA Mobile`)
+
 
     // Sync each notification to UXOne database
     for (const tipaNotif of tipaNotifications) {
@@ -63,7 +63,7 @@ export async function syncNotificationsEnhanced(userId: string): Promise<SyncSta
             }
           })
           syncStatus.syncedNotifications++
-          console.log(`✅ Synced notification: ${tipaNotif.title}`)
+  
         } else {
           // Update existing notification if needed
           if (existingNotif.read !== tipaNotif.read || existingNotif.hidden !== tipaNotif.hidden) {
@@ -87,8 +87,7 @@ export async function syncNotificationsEnhanced(userId: string): Promise<SyncSta
       }
     }
 
-    console.log(`✅ Notification sync completed for user ${userId}`)
-    console.log(`📊 Sync Summary: ${syncStatus.syncedNotifications} synced, ${syncStatus.skippedNotifications} skipped, ${syncStatus.errors.length} errors`)
+
 
   } catch (error) {
     const errorMsg = `Notification sync failed for user ${userId}: ${error}`
@@ -122,7 +121,7 @@ export async function syncNotificationsToTIPA(userId: string): Promise<SyncStatu
     })
 
     syncStatus.totalNotifications = uxoneNotifications.length
-    console.log(`📊 Found ${uxoneNotifications.length} notifications in UXOne`)
+
 
     // Sync each notification to TIPA Mobile database
     for (const uxoneNotif of uxoneNotifications) {
@@ -150,7 +149,7 @@ export async function syncNotificationsToTIPA(userId: string): Promise<SyncStatu
             }
           })
           syncStatus.syncedNotifications++
-          console.log(`✅ Synced UXOne notification to TIPA: ${uxoneNotif.title}`)
+  
         } else {
           syncStatus.skippedNotifications++
         }
@@ -161,7 +160,7 @@ export async function syncNotificationsToTIPA(userId: string): Promise<SyncStatu
       }
     }
 
-    console.log(`✅ UXOne to TIPA notification sync completed for user ${userId}`)
+
 
   } catch (error) {
     const errorMsg = `UXOne to TIPA notification sync failed for user ${userId}: ${error}`
@@ -182,9 +181,7 @@ export async function syncNotificationsBidirectional(userId: string): Promise<{
   const tipaToUXOne = await syncNotificationsEnhanced(userId)
   const uxoneToTIPA = await syncNotificationsToTIPA(userId)
 
-  console.log(`✅ Bidirectional sync completed for user ${userId}`)
-  console.log(`📊 TIPA → UXOne: ${tipaToUXOne.syncedNotifications} synced`)
-  console.log(`📊 UXOne → TIPA: ${uxoneToTIPA.syncedNotifications} synced`)
+  
 
   return { tipaToUXOne, uxoneToTIPA }
 }
@@ -215,7 +212,7 @@ export async function markNotificationAsRead(userId: string, notificationId: str
       data: { read: isRead }
     })
 
-    console.log(`✅ Successfully marked notification as ${isRead ? 'read' : 'unread'} in both systems`)
+
     return true
 
   } catch (error) {
@@ -313,7 +310,7 @@ export async function cleanupOldNotifications(userId: string, daysOld: number = 
       }
     })
 
-    console.log(`✅ Cleaned up ${tipaResult.count} TIPA notifications and ${uxoneResult.count} UXOne notifications`)
+
 
     return {
       tipaCleaned: tipaResult.count,

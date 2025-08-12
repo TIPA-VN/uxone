@@ -164,7 +164,7 @@ export async function POST(request: Request) {
         });
         
         if (existingDocs.length > 0) {
-          console.log(`Found ${existingDocs.length} existing ${fileExtension} files to compare against:`, existingDocs.map(d => `${d.fileName} (v${d.version})`));
+    
           
           // First, save the uploaded file temporarily to compare with existing files
           const tempFilePath = path.join(UPLOAD_DIR, `temp_${Date.now()}_${fileName}`);
@@ -205,13 +205,13 @@ export async function POST(request: Request) {
                   };
                   
                   if (versionDecision.similarity === 1.0) {
-                    console.log(`✅ Found identical file: ${existingDoc.fileName} (v${existingDoc.version})`);
+            
                   } else {
-                    console.log(`✅ Found similar file: ${existingDoc.fileName} (v${existingDoc.version}) - ${Math.round(versionDecision.similarity * 100)}% similar`);
+            
                   }
                   break;
                 } else {
-                  console.log(`❌ Files are different: ${existingDoc.fileName} vs ${file.name} - ${Math.round(versionDecision.similarity * 100)}% similar`);
+          
                 }
               } catch (comparisonError) {
                 console.error(`File comparison failed for ${existingDoc.fileName}:`, comparisonError);
@@ -276,7 +276,7 @@ export async function POST(request: Request) {
     // Create new document with new version
     // First, save the file to disk
     await writeFile(filePath, Buffer.from(arrayBuffer));
-    console.log(`✅ File uploaded to: ${filePath}`);
+    
     
     doc = await prisma.document.create({
       data: {
@@ -293,7 +293,7 @@ export async function POST(request: Request) {
       }
     });
     
-    console.log(`✅ New document version created: ${doc.id} with version ${version}`);
+    
   } else {
     // File is identical or very similar, return existing document info
     // NO FILE UPLOAD NEEDED - we're reusing the existing file
@@ -301,15 +301,15 @@ export async function POST(request: Request) {
       doc = identicalFileInfo.doc;
       
       if (identicalFileInfo.decision.similarity === 1.0) {
-        console.log(`✅ File identical to existing version, returning existing document: ${doc.id}`);
+
         console.log(`📁 File upload skipped - identical file already exists`);
       } else {
-        console.log(`✅ File very similar (${Math.round(identicalFileInfo.decision.similarity * 100)}%) to existing version, returning existing document: ${doc.id}`);
+
         console.log(`📁 File upload skipped - similar file already exists`);
       }
     } else {
       // Fallback: create new document if existing one not found
-      console.log(`❌ ERROR: identicalFileInfo is null but shouldCreateVersion is false!`);
+      
       console.log(`This should not happen - there's a logic error`);
       
       // Fallback: upload the file and create document

@@ -199,19 +199,31 @@ export default function ProcurementDashboard() {
               </div>
               <div className="p-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <button 
+                    onClick={() => setActiveTab('orders')}
+                    className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <ShoppingCart className="w-8 h-8 text-blue-600 mb-2" />
                     <span className="text-sm font-medium text-gray-900">New PO</span>
                   </button>
-                  <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <button 
+                    onClick={() => setActiveTab('inventory')}
+                    className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <Package className="w-8 h-8 text-green-600 mb-2" />
                     <span className="text-sm font-medium text-gray-900">Check Stock</span>
                   </button>
-                  <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <button 
+                    onClick={() => window.location.href = '/lvm/procurement/ai-agent'}
+                    className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <Bot className="w-8 h-8 text-purple-600 mb-2" />
                     <span className="text-sm font-medium text-gray-900">AI Assistant</span>
                   </button>
-                  <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <button 
+                    onClick={() => setActiveTab('ai-insights')}
+                    className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <FileText className="w-8 h-8 text-orange-600 mb-2" />
                     <span className="text-sm font-medium text-gray-900">Generate Report</span>
                   </button>

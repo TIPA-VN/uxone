@@ -95,9 +95,7 @@ export default function TicketsPage() {
         apiUrl += `?department=${encodeURIComponent(userDepartment)}`;
       }
 
-      console.log('🔍 Tickets page - Fetching tickets from:', apiUrl);
-      console.log('🔍 Tickets page - User department:', userDepartment);
-      console.log('🔍 Tickets page - Can see all tickets:', canSeeAllTickets);
+      
 
       const response = await fetch(apiUrl);
       if (response.ok) {

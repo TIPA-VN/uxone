@@ -26,8 +26,6 @@ const HomePage = async () => {
       // Redirect to user's department-specific home page
       const userHomePage = getUserAppropriateHomePage(userDepartment || 'UNKNOWN', userRole || 'STAFF')
       
-      console.log('🔍 LVM PAGE REDIRECT:', { userDepartment, userRole, userHomePage })
-      
       // If the user's department has a specific home page, redirect there
       if (userHomePage !== '/lvm') {
         redirect(userHomePage)

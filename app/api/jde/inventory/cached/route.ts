@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
     const filters = { search, status, businessUnit, glClass };
     const filteredItems = applyFilters(allInventory, filters);
     
-    console.log(`[Cached Inventory] After filtering: ${filteredItems.length} items`);
+
     
     // Apply pagination
     const paginatedItems = applyPagination(filteredItems, page, pageSize);

@@ -65,14 +65,11 @@ export async function GET(
     const hasAdminAccess = isAdmin;
 
     if (!hasDirectAccess && !hasDepartmentAccess && !hasAdminAccess) {
-      console.log(`❌ Access denied for subtasks ${id}: user ${session.user.id} (${userRole}, ${userDepartment}) cannot access task from department ${task.owner?.department || task.assignee?.department || task.creator?.department}`);
       return NextResponse.json(
         { error: "Access denied" },
         { status: 403 }
       );
     }
-
-    console.log(`✅ Access granted for subtasks ${id}: user ${session.user.id} (${userRole}, ${userDepartment})`);
 
     // Get all sub-tasks
     const subtasks = await prisma.task.findMany({

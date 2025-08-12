@@ -6,6 +6,7 @@ import { sendNotification } from "@/app/api/notifications/stream/route";
 import { PrismaAudit } from "@/lib/prisma-audit";
 import { setCompressionHeaders } from "@/lib/compression";
 
+
 // Type definitions for better type safety
 interface ProjectWithCounts {
   id: string;
@@ -41,8 +42,18 @@ interface TaskWithBasicInfo {
   id: string;
   title: string;
   status: string;
-  parentTaskId?: string;
+  parentTaskId: string | null;
 }
+
+// Extended session user type to include fallback auth
+interface ExtendedUser {
+  id: string;
+  role: string;
+  department?: string;
+  isFallbackAuth?: boolean;
+}
+
+
 
 // GET /api/projects - Get all projects with enhanced filtering and KPI data
 export async function GET(request: NextRequest) {
@@ -53,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if this is a fallback authentication session
-    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    const isFallbackAuth = (session.user as ExtendedUser).isFallbackAuth;
     
     // If using fallback auth and database is likely down, return empty array
     if (isFallbackAuth) {
@@ -271,7 +282,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if this is a fallback authentication session
-    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    const isFallbackAuth = (session.user as ExtendedUser).isFallbackAuth;
     
     // If using fallback auth, return an error indicating database is unavailable
     if (isFallbackAuth) {

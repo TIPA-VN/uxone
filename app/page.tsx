@@ -51,9 +51,8 @@ export default async function Home() {
     }
     
     // For non-admin users, redirect to their department home page
-    const userHomePage = getUserAppropriateHomePage(userDepartment || 'UNKNOWN', userRole || 'STAFF')
-    console.log('🔍 ROOT PAGE REDIRECT:', { userDepartment, userRole, userHomePage })
-    redirect(userHomePage)
+          const userHomePage = getUserAppropriateHomePage(userDepartment || 'UNKNOWN', userRole || 'STAFF')
+      redirect(userHomePage)
   }
   
   // If not authenticated, redirect to sign in

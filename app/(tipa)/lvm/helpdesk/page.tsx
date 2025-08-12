@@ -94,28 +94,22 @@ function HelpdeskPageContent() {
         apiUrl += `&department=${encodeURIComponent(userDepartment)}`;
       }
 
-      console.log('🔍 Fetching tickets from:', apiUrl);
-      console.log('🔍 User department:', userDepartment);
-      console.log('🔍 Can see all tickets:', canSeeAllTickets);
-
       // Fetch tickets
       const ticketsResponse = await fetch(apiUrl);
-      console.log('🔍 Tickets response status:', ticketsResponse.status);
       
       if (!ticketsResponse.ok) {
         const errorText = await ticketsResponse.text();
-        console.error('🔍 Tickets API error:', errorText);
+        console.error('Failed to fetch tickets:', errorText);
         throw new Error(`Failed to fetch tickets: ${ticketsResponse.status} ${errorText}`);
       }
 
       const ticketsData = await ticketsResponse.json();
-      console.log('🔍 Tickets data received:', ticketsData);
       
       let tickets = ticketsData.tickets || [];
 
       // Ensure tickets is an array before processing
       if (!Array.isArray(tickets)) {
-        console.error('🔍 Invalid tickets data format:', tickets);
+        console.error('Invalid tickets data format:', ticketsData);
         tickets = [];
       }
 

@@ -77,7 +77,7 @@ export async function authenticateUser(emp_code: string, password: string) {
             isActive: true
           }
         })
-        console.log(`✅ Created new user ${centralApiData.emp_code} in UXOne database with role: ${role}`)
+
       } else {
         // Map emp_pos to role
         const role = mapPositionToRole(centralApiData.emp_pos)
@@ -97,7 +97,7 @@ export async function authenticateUser(emp_code: string, password: string) {
             updatedAt: new Date()
           }
         })
-        console.log(`✅ Updated user ${centralApiData.emp_code} in UXOne database with role: ${role}`)
+
       }
 
       return user

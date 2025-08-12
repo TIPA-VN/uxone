@@ -19,8 +19,6 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log(`🔍 Fetching dependencies for task ${id}, user: ${session.user.id}`);
-
     // Check if user has access to the task
     const task = await prisma.task.findFirst({
       where: {
@@ -49,7 +47,6 @@ export async function GET(
     });
 
     if (!task) {
-      console.log(`❌ Task ${id} not found for user ${session.user.id}`);
       return NextResponse.json(
         { error: "Task not found" },
         { status: 404 }
@@ -66,7 +63,7 @@ export async function GET(
                            task.assigneeId === session.user.id || 
                            task.creatorId === session.user.id;
     
-    const hasDepartmentAccess = isSeniorManager && userDepartment && (
+    const hasDepartmentAccess = isSeniorManager && userRole && (
       task.owner?.department === userDepartment ||
       task.assignee?.department === userDepartment ||
       task.creator?.department === userDepartment
@@ -75,19 +72,13 @@ export async function GET(
     const hasAdminAccess = isAdmin;
 
     if (!hasDirectAccess && !hasDepartmentAccess && !hasAdminAccess) {
-      console.log(`❌ Access denied for task ${id}: user ${session.user.id} (${userRole}, ${userDepartment}) cannot access task from department ${task.owner?.department || task.assignee?.department || task.creator?.department}`);
       return NextResponse.json(
         { error: "Access denied" },
         { status: 403 }
       );
     }
 
-    console.log(`✅ Access granted for task ${id}: user ${session.user.id} (${userRole}, ${userDepartment})`);
-
-    console.log(`✅ Task ${id} found, proceeding to fetch dependencies`);
-
     // Fetch dependencies (tasks that this task depends on)
-    console.log(`🔍 Fetching dependencies for task ${id}`);
     const dependencies = await prisma.taskDependency.findMany({
       where: { dependentTaskId: id },
       include: {
@@ -111,10 +102,7 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    console.log(`📊 Found ${dependencies.length} dependencies`);
-
     // Fetch blocking tasks (tasks that depend on this task)
-    console.log(`🔍 Fetching blocking tasks for task ${id}`);
     const blockingTasks = await prisma.taskDependency.findMany({
       where: { dependencyTaskId: id },
       include: {
@@ -138,8 +126,6 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    console.log(`📊 Found ${blockingTasks.length} blocking tasks`);
-
     const response = {
       dependencies: dependencies.map(d => ({
         id: d.id,
@@ -153,7 +139,6 @@ export async function GET(
       })),
     };
 
-    console.log(`✅ Successfully returning dependencies data:`, response);
     return NextResponse.json(response);
   } catch (error) {
     console.error("Error fetching task dependencies:", error);

@@ -142,9 +142,6 @@ export default function TaskDetailPage() {
   const { data: session } = useSession();
   const user = session?.user;
   
-  console.log(`🔍 TaskDetailPage - User session:`, user);
-  console.log(`🔍 TaskDetailPage - Task ID from params:`, params.id);
-  
   const [task, setTask] = useState<Task | null>(null);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
@@ -173,18 +170,16 @@ export default function TaskDetailPage() {
 
   const fetchTask = useCallback(async () => {
     try {
-      console.log(`🔍 Fetching task ${taskId}`);
       const res = await fetch(`/api/tasks/${taskId}`);
       if (res.ok) {
         const taskData = await res.json();
-        console.log(`✅ Task fetched successfully:`, taskData);
         setTask(taskData);
       } else {
-        console.error(`❌ Error fetching task ${taskId}:`, res.status, res.statusText);
+        console.error('Error fetching task:', res.status);
         setTask(null);
       }
     } catch (error) {
-      console.error(`❌ Error fetching task ${taskId}:`, error);
+      console.error('Error fetching task:', error);
       setTask(null);
     }
   }, [taskId]);
@@ -936,7 +931,7 @@ export default function TaskDetailPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => window.open(attachment.filePath, '_blank')}
+                            onClick={() => window.open(`/api/tasks/${task.id}/attachments/${attachment.id}/download`, '_blank')}
                             className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors cursor-pointer"
                             title="Download"
                           >

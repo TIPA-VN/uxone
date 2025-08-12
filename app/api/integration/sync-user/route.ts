@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       await syncNotifications(syncedUser.id)
     }
 
-          console.log(`✅ Successfully synced user ${emp_code}`)
+      
 
     return NextResponse.json({
       success: true,

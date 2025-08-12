@@ -72,17 +72,7 @@ export function ProductionTab({ productionDocs, user, onRefresh }: ProductionTab
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
     
-    // Debug logging for versioning issues
-    if (groupedDocuments[filename].length > 1) {
-      console.log(`Multiple versions found for ${filename}:`, 
-        groupedDocuments[filename].map(doc => ({
-          id: doc.id,
-          version: doc.version,
-          createdAt: doc.createdAt,
-          workflowState: doc.workflowState
-        }))
-      );
-    }
+
   });
 
 

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`🔍 Fetching notifications for user ${authenticatedUserId}, source: ${source}`)
+
 
     let notifications: Array<Record<string, unknown> & { source: string }> = []
 
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
           source: 'uxone'
         }))]
 
-        console.log(`✅ Found ${uxoneNotifications.length} notifications in UXOne`)
+  
       } catch (error) {
         console.error('Error fetching UXOne notifications:', error)
         if (source === 'uxone') {
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
           source: 'tipa'
         }))]
 
-        console.log(`✅ Found ${tipaNotifications.length} notifications in TIPA Mobile`)
+
       } catch (error) {
         console.error('Error fetching TIPA notifications:', error)
         if (source === 'tipa') {
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     // Apply limit to final result
     const limitedNotifications = notifications.slice(0, limit)
 
-    console.log(`📊 Returning ${limitedNotifications.length} notifications from ${source}`)
+    
 
     return NextResponse.json({
       success: true,
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
           data: notificationData
         })
         results.uxone = uxoneNotification
-        console.log(`✅ Created notification in UXOne: ${title}`)
+
       } catch (error) {
         console.error('Error creating UXOne notification:', error)
         results.uxoneError = error
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
           data: notificationData
         })
         results.tipa = tipaNotification
-        console.log(`✅ Created notification in TIPA Mobile: ${title}`)
+
       } catch (error) {
         console.error('Error creating TIPA notification:', error)
         results.tipaError = error
@@ -279,7 +279,7 @@ export async function PATCH(request: NextRequest) {
           data: updateData
         })
         results.uxone = uxoneNotification
-        console.log(`✅ Updated notification in UXOne: ${notificationId}`)
+
       } catch (error) {
         console.error('Error updating UXOne notification:', error)
         results.uxoneError = error
@@ -294,7 +294,7 @@ export async function PATCH(request: NextRequest) {
           data: updateData
         })
         results.tipa = tipaNotification
-        console.log(`✅ Updated notification in TIPA Mobile: ${notificationId}`)
+
       } catch (error) {
         console.error('Error updating TIPA notification:', error)
         results.tipaError = error

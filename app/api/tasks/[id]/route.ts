@@ -239,14 +239,11 @@ export async function PATCH(
     const hasAdminAccess = isAdmin;
 
     if (!hasDirectAccess && !hasDepartmentAccess && !hasAdminAccess) {
-      console.log(`❌ Access denied for task update ${id}: user ${session.user.id} (${userRole}, ${userDepartment}) cannot access task from department ${existingTask.owner?.department || existingTask.assignee?.department || existingTask.creator?.department}`);
       return NextResponse.json(
         { error: "Access denied" },
         { status: 403 }
       );
     }
-
-    console.log(`✅ Access granted for task update ${id}: user ${session.user.id} (${userRole}, ${userDepartment})`);
 
     // Validate parent task exists if provided
     if (parentTaskId) {

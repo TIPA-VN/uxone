@@ -87,13 +87,10 @@ export async function middleware(request: NextRequest) {
       const userDepartment = session.user.department || session.user.centralDepartment;
       const userRole = session.user.role;
       
-      console.log('🔍 PROC ACCESS CHECK:', { userDepartment, userRole, path: request.nextUrl.pathname });
-      
       // Only allow access if user is from PROC department or is ADMIN
       if (userDepartment !== 'PROC' && userRole !== 'ADMIN') {
         // Redirect to user's appropriate home page based on their department
         const userHomePage = getUserAppropriateHomePage(userDepartment || 'DEFAULT', userRole || 'STAFF');
-        console.log('🔍 PROC REDIRECT:', { userDepartment, userRole, userHomePage });
         return NextResponse.redirect(new URL(userHomePage, request.url))
       }
     }

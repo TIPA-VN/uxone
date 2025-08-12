@@ -43,7 +43,6 @@ export function mapUXOneToLegacy(uxoneCode: string): string {
 export function getDepartmentPage(department: string): string {
   if (!department) return '/lvm';
   const homePage = getDepartmentHomePage(department);
-  console.log('🔍 getDepartmentPage:', { department, homePage });
   return homePage;
 }
 
@@ -117,24 +116,19 @@ export function shouldRedirectUser(userDepartment: string, userRole: string): bo
  * @returns Home page path
  */
 export function getUserAppropriateHomePage(userDepartment: string, userRole: string): string {
-  console.log('🔍 getUserAppropriateHomePage called:', { userDepartment, userRole });
-  
   // Admin users get admin panel access
   const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'SENIOR_MANAGER'];
   if (adminRoles.includes(userRole)) {
-    console.log('🔍 User is admin, redirecting to /lvm/admin');
     return '/lvm/admin';
   }
   
   // Regular users get their department home page
   if (userDepartment) {
     const homePage = getDepartmentPage(userDepartment);
-    console.log('🔍 User department home page:', { userDepartment, homePage });
     return homePage;
   }
   
   // Default fallback
-  console.log('🔍 No department, using default /lvm');
   return '/lvm';
 }
 

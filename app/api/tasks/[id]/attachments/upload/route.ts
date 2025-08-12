@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { writeFile } from "fs/promises";
+import { 
+  getCustomUploadDir, 
+  generateUniqueFilename, 
+  isValidFileType, 
+  isValidFileSize,
+  ensureUploadDirectory 
+} from "@/lib/file-utils";
 
 export const runtime = 'nodejs'
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "tasks");
 
 export async function POST(
   request: NextRequest,
@@ -27,7 +31,7 @@ export async function POST(
         OR: [
           { ownerId: session.user.id },
           { assigneeId: session.user.id },
-          { createdBy: session.user.id },
+          { creatorId: session.user.id },
         ],
       },
     });
@@ -44,13 +48,21 @@ export async function POST(
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Create upload directory
-    await mkdir(UPLOAD_DIR, { recursive: true });
+    // Validate file type and size
+    if (!isValidFileType(file.name)) {
+      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
+    }
+    
+    if (!isValidFileSize(file.size)) {
+      return NextResponse.json({ error: 'File size exceeds limit' }, { status: 400 });
+    }
 
+    // Create upload directory (custom or public)
+    const uploadDir = await ensureUploadDirectory('tasks');
+    
     // Generate unique filename
-    const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.name}`;
-    const filePath = path.join(UPLOAD_DIR, fileName);
+    const fileName = generateUniqueFilename(file.name, 'tasks');
+    const filePath = path.join(uploadDir, fileName);
 
     // Save file
     const arrayBuffer = await file.arrayBuffer();
@@ -63,8 +75,8 @@ export async function POST(
         fileName: file.name,
         filePath: `/uploads/tasks/${fileName}`,
         fileType: file.type || "application/octet-stream",
-        size: file.size,
-        uploadedBy: session.user.name || session.user.username,
+        fileSize: file.size,
+        uploadedById: session.user.id,
       }
     });
 

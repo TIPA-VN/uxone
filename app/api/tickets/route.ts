@@ -35,7 +35,6 @@ export async function GET(req: NextRequest) {
     
     // Filter by department if specified
     if (department && department !== 'all') {
-      console.log('🔍 Filtering tickets by department:', department);
       where.OR = [
         // Filter by tickets created by users from the specified department
         {
@@ -50,12 +49,7 @@ export async function GET(req: NextRequest) {
           }
         }
       ];
-      console.log('🔍 Where clause for department filter:', JSON.stringify(where, null, 2));
-    } else {
-      console.log('🔍 No department filter applied - showing all tickets');
     }
-
-    console.log('🔍 Executing Prisma query with where clause:', JSON.stringify(where, null, 2));
     
     const tickets = await prisma.ticket.findMany({
       where,
@@ -85,13 +79,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    console.log('🔍 Found tickets:', tickets.length);
-    if (tickets.length > 0) {
-      console.log('🔍 Sample ticket departments:', {
-        createdBy: tickets[0].createdBy?.department || 'N/A',
-        assignedTo: tickets[0].assignedTo?.department || 'N/A'
-      });
-    }
+
 
     // Transform the data to match the expected format
     const transformedTickets = tickets.map(ticket => ({
@@ -128,6 +116,21 @@ export async function POST(req: NextRequest) {
 
     if (!title || !description || !customerEmail || !customerName) {
       return NextResponse.json({ error: "Title, description, customer email, and customer name are required" }, { status: 400 });
+    }
+
+    // Validate assignedToId if it's provided
+    if (assignedToId && assignedToId !== '') {
+      const assignedUser = await prisma.user.findUnique({
+        where: { id: assignedToId },
+        select: { id: true }
+      });
+      
+      if (!assignedUser) {
+        return NextResponse.json({ 
+          error: "Invalid assignedToId: User not found",
+          details: `User with ID ${assignedToId} does not exist in the database`
+        }, { status: 400 });
+      }
     }
 
     // Generate ticket number
@@ -167,6 +170,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(ticket);
   } catch (error) {
     console.error('Error creating ticket:', error);
+    
+    // Handle specific Prisma errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'P2003') {
+        return NextResponse.json({ 
+          error: "Foreign key constraint failed",
+          details: "The assignedToId references a user that doesn't exist. Please check the user ID and try again."
+        }, { status: 400 });
+      }
+    }
+    
     return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 });
   }
 } 

@@ -88,7 +88,7 @@ export async function syncUserFromTIPA(emp_code: string, centralApiData?: any) {
             updatedAt: new Date()
           }
         })
-      console.log(`✅ Updated user ${emp_code} in UXOne database with role: ${role}`)
+      
       return updatedUser
     } else {
       // Create new user in UXOne
@@ -106,7 +106,7 @@ export async function syncUserFromTIPA(emp_code: string, centralApiData?: any) {
           hashedPassword: tipaUser.hashedPassword || ''
         }
       })
-      console.log(`✅ Created user ${emp_code} in UXOne database with role: ${role}`)
+      
       return newUser
     }
   } catch (error) {
@@ -145,7 +145,7 @@ export async function syncUserFromCentralAPI(centralApiData: any) {
             updatedAt: new Date()
           }
         })
-      console.log(`✅ Updated user ${centralApiData.emp_code} in UXOne database with role: ${role}`)
+      
       return updatedUser
     } else {
       // Create new user in UXOne
@@ -162,7 +162,7 @@ export async function syncUserFromCentralAPI(centralApiData: any) {
           isActive: true
         }
       })
-      console.log(`✅ Created new user ${centralApiData.emp_code} in UXOne database with role: ${role}`)
+      
       return newUser
     }
   } catch (error) {
@@ -209,7 +209,7 @@ export async function syncNotifications(userId: string) {
       }
     }
 
-    console.log(`✅ Synced ${tipaNotifications.length} notifications for user ${userId}`)
+    
   } catch (error) {
     console.error('Error syncing notifications:', error)
   }
