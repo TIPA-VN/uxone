@@ -18,6 +18,7 @@ const ADMIN_CREDENTIALS = {
 
 // Test accounts for development
 const TEST_ACCOUNTS = [
+  // Original test accounts
   {
     username: 'procurement',
     password: 'proc1234',
@@ -35,6 +36,61 @@ const TEST_ACCOUNTS = [
     email: 'procurement.staff@tipa.co.th',
     department: 'PROC',
     departmentName: 'Procurement'
+  },
+  // New test accounts for DES, ME, and LOG departments
+  {
+    username: 'des_manager',
+    password: 'des_manager123',
+    role: 'SENIOR_MANAGER',
+    name: 'DES Department Manager',
+    email: 'des.manager@tipa.co.th',
+    department: 'DES',
+    departmentName: 'Product Engineering'
+  },
+  {
+    username: 'me_manager',
+    password: 'me_manager123',
+    role: 'SENIOR_MANAGER',
+    name: 'ME Department Manager',
+    email: 'me.manager@tipa.co.th',
+    department: 'ME',
+    departmentName: 'Manufacturing Engineering'
+  },
+  {
+    username: 'log_manager',
+    password: 'log_manager123',
+    role: 'SENIOR_MANAGER',
+    name: 'LOG Department Manager',
+    email: 'log.manager@tipa.co.th',
+    department: 'LOG',
+    departmentName: 'Logistics'
+  },
+  {
+    username: 'des_staff',
+    password: 'des_staff123',
+    role: 'STAFF',
+    name: 'DES Department Staff',
+    email: 'des.staff@tipa.co.th',
+    department: 'DES',
+    departmentName: 'Product Engineering'
+  },
+  {
+    username: 'me_staff',
+    password: 'me_staff123',
+    role: 'STAFF',
+    name: 'ME Department Staff',
+    email: 'me.staff@tipa.co.th',
+    department: 'ME',
+    departmentName: 'Manufacturing Engineering'
+  },
+  {
+    username: 'log_staff',
+    password: 'log_staff123',
+    role: 'STAFF',
+    name: 'LOG Department Staff',
+    email: 'log.staff@tipa.co.th',
+    department: 'LOG',
+    departmentName: 'Logistics'
   }
 ];
 

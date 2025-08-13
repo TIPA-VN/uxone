@@ -131,7 +131,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "manufacturing",
     description: "General manufacturing operations",
     isActive: true,
-    homePage: "/lvm/production",
+    homePage: "/lvm/manufacturing",
     aliases: ["MFG"]
   },
   {
@@ -140,7 +140,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "manufacturing",
     description: "Manufacturing engineering and process design",
     isActive: true,
-    homePage: "/lvm/production/engineering",
+    homePage: "/lvm/manufacturing-engineering",
     aliases: ["ME", "MFG-ENG"]
   },
   {
@@ -149,7 +149,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "manufacturing",
     description: "Product engineering and design",
     isActive: true,
-    homePage: "/lvm/production/engineering",
+    homePage: "/lvm/production-engineering",
     aliases: ["DES", "PROD-ENG"]
   },
   {
@@ -158,7 +158,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Motor assembly operations",
     isActive: true,
-    homePage: "/lvm/production/assembly",
+    homePage: "/lvm/manufacturing",
     aliases: ["MOTOR-ASSY"]
   },
   {
@@ -167,7 +167,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Motor painting and finishing",
     isActive: true,
-    homePage: "/lvm/production/painting",
+    homePage: "/lvm/manufacturing",
     aliases: ["MOTOR-PAINT"]
   },
   {
@@ -176,7 +176,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Rotor and stator assembly",
     isActive: true,
-    homePage: "/lvm/production/assembly",
+    homePage: "/lvm/manufacturing",
     aliases: ["ROTOR-STATOR"]
   },
   {
@@ -185,7 +185,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Motor winding operations",
     isActive: true,
-    homePage: "/lvm/production/winding",
+    homePage: "/lvm/manufacturing",
     aliases: ["WINDING"]
   },
   {
@@ -194,7 +194,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Lamination punching operations",
     isActive: true,
-    homePage: "/lvm/production/machining",
+    homePage: "/lvm/manufacturing",
     aliases: ["LAM-PUNCH"]
   },
   {
@@ -203,7 +203,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Bracket machining operations",
     isActive: true,
-    homePage: "/lvm/production/machining",
+    homePage: "/lvm/manufacturing",
     aliases: ["BRACKET-MACH"]
   },
   {
@@ -212,7 +212,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Frame machining operations",
     isActive: true,
-    homePage: "/lvm/production/machining",
+    homePage: "/lvm/manufacturing",
     aliases: ["FRAME-MACH"]
   },
   {
@@ -221,7 +221,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Rotor die casting operations",
     isActive: true,
-    homePage: "/lvm/production/casting",
+    homePage: "/lvm/manufacturing",
     aliases: ["ROTOR-DIE"]
   },
   {
@@ -230,7 +230,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Shaft machining operations",
     isActive: true,
-    homePage: "/lvm/production/machining",
+    homePage: "/lvm/manufacturing",
     aliases: ["SHAFT-MACH"]
   },
   {
@@ -239,7 +239,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Vanish and coating operations",
     isActive: true,
-    homePage: "/lvm/production/coating",
+    homePage: "/lvm/manufacturing",
     aliases: ["VANISH"]
   },
   {
@@ -248,7 +248,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "production",
     description: "Product packing and shipping",
     isActive: true,
-    homePage: "/lvm/production/packing",
+    homePage: "/lvm/manufacturing",
     aliases: ["PACKING"]
   },
 
@@ -259,7 +259,7 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     category: "support",
     description: "Accounting and financial operations",
     isActive: true,
-    homePage: "/lvm/finance",
+    homePage: "/lvm/accounting",
     aliases: ["ACC", "Finance"]
   },
   {
