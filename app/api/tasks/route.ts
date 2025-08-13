@@ -73,16 +73,14 @@ export async function GET(request: NextRequest) {
       where.parentTaskId = null;
     }
 
-    // Department-based filtering - users can only see tasks from their department
-    // Managers and above can see all tasks, others see only their department
-    if (!isManagerOrAbove) {
-      where.OR = [
-        { assignee: { department: session.user.department } },
-        { owner: { department: session.user.department } },
-        { creator: { department: session.user.department } },
-        { project: { departments: { has: session.user.department } } }
-      ];
-    }
+    // Department-based filtering - all users see tasks from their department
+    // Managers can see all tasks within their department, others see only their department
+    where.OR = [
+      { assignee: { department: session.user.department } },
+      { owner: { department: session.user.department } },
+      { creator: { department: session.user.department } },
+      { project: { departments: { has: session.user.department } } }
+    ];
 
     const include: any = {
       project: {

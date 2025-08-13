@@ -51,10 +51,10 @@ const TEST_ACCOUNTS = [
     username: 'me_manager',
     password: 'me_manager123',
     role: 'SENIOR_MANAGER',
-    name: 'ME Department Manager',
+    name: 'LVM-ME Department Manager',
     email: 'me.manager@tipa.co.th',
-    department: 'ME',
-    departmentName: 'Manufacturing Engineering'
+    department: 'LVM-ME',
+    departmentName: 'LVM MFG ENGINEERING'
   },
   {
     username: 'log_manager',
@@ -78,10 +78,10 @@ const TEST_ACCOUNTS = [
     username: 'me_staff',
     password: 'me_staff123',
     role: 'STAFF',
-    name: 'ME Department Staff',
+    name: 'LVM-ME Department Staff',
     email: 'me.staff@tipa.co.th',
-    department: 'ME',
-    departmentName: 'Manufacturing Engineering'
+    department: 'LVM-ME',
+    departmentName: 'LVM MFG ENGINEERING'
   },
   {
     username: 'log_staff',
@@ -110,8 +110,8 @@ function shouldOverrideToAdmin(username: string): boolean {
 // Check if central API is available
 async function isCentralApiAvailable(): Promise<boolean> {
   try {
-    // Just check if the endpoint is reachable with a simple request
-    await fetch(process.env.CENTRAL_API_URL || "http://10.116.3.138:8888/api/web_check_login", {
+    // Check if the endpoint is reachable and responding properly
+    const response = await fetch(process.env.CENTRAL_API_URL || "http://10.116.3.138:8888/api/web_check_login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
@@ -121,8 +121,10 @@ async function isCentralApiAvailable(): Promise<boolean> {
       signal: AbortSignal.timeout(5000)
     })
     
-    // If we get any response (even 401 for wrong credentials), the API is available
-    return true
+    // Only consider the API available if it returns a successful response (not 401, 500, etc.)
+    // 401 means the API is reachable but authentication failed, which is expected for test credentials
+    // We want to use fallback auth when central API is not working properly
+    return response.ok && response.status !== 401
   } catch {
     return false
   }

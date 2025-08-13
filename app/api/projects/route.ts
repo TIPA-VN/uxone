@@ -107,15 +107,13 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Department-based filtering - users can only see projects from their department
-    // Managers and above can see all projects, others see only their department
-    if (!isManagerOrAbove) {
-      where.OR = [
-        { departments: { has: session.user.department } },
-        { owner: { department: session.user.department } },
-        { members: { some: { user: { department: session.user.department } } } }
-      ];
-    }
+    // Department-based filtering - all users see projects from their department
+    // Managers can see all projects within their department, others see only their department
+    where.OR = [
+      { departments: { has: session.user.department } },
+      { owner: { department: session.user.department } },
+      { members: { some: { user: { department: session.user.department } } } }
+    ];
 
     const include: any = {
       owner: {

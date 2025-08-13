@@ -67,7 +67,7 @@ export const APP_CONFIG = {
     OPS: "/lvm/operations",        // Operations - Operations management
     ADMIN: "/lvm/admin",           // Administration - Admin panel
     MFG: "/lvm/manufacturing",     // Manufacturing - General manufacturing operations
-    ME: "/lvm/manufacturing-engineering", // Manufacturing Engineering - Process design
+    "LVM-ME": "/lvm/manufacturing-engineering", // LVM Manufacturing Engineering - Process design
     ACC: "/lvm/accounting",        // Accounting - Financial operations
     INV: "/lvm/inventory",         // Inventory - Inventory management
     DEFAULT: "/lvm"                // Default fallback
@@ -201,11 +201,11 @@ export const APP_CONFIG = {
       sortOrder: 12
     },
     {
-      value: "ME",
-      label: "Manufacturing Engineering (ME)",
-      code: "ME",
+      value: "LVM-ME",
+      label: "LVM Manufacturing Engineering (LVM-ME)",
+      code: "LVM-ME",
       color: "bg-green-600",
-      description: "Manufacturing engineering and process design",
+      description: "LVM Manufacturing engineering and process design",
       isActive: true,
       sortOrder: 13
     },

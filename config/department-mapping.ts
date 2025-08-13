@@ -135,13 +135,13 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     aliases: ["MFG"]
   },
   {
-    legacyName: "Manufacturing Engineering",
-    uxoneCode: "ME",
+    legacyName: "LVM MFG ENGINEERING",
+    uxoneCode: "LVM-ME",
     category: "manufacturing",
     description: "Manufacturing engineering and process design",
     isActive: true,
     homePage: "/lvm/manufacturing-engineering",
-    aliases: ["ME", "MFG-ENG"]
+    aliases: ["ME", "MFG-ENG", "LVM-ME"]
   },
   {
     legacyName: "Product Engineering",
