@@ -145,12 +145,12 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
   },
   {
     legacyName: "Product Engineering",
-    uxoneCode: "DES",
+    uxoneCode: "LVM-DESIGN",
     category: "manufacturing",
     description: "Product engineering and design",
     isActive: true,
-    homePage: "/lvm/production-engineering",
-    aliases: ["DES", "PROD-ENG"]
+    homePage: "/lvm/design",
+    aliases: ["DES", "PROD-ENG", "LVM-DESIGN"]
   },
   {
     legacyName: "Motor Assembly",

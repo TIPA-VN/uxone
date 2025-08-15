@@ -61,7 +61,7 @@ export const APP_CONFIG = {
     FM: "/lvm/facility-management", // Facility Management - Infrastructure
     CS: "/lvm/customer-service",   // Customer Service - Support
     RD: "/lvm/research-development", // Research & Development - R&D
-    DES: "/lvm/production-engineering", // Production Engineering - Product design
+    "LVM-DESIGN": "/lvm/design", // LVM Design - Product design and engineering
     MKT: "/lvm/marketing",         // Marketing - Marketing activities
     SALES: "/lvm/sales",           // Sales - Sales management
     OPS: "/lvm/operations",        // Operations - Operations management
@@ -202,12 +202,21 @@ export const APP_CONFIG = {
     },
     {
       value: "LVM-ME",
-      label: "LVM Manufacturing Engineering (LVM-ME)",
+      label: "Manufacturing Engineering (LVM-ME)",
       code: "LVM-ME",
       color: "bg-green-600",
       description: "LVM Manufacturing engineering and process design",
       isActive: true,
       sortOrder: 13
+    },
+    {
+      value: "LVM-DESIGN",
+      label: "Design (LVM-DESIGN)",
+      code: "LVM-DESIGN",
+      color: "bg-purple-600",
+      description: "LVM Product design and engineering",
+      isActive: true,
+      sortOrder: 14
     },
     {
       value: "ACC",
@@ -216,7 +225,7 @@ export const APP_CONFIG = {
       color: "bg-yellow-600",
       description: "Accounting and financial operations",
       isActive: true,
-      sortOrder: 14
+      sortOrder: 15
     },
     {
       value: "INV",
@@ -225,7 +234,7 @@ export const APP_CONFIG = {
       color: "bg-orange-600",
       description: "Inventory management and control",
       isActive: true,
-      sortOrder: 15
+      sortOrder: 16
     },
     {
       value: "RD",
@@ -234,7 +243,16 @@ export const APP_CONFIG = {
       color: "bg-indigo-600",
       description: "Research and development",
       isActive: true,
-      sortOrder: 16
+      sortOrder: 17
+    },
+    {
+      value: "LVM-EXPAT",
+      label: "EXPATS (LVM-EXPAT)",
+      code: "LVM-EXPAT",
+      color: "bg-gray-600",
+      description: "LVM Expatriate team",
+      isActive: true,
+      sortOrder: 18
     }
   ] as const,
 
@@ -1646,11 +1664,11 @@ export const getDepartmentGroups = () => {
   APP_CONFIG.departments.forEach(dept => {
     if (['LOG', 'LVM-PUR', 'PC', 'PM', 'FM'].includes(dept.code)) {
       groups['Operations'].push(dept);
-    } else if (['CS', 'HELPDESK'].includes(dept.code)) {
+    } else if (['CS', 'ACC', 'INV'].includes(dept.code)) {
       groups['Support'].push(dept);
-    } else if (['HR', 'FIN', 'ADMIN'].includes(dept.code)) {
+    } else if (['HR', 'LVM-EXPAT'].includes(dept.code)) {
       groups['Management'].push(dept);
-    } else if (['IS', 'QA', 'QC', 'RD'].includes(dept.code)) {
+    } else if (['IS', 'QA', 'QC', 'RD', 'LVM-DESIGN', 'LVM-ME', 'MFG', 'SALES'].includes(dept.code)) {
       groups['Technical'].push(dept);
     } else {
       groups['Operations'].push(dept); // Default group

@@ -34,9 +34,7 @@ export default function CreateDemandsPage() {
   const hasSupervisorPermissions = () => {
     if (!session?.user?.role) return false;
     
-    // Direct role check first (for debugging)
     const userRole = session.user.role;
-    console.log("User role:", userRole); // Debug log
     
     // Check if role contains "SENIOR_MANAGER" or "MANAGER" (case insensitive)
     const roleUpper = userRole.toUpperCase();
@@ -58,9 +56,6 @@ export default function CreateDemandsPage() {
     ];
     
     const hasMappedRole = supervisorRoles.includes(mappedRole);
-    
-    console.log("Mapped role:", mappedRole, "Has mapped role:", hasMappedRole); // Debug log
-    console.log("Has manager role:", hasManagerRole); // Debug log
     
     return hasManagerRole || hasMappedRole;
   };
