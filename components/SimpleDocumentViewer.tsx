@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Download, Eye, FileText, Image, File, X, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
 interface SimpleDocumentViewerProps {
@@ -25,6 +25,7 @@ export const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLImageElement>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const getFileIcon = () => {
     if (isImage(fileName)) return <Image className="w-8 h-8 text-blue-600" />;
@@ -82,11 +83,23 @@ export const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
     setIsDragging(false);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = (e: WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setScale(prev => Math.max(0.1, Math.min(5, prev * delta)));
   };
+
+  // Add wheel event listener with proper options to allow preventDefault
+  useEffect(() => {
+    const container = imageContainerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      
+      return () => {
+        container.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, []);
 
   if (isImage(fileName)) {
     return (
@@ -168,12 +181,12 @@ export const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
 
                 {/* Image Container */}
                 <div 
+                  ref={imageContainerRef}
                   className="flex-1 overflow-hidden relative"
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
-                  onWheel={handleWheel}
                   style={{ cursor: isDragging ? 'grabbing' : scale > 1 ? 'grab' : 'default' }}
                 >
                   <div className="w-full h-full flex items-center justify-center">

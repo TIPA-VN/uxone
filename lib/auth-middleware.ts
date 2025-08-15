@@ -22,7 +22,6 @@ export async function authenticateUser(emp_code: string, password: string) {
     })
 
     if (!centralApiResponse.ok) {
-      console.log(`Central API error: ${centralApiResponse.status}`)
       return null
     }
 
@@ -82,6 +81,12 @@ export async function authenticateUser(emp_code: string, password: string) {
         // Map emp_pos to role
         const role = mapPositionToRole(centralApiData.emp_pos)
         
+        // Import department mapping
+        const { getUXOneDepartmentCode } = require('@/config/department-mapping');
+        
+        // Map legacy department to UXOne code
+        const mappedDepartment = getUXOneDepartmentCode(centralApiData.emp_dept);
+        
         // Update existing user with latest central API data
         user = await uxonePrisma.user.update({
           where: { id: user.id },
@@ -105,7 +110,6 @@ export async function authenticateUser(emp_code: string, password: string) {
 
     return null
   } catch (error) {
-    console.error('Authentication error:', error)
     return null
   }
 }

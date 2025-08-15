@@ -2,6 +2,7 @@ import type { NextAuthConfig } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { verifyPassword } from '@/lib/hashPassword'
 import { authenticateUser, mapPositionToRole } from '@/lib/auth-middleware'
+import bcrypt from 'bcryptjs'
 
 export const runtime = 'nodejs'
 
@@ -16,9 +17,9 @@ const ADMIN_CREDENTIALS = {
   departmentName: process.env.ADMIN_FALLBACK_DEPARTMENT_NAME || 'Information Technology'
 }
 
-// Test accounts for development
+// Test accounts for emergency access when central API is completely down
+// These are NOT accessible when central API is working
 const TEST_ACCOUNTS = [
-  // Original test accounts
   {
     username: 'procurement',
     password: 'proc1234',
@@ -27,78 +28,13 @@ const TEST_ACCOUNTS = [
     email: 'procurement@tipa.co.th',
     department: 'LVM-PUR',
     departmentName: 'Procurement'
-  },
-  {
-    username: 'procurement_staff',
-    password: 'proc1234',
-    role: 'STAFF',
-    name: 'Procurement Staff',
-    email: 'procurement.staff@tipa.co.th',
-    department: 'LVM-PUR',
-    departmentName: 'Procurement'
-  },
-  // New test accounts for DES, ME, and LOG departments
-  {
-    username: 'des_manager',
-    password: 'des_manager123',
-    role: 'SENIOR_MANAGER',
-    name: 'DES Department Manager',
-    email: 'des.manager@tipa.co.th',
-    department: 'DES',
-    departmentName: 'Product Engineering'
-  },
-  {
-    username: 'me_manager',
-    password: 'me_manager123',
-    role: 'SENIOR_MANAGER',
-    name: 'LVM-ME Department Manager',
-    email: 'me.manager@tipa.co.th',
-    department: 'LVM-ME',
-    departmentName: 'LVM MFG ENGINEERING'
-  },
-  {
-    username: 'log_manager',
-    password: 'log_manager123',
-    role: 'SENIOR_MANAGER',
-    name: 'LOG Department Manager',
-    email: 'log.manager@tipa.co.th',
-    department: 'LOG',
-    departmentName: 'Logistics'
-  },
-  {
-    username: 'des_staff',
-    password: 'des_staff123',
-    role: 'STAFF',
-    name: 'DES Department Staff',
-    email: 'des.staff@tipa.co.th',
-    department: 'DES',
-    departmentName: 'Product Engineering'
-  },
-  {
-    username: 'me_staff',
-    password: 'me_staff123',
-    role: 'STAFF',
-    name: 'LVM-ME Department Staff',
-    email: 'me.staff@tipa.co.th',
-    department: 'LVM-ME',
-    departmentName: 'LVM MFG ENGINEERING'
-  },
-  {
-    username: 'log_staff',
-    password: 'log_staff123',
-    role: 'STAFF',
-    name: 'LOG Department Staff',
-    email: 'log.staff@tipa.co.th',
-    department: 'LOG',
-    departmentName: 'Logistics'
   }
 ];
 
 // Admin override list - usernames that should always have admin access
 const ADMIN_OVERRIDE_USERS = [
   'administrator', // Your username
-  'admin',
-  //'22023312', // Add your actual username here
+  'admin'
   // Add more admin usernames as needed
 ];
 
@@ -111,6 +47,7 @@ function shouldOverrideToAdmin(username: string): boolean {
 async function isCentralApiAvailable(): Promise<boolean> {
   try {
     // Check if the endpoint is reachable and responding properly
+    // We just need to verify the API is responding, not that credentials work
     const response = await fetch(process.env.CENTRAL_API_URL || "http://10.116.3.138:8888/api/web_check_login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -121,10 +58,10 @@ async function isCentralApiAvailable(): Promise<boolean> {
       signal: AbortSignal.timeout(5000)
     })
     
-    // Only consider the API available if it returns a successful response (not 401, 500, etc.)
-    // 401 means the API is reachable but authentication failed, which is expected for test credentials
-    // We want to use fallback auth when central API is not working properly
-    return response.ok && response.status !== 401
+    // Consider the API available if it responds (even with 401)
+    // 401 means the API is reachable and working, just the credentials are wrong
+    // Only return false if there's a connection error or server error (5xx)
+    return response.status !== 500 && response.status !== 502 && response.status !== 503 && response.status !== 504
   } catch {
     return false
   }
@@ -171,7 +108,7 @@ export const authConfig = {
           // First, check if central API is available
           const centralApiAvailable = await isCentralApiAvailable()
           
-          // If central API is down, check for admin fallback authentication and test accounts
+          // If central API is completely down, allow admin fallback and test accounts for emergency access
           if (!centralApiAvailable) {
               const isAdmin = await validateAdminCredentials(
                 credentials.username as string, 
@@ -179,8 +116,7 @@ export const authConfig = {
               )
               
               if (isAdmin) {
-                
-                // Create a virtual admin user without database access
+                // Create a virtual admin user for emergency access
                 const virtualAdminUser = {
                   id: 'admin-fallback-' + Date.now(),
                   username: ADMIN_CREDENTIALS.username,
@@ -208,7 +144,7 @@ export const authConfig = {
                 }
               }
               
-              // Check for test accounts
+              // Check for test accounts (only when central API is completely down)
               const testAccount = validateTestCredentials(
                 credentials.username as string, 
                 credentials.password as string
@@ -229,65 +165,72 @@ export const authConfig = {
                 }
               }
               
-              throw new Error('Central authentication service is unavailable. Only admin and test accounts can access the system.')
+              throw new Error('Central authentication service is completely unavailable. Only admin and test accounts can access the system for emergency purposes.')
             }
 
-          // Central API is available, use enhanced authentication
+          // Central API is available - ALL authentication must go through it
           const user = await authenticateUser(
             credentials.username as string, 
             credentials.password as string
           )
 
-          if (!user) {
-            throw new Error('Invalid credentials')
-          }
+          if (user) {
+            // Central API authentication successful
+            // Check if user is active
+            if (!user.isActive) {
+              throw new Error('User account is disabled. Please contact your administrator.')
+            }
 
-          // Check if user is active
-          if (!user.isActive) {
-            throw new Error('User account is disabled. Please contact your administrator.')
-          }
+            // Check if this user should have admin override
+            const isAdminOverride = shouldOverrideToAdmin(user.username);
+            
+            const mappedRole = mapPositionToRole(user.departmentName || 'STAFF');
+            const finalRole = isAdminOverride ? 'ADMIN' : (user.role || mappedRole);
 
-          // Check if this user should have admin override
-          const isAdminOverride = shouldOverrideToAdmin(user.username);
+            // Update user role if needed
+            if (user.role !== finalRole) {
+              const { PrismaClient } = await import('@prisma/client');
+              const prisma = new PrismaClient();
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { role: finalRole }
+              });
+              await prisma.$disconnect();
+              user.role = finalRole;
+            }
+
+            return {
+              id: user.id,
+              name: user.name || user.username,
+              email: user.email || `${user.username}@tipa.co.th`,
+              username: user.username,
+              department: user.department || 'OPS',
+              centralDepartment: user.centralDepartment || 'UNKNOWN',
+              departmentName: user.departmentName || 'Unknown Department',
+              role: user.role || 'STAFF',
+              position: user.departmentName || 'Unknown Department',
+              isFallbackAuth: false,
+            }
+          }
           
-          const mappedRole = mapPositionToRole(user.departmentName || 'STAFF');
-          const finalRole = isAdminOverride ? 'ADMIN' : (user.role || mappedRole);
+          // Central API authentication failed - no fallback to test accounts
+          // Test accounts are only for admin/development purposes when central API is down
+          throw new Error('Invalid credentials. Please use your central system credentials.')
 
-          // Update user role if needed
-          if (user.role !== finalRole) {
-            const { PrismaClient } = await import('@prisma/client');
-            const prisma = new PrismaClient();
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { role: finalRole }
-            });
-            await prisma.$disconnect();
-            user.role = finalRole;
-          }
 
-          return {
-            id: user.id,
-            name: user.name || user.username,
-            email: user.email || `${user.username}@tipa.co.th`,
-            username: user.username,
-            department: user.department || 'OPS',
-            centralDepartment: user.centralDepartment || 'UNKNOWN',
-            departmentName: user.departmentName || 'Unknown Department',
-            role: user.role || 'STAFF',
-            position: user.departmentName || 'Unknown Department',
-            isFallbackAuth: false,
-          }
-        } catch {
-          // If normal authentication fails, check if this is an admin user for fallback
+        } catch (error) {
+          // Central API authentication failed
+          // Only allow admin fallback when central API is completely unavailable
+          // Test accounts are not accessible when central API is working
           
+          // Check if this is an admin user for emergency fallback
           const isAdmin = await validateAdminCredentials(
             credentials.username as string, 
             credentials.password as string
           )
           
           if (isAdmin) {
-            
-            // Create a virtual admin user without database access
+            // Create a virtual admin user for emergency access
             const virtualAdminUser = {
               id: 'admin-fallback-' + Date.now(),
               username: ADMIN_CREDENTIALS.username,
@@ -315,28 +258,8 @@ export const authConfig = {
             }
           }
           
-          // Check for test accounts
-          const testAccount = validateTestCredentials(
-            credentials.username as string, 
-            credentials.password as string
-          )
-          
-          if (testAccount) {
-            return {
-              id: 'test-account-' + testAccount.username + '-' + Date.now(),
-              name: testAccount.name,
-              email: testAccount.email,
-              username: testAccount.username,
-              department: testAccount.department,
-              centralDepartment: testAccount.department,
-              departmentName: testAccount.departmentName,
-              role: testAccount.role,
-              position: testAccount.departmentName,
-              isFallbackAuth: true, // Flag to indicate fallback authentication
-            }
-          }
-          
-          throw new Error('Authentication failed. Central service unavailable and user is not an admin or test account.')
+          // No test account access when central API is working
+          throw new Error('Authentication failed. Please use your central system credentials.')
         }
       },
     }),
