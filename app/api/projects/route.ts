@@ -66,10 +66,10 @@ export async function GET(request: NextRequest) {
     // Check if this is a fallback authentication session
     const isFallbackAuth = (session.user as ExtendedUser).isFallbackAuth;
     
-    // If using fallback auth and database is likely down, return empty array
-    if (isFallbackAuth) {
-      return NextResponse.json([]);
-    }
+    // Note: Fallback auth check removed - database is working fine
+    // if (isFallbackAuth) {
+    //   return NextResponse.json([]);
+    // }
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");

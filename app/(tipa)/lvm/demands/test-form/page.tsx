@@ -211,7 +211,7 @@ export default function TestFormPage() {
               <h4 className="font-medium text-gray-900 mb-2">Sample Console Output</h4>
               <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">
 {`=== FORM STATE DEBUG ===
-Current form values: { bu: "TIPA", department: "PROC", ... }
+Current form values: { bu: "TIPA", department: "LVM-PUR", ... }
 Form errors: {}
 Is form valid: true
 Total estimated cost: 25000000

@@ -82,7 +82,7 @@ export async function GET(
     }
     
     // PROC team can view all demands
-    if (userDepartment === "PROC") {
+    if (userDepartment === "LVM-PUR") {
       return NextResponse.json({ demand });
     }
 

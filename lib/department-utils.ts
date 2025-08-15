@@ -101,7 +101,7 @@ export function shouldRedirectUser(userDepartment: string, userRole: string): bo
   if (!userDepartment) return false;
   
   // Admin users should not be redirected
-  const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'SENIOR_MANAGER'];
+  const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2'];
   if (adminRoles.includes(userRole)) return false;
   
   // Check if department has a specific home page
@@ -117,7 +117,7 @@ export function shouldRedirectUser(userDepartment: string, userRole: string): bo
  */
 export function getUserAppropriateHomePage(userDepartment: string, userRole: string): string {
   // Admin users get admin panel access
-  const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'SENIOR_MANAGER'];
+  const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2'];
   if (adminRoles.includes(userRole)) {
     return '/lvm/admin';
   }

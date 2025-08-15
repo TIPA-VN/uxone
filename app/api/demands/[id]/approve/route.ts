@@ -77,7 +77,7 @@ export async function POST(
     }
     
     // PROC team can approve all demands
-    if (userDepartment === "PROC") {
+    if (userDepartment === "LVM-PUR") {
       canApprove = true;
     }
 

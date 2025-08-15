@@ -70,8 +70,8 @@ export default function Menu() {
     canAccessPage(session.user.role, 'admin'); // Updated to pass role as string
 
   // Check if user has access to procurement
-  const hasProcurementAccess = session?.user?.department === 'PROC' || 
-                               session?.user?.centralDepartment === 'PROC' ||
+  const hasProcurementAccess = session?.user?.department === 'LVM-PUR' || 
+                               session?.user?.centralDepartment === 'LVM-PUR' ||
                                session?.user?.role === 'ADMIN';
 
   // Check if user has access to demands
@@ -99,8 +99,8 @@ export default function Menu() {
     ];
     
     const hasMappedRole = supervisorRoles.includes(mappedRole);
-    const isPRTeam = session?.user?.department === 'PROC' || 
-                     session?.user?.centralDepartment === 'PROC';
+    const isPRTeam = session?.user?.department === 'LVM-PUR' || 
+                     session?.user?.centralDepartment === 'LVM-PUR';
     
     return hasManagerRole || hasMappedRole || isPRTeam;
   };

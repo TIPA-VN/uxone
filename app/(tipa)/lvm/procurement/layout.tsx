@@ -41,8 +41,8 @@ function ProcurementNavigation() {
   const { data: session } = useSession();
   
   // Check if user has access to procurement
-  const hasProcurementAccess = session?.user?.department === 'PROC' || 
-                               session?.user?.centralDepartment === 'PROC' ||
+  const hasProcurementAccess = session?.user?.department === 'LVM-PUR' ||
+session?.user?.centralDepartment === 'LVM-PUR' ||
                                session?.user?.role === 'ADMIN';
   
   // If user doesn't have procurement access, don't render the navigation

@@ -35,12 +35,12 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
   },
   {
     legacyName: "Procurement",
-    uxoneCode: "PROC",
+    uxoneCode: "LVM-PUR",
     category: "core",
     description: "Purchasing and procurement operations",
     isActive: true,
     homePage: "/lvm/procurement",
-    aliases: ["PROC"]
+    aliases: ["PROC", "PR"]
   },
   {
     legacyName: "Production Planning",

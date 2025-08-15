@@ -55,7 +55,7 @@ export const APP_CONFIG = {
     HR: "/lvm/human-resources",    // Human Resources - HR management
     FIN: "/lvm/finance",           // Finance - Financial management
     LOG: "/lvm/logistics",         // Logistics - Supply chain
-    PROC: "/lvm/procurement",      // Procurement - Purchasing
+    "LVM-PUR": "/lvm/procurement",      // Procurement - Purchasing
     PC: "/lvm/production-planning", // Production Planning - Planning
     PM: "/lvm/production-maintenance", // Production Maintenance - Equipment
     FM: "/lvm/facility-management", // Facility Management - Infrastructure
@@ -76,7 +76,7 @@ export const APP_CONFIG = {
   // Department Codes Mapping (for backward compatibility and quick lookups)
   departmentCodes: {
     LOG: "Logistics (LOG)",
-    PROC: "Procurement (PR)", 
+    "LVM-PUR": "Procurement (PR)", 
     PC: "Production Planning (PC)",
     QA: "Quality Assurance (QA)",
     QC: "Quality Control (QC)",
@@ -102,9 +102,9 @@ export const APP_CONFIG = {
       sortOrder: 1
     },
     {
-      value: "PROC",
+      value: "LVM-PUR",
       label: "Procurement (PR)",
-      code: "PROC", 
+      code: "LVM-PUR", 
       color: "bg-green-500",
       description: "Purchasing and procurement operations",
       isActive: true,
@@ -1644,7 +1644,7 @@ export const getDepartmentGroups = () => {
   };
   
   APP_CONFIG.departments.forEach(dept => {
-    if (['LOG', 'PROC', 'PC', 'PM', 'FM'].includes(dept.code)) {
+    if (['LOG', 'LVM-PUR', 'PC', 'PM', 'FM'].includes(dept.code)) {
       groups['Operations'].push(dept);
     } else if (['CS', 'HELPDESK'].includes(dept.code)) {
       groups['Support'].push(dept);

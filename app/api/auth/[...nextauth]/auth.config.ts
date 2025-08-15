@@ -25,7 +25,7 @@ const TEST_ACCOUNTS = [
     role: 'MANAGER',
     name: 'Procurement Manager',
     email: 'procurement@tipa.co.th',
-    department: 'PROC',
+    department: 'LVM-PUR',
     departmentName: 'Procurement'
   },
   {
@@ -34,7 +34,7 @@ const TEST_ACCOUNTS = [
     role: 'STAFF',
     name: 'Procurement Staff',
     email: 'procurement.staff@tipa.co.th',
-    department: 'PROC',
+    department: 'LVM-PUR',
     departmentName: 'Procurement'
   },
   // New test accounts for DES, ME, and LOG departments

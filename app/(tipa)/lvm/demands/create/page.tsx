@@ -68,7 +68,7 @@ export default function CreateDemandsPage() {
   // Check if user is from PR team
   const isPRTeamMember = () => {
     const userDepartment = session?.user?.department || session?.user?.centralDepartment;
-    return userDepartment === "PROC";
+    return userDepartment === "LVM-PUR";
   };
 
   useEffect(() => {

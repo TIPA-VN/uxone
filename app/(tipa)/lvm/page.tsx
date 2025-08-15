@@ -11,7 +11,7 @@ const HomePage = async () => {
     const userDepartment = session.user.department || session.user.centralDepartment;
     
     // Define admin roles and departments
-    const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'SENIOR_MANAGER'];
+    const adminRoles = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2'];
     const adminDepartments = ['IS', 'ADMIN', 'IT'];
     
     // Map the user role to the config key format (handles spaces vs underscores)

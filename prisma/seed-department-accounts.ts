@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 const departmentAccounts = [
   // LVM Business Unit
   { bu: 'LVM', department: 'Manufacturing Engineering', account: 1110, approvalRoute: 'MANAGER' },
-  { bu: 'LVM', department: 'Procurement', account: 1120, approvalRoute: 'DIRECTOR' },
+  { bu: 'LVM', department: 'LVM-PUR', account: 1120, approvalRoute: 'DIRECTOR' },
   { bu: 'LVM', department: 'Quality Assurance', account: 1130, approvalRoute: 'MANAGER' },
   { bu: 'LVM', department: 'Production Maintenance', account: 1140, approvalRoute: 'MANAGER' },
   { bu: 'LVM', department: 'Product Engineering', account: 1150, approvalRoute: 'DIRECTOR' },
