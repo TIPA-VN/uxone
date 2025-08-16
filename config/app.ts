@@ -56,7 +56,8 @@ export const APP_CONFIG = {
     FIN: "/lvm/finance",           // Finance - Financial management
     LOG: "/lvm/logistics",         // Logistics - Supply chain
     "LVM-PUR": "/lvm/procurement",      // Procurement - Purchasing
-    PC: "/lvm/production-planning", // Production Planning - Planning
+    PC: "/lvm/pc", // Production Planning - Planning
+    "LVM-PP": "/lvm/pc", // LVM Production Planning - Planning
     PM: "/lvm/production-maintenance", // Production Maintenance - Equipment
     FM: "/lvm/facility-management", // Facility Management - Infrastructure
     CS: "/lvm/customer-service",   // Customer Service - Support
@@ -78,6 +79,7 @@ export const APP_CONFIG = {
     LOG: "Logistics (LOG)",
     "LVM-PUR": "Procurement (PR)", 
     PC: "Production Planning (PC)",
+    "LVM-PP": "Production Planning (PC)",
     QA: "Quality Assurance (QA)",
     QC: "Quality Control (QC)",
     PM: "Production Maintenance (PM)",
@@ -120,13 +122,22 @@ export const APP_CONFIG = {
       sortOrder: 3
     },
     {
+      value: "LVM-PP",
+      label: "LVM Production Planning (LVM-PP)",
+      code: "LVM-PP",
+      color: "bg-purple-600",
+      description: "LVM Production Planning - Production planning and scheduling",
+      isActive: true,
+      sortOrder: 4
+    },
+    {
       value: "QA",
       label: "Quality Assurance (QA)",
       code: "QA",
       color: "bg-yellow-500",
       description: "Quality assurance and testing",
       isActive: true,
-      sortOrder: 4
+      sortOrder: 5
     },
     {
       value: "QC",
@@ -135,7 +146,7 @@ export const APP_CONFIG = {
       color: "bg-orange-500",
       description: "Quality control and inspection",
       isActive: true,
-      sortOrder: 5
+      sortOrder: 6
     },
     {
       value: "PM",
@@ -144,7 +155,7 @@ export const APP_CONFIG = {
       color: "bg-red-500",
       description: "Production equipment maintenance",
       isActive: true,
-      sortOrder: 6
+      sortOrder: 7
     },
     {
       value: "FM",
@@ -153,7 +164,7 @@ export const APP_CONFIG = {
       color: "bg-indigo-500",
       description: "Facility and infrastructure management",
       isActive: true,
-      sortOrder: 7
+      sortOrder: 8
     },
     {
       value: "HR",
@@ -162,7 +173,7 @@ export const APP_CONFIG = {
       color: "bg-pink-500",
       description: "Human resources and personnel management",
       isActive: true,
-      sortOrder: 8
+      sortOrder: 9
     },
     {
       value: "CS",
@@ -171,7 +182,7 @@ export const APP_CONFIG = {
       color: "bg-teal-500",
       description: "Customer service and support",
       isActive: true,
-      sortOrder: 9
+      sortOrder: 10
     },
     {
       value: "IS",
@@ -180,7 +191,7 @@ export const APP_CONFIG = {
       color: "bg-cyan-500",
       description: "IT and information systems management",
       isActive: true,
-      sortOrder: 10
+      sortOrder: 11
     },
     {
       value: "SALES",
@@ -189,7 +200,7 @@ export const APP_CONFIG = {
       color: "bg-emerald-500",
       description: "Sales and business development",
       isActive: true,
-      sortOrder: 11
+      sortOrder: 12
     },
     {
       value: "MFG",
@@ -198,7 +209,7 @@ export const APP_CONFIG = {
       color: "bg-blue-600",
       description: "General manufacturing operations",
       isActive: true,
-      sortOrder: 12
+      sortOrder: 13
     },
     {
       value: "LVM-ME",
@@ -207,7 +218,7 @@ export const APP_CONFIG = {
       color: "bg-green-600",
       description: "LVM Manufacturing engineering and process design",
       isActive: true,
-      sortOrder: 13
+      sortOrder: 14
     },
     {
       value: "LVM-DESIGN",
@@ -216,7 +227,7 @@ export const APP_CONFIG = {
       color: "bg-purple-600",
       description: "LVM Product design and engineering",
       isActive: true,
-      sortOrder: 14
+      sortOrder: 15
     },
     {
       value: "ACC",
@@ -225,7 +236,7 @@ export const APP_CONFIG = {
       color: "bg-yellow-600",
       description: "Accounting and financial operations",
       isActive: true,
-      sortOrder: 15
+      sortOrder: 16
     },
     {
       value: "INV",
@@ -234,7 +245,7 @@ export const APP_CONFIG = {
       color: "bg-orange-600",
       description: "Inventory management and control",
       isActive: true,
-      sortOrder: 16
+      sortOrder: 17
     },
     {
       value: "RD",
@@ -243,7 +254,7 @@ export const APP_CONFIG = {
       color: "bg-indigo-600",
       description: "Research and development",
       isActive: true,
-      sortOrder: 17
+      sortOrder: 18
     },
     {
       value: "LVM-EXPAT",
@@ -252,7 +263,7 @@ export const APP_CONFIG = {
       color: "bg-gray-600",
       description: "LVM Expatriate team",
       isActive: true,
-      sortOrder: 18
+      sortOrder: 19
     }
   ] as const,
 

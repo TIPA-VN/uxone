@@ -52,6 +52,15 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     aliases: ["PC", "Production Control"]
   },
   {
+    legacyName: "LVM-PP",
+    uxoneCode: "PC",
+    category: "core",
+    description: "LVM Production Planning - Production planning and scheduling",
+    isActive: true,
+    homePage: "/lvm/pc",
+    aliases: ["LVM-PP", "PC", "Production Control", "Production Planning"]
+  },
+  {
     legacyName: "Quality Assurance",
     uxoneCode: "QA",
     category: "core",
