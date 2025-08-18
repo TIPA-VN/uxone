@@ -47,6 +47,11 @@ model User {
   createdTickets           Ticket[]                  @relation("TicketCreator")
   triggeredEvents          WebhookEvent[]
   updatedSystemConfigs     SystemConfig[]            @relation("SystemConfigUpdater")
+  contractApprovals        ContractApproval[]         @relation("ContractApprover")
+  contractRevisions        ContractRevision[]         @relation("RevisionCreator")
+  finalizedDocuments       FinalizedDocument[]        @relation("DocumentArchiver")
+  documentChanges          DocumentChange[]           @relation("ChangeAuthor")
+  lastUpdatedDocuments     Document[]                 @relation("DocumentLastUpdatedBy")
 
   @@map("users")
 }
@@ -153,12 +158,217 @@ model Document {
   workflowMeta  Json?
   projectId     String?
   annotations   Json?
-  owner         User       @relation("UserDocuments", fields: [ownerId], references: [id])
-  parent        Document?  @relation("DocumentVersion", fields: [parentId], references: [id])
+  
+  // NEW: Document classification and contract fields
+  documentType  DocumentType @default(REGULAR_DOCUMENT)
+  title         String?  // For contracts and better document identification
+  content       String?  @db.Text  // For contracts with rich text content
+  isEditable    Boolean  @default(true)
+  
+  // Contract-specific fields
+  contractDetails ContractDetails?
+  
+  // Finalized document relation
+  finalizedDocument FinalizedDocument? @relation("FinalizedDocument")
+  
+  // Audit fields (following your existing pattern)
+  lastUpdatedBy    String?
+  lastUpdatedById  String?
+  lastUpdatedByUser User? @relation("DocumentLastUpdatedBy", fields: [lastUpdatedById], references: [id])
+  
+  // Relations
+  owner         User     @relation("UserDocuments", fields: [ownerId], references: [id])
+  parent        Document? @relation("DocumentVersion", fields: [parentId], references: [id])
   versions      Document[] @relation("DocumentVersion")
-  project       Project?   @relation(fields: [projectId], references: [id])
+  project       Project? @relation(fields: [projectId], references: [id])
 
   @@map("documents")
+}
+
+// NEW: Contract Details Model
+model ContractDetails {
+  id          String   @id @default(cuid())
+  documentId  String   @unique
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  // Contract-Specific Fields
+  contractNumber  String?  @unique
+  contractType    ContractType?
+  isLocked       Boolean  @default(false)
+  
+  // Approval Workflow
+  currentApprovalLevel Int @default(1)
+  totalApprovalLevels  Int
+  approvalHistory      ContractApproval[]
+  
+  // Revision Control
+  revisions     ContractRevision[]
+  
+  // Contract Metadata
+  startDate     DateTime?
+  endDate       DateTime?
+  value         Decimal? @db.Decimal(15, 2)
+  currency      String?  @default("USD")
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("contract_details")
+}
+
+// NEW: Contract Approval Model
+model ContractApproval {
+  id          String   @id @default(cuid())
+  contractId  String
+  contract    ContractDetails @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  
+  approverId  String
+  approver    User     @relation("ContractApprover", fields: [approverId], references: [id])
+  
+  level       Int      // Approval level (1, 2, 3...)
+  status      ApprovalStatus @default(PENDING)
+  comments    String?
+  
+  approvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  
+  @@unique([contractId, approverId, level])
+  @@map("contract_approvals")
+}
+
+// NEW: Contract Revision Model
+model ContractRevision {
+  id          String   @id @default(cuid())
+  contractId  String
+  contract    ContractDetails @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  
+  // Version Information
+  version     Int
+  revisionNumber Int    // Incremental revision within version
+  
+  // Content & Changes
+  content     String   @db.Text
+  changes     Json     // Detailed change log
+  diff        String?  // Visual diff representation
+  
+  // Metadata
+  createdBy   String
+  creator     User     @relation("RevisionCreator", fields: [createdBy], references: [id])
+  createdAt   DateTime @default(now())
+  
+  // Change Summary
+  changeSummary String
+  changeCount  Int
+  
+  // Approval Status
+  requiresApproval Boolean @default(false)
+  approvedBy       String?
+  approvedAt       DateTime?
+  
+  // Relations
+  documentChanges DocumentChange[] @relation("RevisionChanges")
+  
+  @@unique([contractId, version, revisionNumber])
+  @@map("contract_revisions")
+}
+
+// NEW: Finalized Document Archive Model
+model FinalizedDocument {
+  id          String   @id @default(cuid())
+  originalDocumentId String @unique
+  originalDocument Document @relation("FinalizedDocument", fields: [originalDocumentId], references: [id])
+  
+  // Finalized Content (Immutable)
+  finalizedContent String @db.Text
+  finalizedHtml   String? @db.Text  // For contracts with rich formatting
+  finalizedPdf    String? // Path to generated PDF
+  
+  // Approval & Finalization
+  approvedBy      String[]
+  approvedAt      DateTime
+  finalizationDate DateTime @default(now())
+  
+  // Document Metadata (Frozen)
+  title           String
+  contractNumber  String?
+  version         Int
+  revisionNumber  Int
+  
+  // Legal & Compliance
+  digitalSignature String? // Hash of finalized content
+  checksum        String   // Content integrity verification
+  isLegallyBinding Boolean @default(true)
+  
+  // Storage & Retrieval
+  storageLocation String   // Archive location identifier
+  storageType     StorageType @default(ACTIVE_ARCHIVE)
+  compressionRatio Float?  // If compressed
+  
+  // Audit Trail
+  finalizationNotes String?
+  archivedBy       String
+  archivedByUser   User     @relation("DocumentArchiver", fields: [archivedBy], references: [id])
+  
+  // Relations
+  archives         DocumentArchive[]
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  
+  @@map("finalized_documents")
+}
+
+// NEW: Document Archive Model
+model DocumentArchive {
+  id          String   @id @default(cuid())
+  finalizedDocumentId String
+  finalizedDocument FinalizedDocument @relation(fields: [finalizedDocumentId], references: [id])
+  
+  // Archive Metadata
+  archiveNumber String @unique
+  archiveDate   DateTime @default(now())
+  archiveReason String
+  
+  // Storage Details
+  storagePath   String
+  backupLocation String?
+  retentionPolicy RetentionPolicy @default(LEGAL_REQUIREMENT)
+  
+  // Access Control
+  accessLevel   AccessLevel @default(RESTRICTED)
+  authorizedUsers String[] // User IDs who can access
+  
+  @@map("document_archives")
+}
+
+// NEW: Document Change Tracking Model
+model DocumentChange {
+  id          String   @id @default(cuid())
+  documentId  String
+  revisionId  String?
+  
+  // Change Details
+  changeType  ChangeType
+  position    Int
+  oldContent  String?
+  newContent  String?
+  
+  // User & Session
+  userId      String
+  user        User     @relation("ChangeAuthor", fields: [userId], references: [id])
+  sessionId   String
+  
+  // Relations
+  revision    ContractRevision? @relation("RevisionChanges", fields: [revisionId], references: [id])
+  
+  // Timestamps
+  timestamp   DateTime @default(now())
+  
+  // Metadata
+  metadata    Json
+  
+  @@map("document_changes")
 }
 
 model Project {
@@ -871,4 +1081,69 @@ enum DocumentNumberStatus {
   USED
   CANCELLED
   EXPIRED
+}
+
+// NEW: Document Type Enum
+enum DocumentType {
+  REGULAR_DOCUMENT    // Uploaded files (PDF, Word, etc.)
+  CONTRACT           // Editable contracts with revision control
+  TEMPLATE           // Document templates
+  FORM               // Fillable forms
+  REFERENCE          // Reference materials
+}
+
+// NEW: Contract Type Enum
+enum ContractType {
+  PURCHASE_CONTRACT
+  LOGISTICS_AGREEMENT
+  PRICING_AGREEMENT
+  LEGAL_DISPUTE
+  MOQ_AGREEMENT
+  SERVICE_AGREEMENT
+  EMPLOYMENT_CONTRACT
+  NDA
+  OTHER
+}
+
+// NEW: Approval Status Enum
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMMENTED
+}
+
+// NEW: Storage Type Enum
+enum StorageType {
+  ACTIVE_ARCHIVE    // Recently finalized, quick access
+  COLD_ARCHIVE      // Long-term storage, slower access
+  COMPLIANCE_ARCHIVE // Legal/regulatory requirements
+  BACKUP_ARCHIVE    // Disaster recovery
+}
+
+// NEW: Retention Policy Enum
+enum RetentionPolicy {
+  LEGAL_REQUIREMENT // Keep for legal compliance period
+  BUSINESS_NEED     // Keep for business operations
+  SHORT_TERM       // Keep for 1-5 years
+  LONG_TERM        // Keep for 5+ years
+  PERMANENT        // Keep indefinitely
+}
+
+// NEW: Access Level Enum
+enum AccessLevel {
+  PUBLIC           // Anyone can view
+  INTERNAL         // Company employees only
+  RESTRICTED       // Specific users only
+  CONFIDENTIAL     // High security clearance
+}
+
+// NEW: Change Type Enum
+enum ChangeType {
+  INSERT
+  DELETE
+  FORMAT
+  COMMENT
+  MOVE
+  REPLACE
 }
