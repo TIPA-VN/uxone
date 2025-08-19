@@ -23,73 +23,71 @@ model User {
   centralDepartment        String?
   emp_code                 String?                   @unique
   comments                 Comment[]                 @relation("CommentAuthor")
+  contractApprovals        ContractApproval[]        @relation("ContractApprover")
+  contractRevisions        ContractRevision[]        @relation("RevisionCreator")
   demands                  Demand[]                  @relation("UserDemands")
+  documentChanges          DocumentChange[]          @relation("ChangeAuthor")
   createdDocumentNumbers   DocumentNumber[]          @relation("DocumentNumberCreator")
   createdTemplates         DocumentTemplate[]        @relation("DocumentTemplateCreator")
+  lastUpdatedDocuments     Document[]                @relation("DocumentLastUpdatedBy")
   documents                Document[]                @relation("UserDocuments")
+  finalizedDocuments       FinalizedDocument[]       @relation("DocumentArchiver")
   notes                    Note[]
   notifications            Notification[]
   projectComments          ProjectComment[]          @relation("ProjectCommentAuthor")
   projectMembers           ProjectMember[]
+  lastUpdatedProjects      Project[]                 @relation("ProjectLastUpdatedBy")
   projects                 Project[]
   serviceApprovalDecisions ServiceApprovalDecision[]
+  updatedSystemConfigs     SystemConfig[]            @relation("SystemConfigUpdater")
   taskAttachments          TaskAttachment[]          @relation("TaskAttachmentUploader")
   taskComments             TaskComment[]             @relation("TaskCommentAuthor")
   assignedTasks            Task[]                    @relation("TaskAssignee")
   createdTasks             Task[]                    @relation("TaskCreator")
-  ownedTasks               Task[]                    @relation("TaskOwner")
   lastUpdatedTasks         Task[]                    @relation("TaskLastUpdatedBy")
-  lastUpdatedProjects      Project[]                 @relation("ProjectLastUpdatedBy")
-  lastUpdatedTickets       Ticket[]                  @relation("TicketLastUpdatedBy")
+  ownedTasks               Task[]                    @relation("TaskOwner")
   ticketAttachments        TicketAttachment[]        @relation("TicketAttachmentUploader")
   ticketComments           TicketComment[]           @relation("TicketCommentAuthor")
   assignedTickets          Ticket[]                  @relation("TicketAssignee")
   createdTickets           Ticket[]                  @relation("TicketCreator")
+  lastUpdatedTickets       Ticket[]                  @relation("TicketLastUpdatedBy")
   triggeredEvents          WebhookEvent[]
-  updatedSystemConfigs     SystemConfig[]            @relation("SystemConfigUpdater")
-  contractApprovals        ContractApproval[]         @relation("ContractApprover")
-  contractRevisions        ContractRevision[]         @relation("RevisionCreator")
-  finalizedDocuments       FinalizedDocument[]        @relation("DocumentArchiver")
-  documentChanges          DocumentChange[]           @relation("ChangeAuthor")
-  lastUpdatedDocuments     Document[]                 @relation("DocumentLastUpdatedBy")
 
   @@map("users")
 }
 
 model Ticket {
-  id               String             @id @default(cuid())
-  ticketNumber     String             @unique
-  title            String
-  description      String
-  status           TicketStatus       @default(OPEN)
-  priority         TicketPriority     @default(MEDIUM)
-  category         TicketCategory     @default(SUPPORT)
-  customerId       String?
-  customerEmail    String
-  customerName     String
-  assignedToId     String?
-  assignedTeam     String?
-  relatedTasks     String[]
-  relatedProjectId String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  resolvedAt       DateTime?
-  closedAt         DateTime?
-  firstResponseAt  DateTime?
-  slaBreached      Boolean            @default(false)
-  responseTime     Int?
-  resolutionTime   Int?
-  tags             String[]
-  createdById      String
-  attachments      TicketAttachment[]
-  comments         TicketComment[]
-  assignedTo       User?              @relation("TicketAssignee", fields: [assignedToId], references: [id])
-  createdBy        User               @relation("TicketCreator", fields: [createdById], references: [id])
-  
-  // Audit fields
-  lastUpdatedBy    String?
-  lastUpdatedById  String?
-  lastUpdatedByUser User?             @relation("TicketLastUpdatedBy", fields: [lastUpdatedById], references: [id])
+  id                String             @id @default(cuid())
+  ticketNumber      String             @unique
+  title             String
+  description       String
+  status            TicketStatus       @default(OPEN)
+  priority          TicketPriority     @default(MEDIUM)
+  category          TicketCategory     @default(SUPPORT)
+  customerId        String?
+  customerEmail     String
+  customerName      String
+  assignedToId      String?
+  assignedTeam      String?
+  relatedTasks      String[]
+  relatedProjectId  String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  resolvedAt        DateTime?
+  closedAt          DateTime?
+  firstResponseAt   DateTime?
+  slaBreached       Boolean            @default(false)
+  responseTime      Int?
+  resolutionTime    Int?
+  tags              String[]
+  createdById       String
+  lastUpdatedBy     String?
+  lastUpdatedById   String?
+  attachments       TicketAttachment[]
+  comments          TicketComment[]
+  assignedTo        User?              @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  createdBy         User               @relation("TicketCreator", fields: [createdById], references: [id])
+  lastUpdatedByUser User?              @relation("TicketLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 
   @@map("tickets")
 }
@@ -141,233 +139,180 @@ model Notification {
 }
 
 model Document {
-  id            String     @id @default(cuid())
-  fileName      String
-  filePath      String
-  fileType      String
-  size          Int
-  version       Int        @default(1)
-  metadata      Json
-  ownerId       String
-  department    String?
-  accessRoles   String[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  parentId      String?
-  workflowState String?
-  workflowMeta  Json?
-  projectId     String?
-  annotations   Json?
-  
-  // NEW: Document classification and contract fields
-  documentType  DocumentType @default(REGULAR_DOCUMENT)
-  title         String?  // For contracts and better document identification
-  content       String?  @db.Text  // For contracts with rich text content
-  isEditable    Boolean  @default(true)
-  
-  // Contract-specific fields
-  contractDetails ContractDetails?
-  
-  // Finalized document relation
+  id                String             @id @default(cuid())
+  fileName          String
+  filePath          String
+  fileType          String
+  size              Int
+  version           Int                @default(1)
+  metadata          Json
+  ownerId           String
+  department        String?
+  accessRoles       String[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  parentId          String?
+  workflowState     String?
+  workflowMeta      Json?
+  projectId         String?
+  annotations       Json?
+  content           String?
+  documentType      DocumentType       @default(REGULAR_DOCUMENT)
+  isEditable        Boolean            @default(true)
+  lastUpdatedBy     String?
+  lastUpdatedById   String?
+  title             String?
+  contractDetails   ContractDetails?
+  history           DocumentHistory[]
+  lastUpdatedByUser User?              @relation("DocumentLastUpdatedBy", fields: [lastUpdatedById], references: [id])
+  owner             User               @relation("UserDocuments", fields: [ownerId], references: [id])
+  parent            Document?          @relation("DocumentVersion", fields: [parentId], references: [id])
+  versions          Document[]         @relation("DocumentVersion")
+  project           Project?           @relation(fields: [projectId], references: [id])
   finalizedDocument FinalizedDocument? @relation("FinalizedDocument")
-  
-  // Audit fields (following your existing pattern)
-  lastUpdatedBy    String?
-  lastUpdatedById  String?
-  lastUpdatedByUser User? @relation("DocumentLastUpdatedBy", fields: [lastUpdatedById], references: [id])
-  
-  // Relations
-  owner         User     @relation("UserDocuments", fields: [ownerId], references: [id])
-  parent        Document? @relation("DocumentVersion", fields: [parentId], references: [id])
-  versions      Document[] @relation("DocumentVersion")
-  project       Project? @relation(fields: [projectId], references: [id])
 
   @@map("documents")
 }
 
-// NEW: Contract Details Model
+model DocumentHistory {
+  id             String   @id @default(cuid())
+  documentId     String
+  content        String
+  title          String
+  changeType     String
+  summary        String?
+  changedBy      String
+  changedByName  String
+  changedByEmail String
+  version        Int
+  wordCount      Int      @default(0)
+  createdAt      DateTime @default(now())
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, createdAt])
+  @@map("document_history")
+}
+
 model ContractDetails {
-  id          String   @id @default(cuid())
-  documentId  String   @unique
-  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  
-  // Contract-Specific Fields
-  contractNumber  String?  @unique
-  contractType    ContractType?
-  isLocked       Boolean  @default(false)
-  
-  // Approval Workflow
-  currentApprovalLevel Int @default(1)
+  id                   String             @id @default(cuid())
+  documentId           String             @unique
+  contractNumber       String?            @unique
+  contractType         ContractType?
+  isLocked             Boolean            @default(false)
+  currentApprovalLevel Int                @default(1)
   totalApprovalLevels  Int
+  startDate            DateTime?
+  endDate              DateTime?
+  value                Decimal?           @db.Decimal(15, 2)
+  currency             String?            @default("USD")
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
   approvalHistory      ContractApproval[]
-  
-  // Revision Control
-  revisions     ContractRevision[]
-  
-  // Contract Metadata
-  startDate     DateTime?
-  endDate       DateTime?
-  value         Decimal? @db.Decimal(15, 2)
-  currency      String?  @default("USD")
-  
-  // Timestamps
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  document             Document           @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  revisions            ContractRevision[]
+
   @@map("contract_details")
 }
 
-// NEW: Contract Approval Model
 model ContractApproval {
-  id          String   @id @default(cuid())
-  contractId  String
-  contract    ContractDetails @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  
-  approverId  String
-  approver    User     @relation("ContractApprover", fields: [approverId], references: [id])
-  
-  level       Int      // Approval level (1, 2, 3...)
-  status      ApprovalStatus @default(PENDING)
-  comments    String?
-  
-  approvedAt  DateTime?
-  createdAt   DateTime @default(now())
-  
+  id         String          @id @default(cuid())
+  contractId String
+  approverId String
+  level      Int
+  status     ApprovalStatus  @default(PENDING)
+  comments   String?
+  approvedAt DateTime?
+  createdAt  DateTime        @default(now())
+  approver   User            @relation("ContractApprover", fields: [approverId], references: [id])
+  contract   ContractDetails @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
   @@unique([contractId, approverId, level])
   @@map("contract_approvals")
 }
 
-// NEW: Contract Revision Model
 model ContractRevision {
-  id          String   @id @default(cuid())
-  contractId  String
-  contract    ContractDetails @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  
-  // Version Information
-  version     Int
-  revisionNumber Int    // Incremental revision within version
-  
-  // Content & Changes
-  content     String   @db.Text
-  changes     Json     // Detailed change log
-  diff        String?  // Visual diff representation
-  
-  // Metadata
-  createdBy   String
-  creator     User     @relation("RevisionCreator", fields: [createdBy], references: [id])
-  createdAt   DateTime @default(now())
-  
-  // Change Summary
-  changeSummary String
-  changeCount  Int
-  
-  // Approval Status
-  requiresApproval Boolean @default(false)
+  id               String           @id @default(cuid())
+  contractId       String
+  version          Int
+  revisionNumber   Int
+  content          String
+  changes          Json
+  diff             String?
+  createdBy        String
+  createdAt        DateTime         @default(now())
+  changeSummary    String
+  changeCount      Int
+  requiresApproval Boolean          @default(false)
   approvedBy       String?
   approvedAt       DateTime?
-  
-  // Relations
-  documentChanges DocumentChange[] @relation("RevisionChanges")
-  
+  contract         ContractDetails  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  creator          User             @relation("RevisionCreator", fields: [createdBy], references: [id])
+  documentChanges  DocumentChange[] @relation("RevisionChanges")
+
   @@unique([contractId, version, revisionNumber])
   @@map("contract_revisions")
 }
 
-// NEW: Finalized Document Archive Model
 model FinalizedDocument {
-  id          String   @id @default(cuid())
-  originalDocumentId String @unique
-  originalDocument Document @relation("FinalizedDocument", fields: [originalDocumentId], references: [id])
-  
-  // Finalized Content (Immutable)
-  finalizedContent String @db.Text
-  finalizedHtml   String? @db.Text  // For contracts with rich formatting
-  finalizedPdf    String? // Path to generated PDF
-  
-  // Approval & Finalization
-  approvedBy      String[]
-  approvedAt      DateTime
-  finalizationDate DateTime @default(now())
-  
-  // Document Metadata (Frozen)
-  title           String
-  contractNumber  String?
-  version         Int
-  revisionNumber  Int
-  
-  // Legal & Compliance
-  digitalSignature String? // Hash of finalized content
-  checksum        String   // Content integrity verification
-  isLegallyBinding Boolean @default(true)
-  
-  // Storage & Retrieval
-  storageLocation String   // Archive location identifier
-  storageType     StorageType @default(ACTIVE_ARCHIVE)
-  compressionRatio Float?  // If compressed
-  
-  // Audit Trail
-  finalizationNotes String?
-  archivedBy       String
-  archivedByUser   User     @relation("DocumentArchiver", fields: [archivedBy], references: [id])
-  
-  // Relations
-  archives         DocumentArchive[]
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  
+  id                 String            @id @default(cuid())
+  originalDocumentId String            @unique
+  finalizedContent   String
+  finalizedHtml      String?
+  finalizedPdf       String?
+  approvedBy         String[]
+  approvedAt         DateTime
+  finalizationDate   DateTime          @default(now())
+  title              String
+  contractNumber     String?
+  version            Int
+  revisionNumber     Int
+  digitalSignature   String?
+  checksum           String
+  isLegallyBinding   Boolean           @default(true)
+  storageLocation    String
+  storageType        StorageType       @default(ACTIVE_ARCHIVE)
+  compressionRatio   Float?
+  finalizationNotes  String?
+  archivedBy         String
+  createdAt          DateTime          @default(now())
+  archives           DocumentArchive[]
+  archivedByUser     User              @relation("DocumentArchiver", fields: [archivedBy], references: [id])
+  originalDocument   Document          @relation("FinalizedDocument", fields: [originalDocumentId], references: [id])
+
   @@map("finalized_documents")
 }
 
-// NEW: Document Archive Model
 model DocumentArchive {
-  id          String   @id @default(cuid())
+  id                  String            @id @default(cuid())
   finalizedDocumentId String
-  finalizedDocument FinalizedDocument @relation(fields: [finalizedDocumentId], references: [id])
-  
-  // Archive Metadata
-  archiveNumber String @unique
-  archiveDate   DateTime @default(now())
-  archiveReason String
-  
-  // Storage Details
-  storagePath   String
-  backupLocation String?
-  retentionPolicy RetentionPolicy @default(LEGAL_REQUIREMENT)
-  
-  // Access Control
-  accessLevel   AccessLevel @default(RESTRICTED)
-  authorizedUsers String[] // User IDs who can access
-  
+  archiveNumber       String            @unique
+  archiveDate         DateTime          @default(now())
+  archiveReason       String
+  storagePath         String
+  backupLocation      String?
+  retentionPolicy     RetentionPolicy   @default(LEGAL_REQUIREMENT)
+  accessLevel         AccessLevel       @default(RESTRICTED)
+  authorizedUsers     String[]
+  finalizedDocument   FinalizedDocument @relation(fields: [finalizedDocumentId], references: [id])
+
   @@map("document_archives")
 }
 
-// NEW: Document Change Tracking Model
 model DocumentChange {
-  id          String   @id @default(cuid())
-  documentId  String
-  revisionId  String?
-  
-  // Change Details
-  changeType  ChangeType
-  position    Int
-  oldContent  String?
-  newContent  String?
-  
-  // User & Session
-  userId      String
-  user        User     @relation("ChangeAuthor", fields: [userId], references: [id])
-  sessionId   String
-  
-  // Relations
-  revision    ContractRevision? @relation("RevisionChanges", fields: [revisionId], references: [id])
-  
-  // Timestamps
-  timestamp   DateTime @default(now())
-  
-  // Metadata
-  metadata    Json
-  
+  id         String            @id @default(cuid())
+  documentId String
+  revisionId String?
+  changeType ChangeType
+  position   Int
+  oldContent String?
+  newContent String?
+  userId     String
+  sessionId  String
+  timestamp  DateTime          @default(now())
+  metadata   Json
+  revision   ContractRevision? @relation("RevisionChanges", fields: [revisionId], references: [id])
+  user       User              @relation("ChangeAuthor", fields: [userId], references: [id])
+
   @@map("document_changes")
 }
 
@@ -388,18 +333,16 @@ model Project {
   approvalState      Json?
   departmentDueDates Json?
   requestDate        DateTime?
+  lastUpdatedBy      String?
+  lastUpdatedById    String?
   documentNumbers    DocumentNumber[] @relation("ProjectDocuments")
   documents          Document[]
   notes              Note[]
   comments           ProjectComment[]
   members            ProjectMember[]
+  lastUpdatedByUser  User?            @relation("ProjectLastUpdatedBy", fields: [lastUpdatedById], references: [id])
   owner              User             @relation(fields: [ownerId], references: [id])
   tasks              Task[]
-  
-  // Audit fields
-  lastUpdatedBy      String?
-  lastUpdatedById    String?
-  lastUpdatedByUser  User?            @relation("ProjectLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 
   @@map("projects")
 }
@@ -462,6 +405,8 @@ model Task {
   sourceTicketId    String?
   startDate         DateTime?
   ticketIntegration Json?
+  lastUpdatedBy     String?
+  lastUpdatedById   String?
   legacyComments    Comment[]
   serviceTask       ServiceTask?
   attachments       TaskAttachment[]
@@ -470,15 +415,11 @@ model Task {
   dependencies      TaskDependency[] @relation("DependentTask")
   assignee          User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
   creator           User?            @relation("TaskCreator", fields: [creatorId], references: [id])
+  lastUpdatedByUser User?            @relation("TaskLastUpdatedBy", fields: [lastUpdatedById], references: [id])
   owner             User?            @relation("TaskOwner", fields: [ownerId], references: [id])
   parentTask        Task?            @relation("SubtaskParent", fields: [parentTaskId], references: [id])
   subtasks          Task[]           @relation("SubtaskParent")
   project           Project?         @relation(fields: [projectId], references: [id])
-  
-  // Audit fields
-  lastUpdatedBy     String?
-  lastUpdatedById   String?
-  lastUpdatedByUser User?            @relation("TaskLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 
   @@map("tasks")
 }
@@ -991,20 +932,20 @@ model WebhookEvent {
 }
 
 model WebhookDelivery {
-  id           String   @id @default(cuid())
-  webhookId    String
-  eventId      String
-  url          String
-  method       String
-  headers      Json
-  body         Json
-  status       Int
-  response     Json?
-  error        String?
-  retryCount   Int      @default(0)
-  createdAt    DateTime @default(now())
-  webhook      ServiceWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-  event        WebhookEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id         String         @id @default(cuid())
+  webhookId  String
+  eventId    String
+  createdAt  DateTime       @default(now())
+  body       Json
+  error      String?
+  headers    Json
+  method     String
+  response   Json?
+  retryCount Int            @default(0)
+  url        String
+  status     Int
+  event      WebhookEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  webhook    ServiceWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
   @@map("webhook_deliveries")
 }
@@ -1083,16 +1024,14 @@ enum DocumentNumberStatus {
   EXPIRED
 }
 
-// NEW: Document Type Enum
 enum DocumentType {
-  REGULAR_DOCUMENT    // Uploaded files (PDF, Word, etc.)
-  CONTRACT           // Editable contracts with revision control
-  TEMPLATE           // Document templates
-  FORM               // Fillable forms
-  REFERENCE          // Reference materials
+  REGULAR_DOCUMENT
+  CONTRACT
+  TEMPLATE
+  FORM
+  REFERENCE
 }
 
-// NEW: Contract Type Enum
 enum ContractType {
   PURCHASE_CONTRACT
   LOGISTICS_AGREEMENT
@@ -1105,7 +1044,6 @@ enum ContractType {
   OTHER
 }
 
-// NEW: Approval Status Enum
 enum ApprovalStatus {
   PENDING
   APPROVED
@@ -1113,32 +1051,28 @@ enum ApprovalStatus {
   COMMENTED
 }
 
-// NEW: Storage Type Enum
 enum StorageType {
-  ACTIVE_ARCHIVE    // Recently finalized, quick access
-  COLD_ARCHIVE      // Long-term storage, slower access
-  COMPLIANCE_ARCHIVE // Legal/regulatory requirements
-  BACKUP_ARCHIVE    // Disaster recovery
+  ACTIVE_ARCHIVE
+  COLD_ARCHIVE
+  COMPLIANCE_ARCHIVE
+  BACKUP_ARCHIVE
 }
 
-// NEW: Retention Policy Enum
 enum RetentionPolicy {
-  LEGAL_REQUIREMENT // Keep for legal compliance period
-  BUSINESS_NEED     // Keep for business operations
-  SHORT_TERM       // Keep for 1-5 years
-  LONG_TERM        // Keep for 5+ years
-  PERMANENT        // Keep indefinitely
+  LEGAL_REQUIREMENT
+  BUSINESS_NEED
+  SHORT_TERM
+  LONG_TERM
+  PERMANENT
 }
 
-// NEW: Access Level Enum
 enum AccessLevel {
-  PUBLIC           // Anyone can view
-  INTERNAL         // Company employees only
-  RESTRICTED       // Specific users only
-  CONFIDENTIAL     // High security clearance
+  PUBLIC
+  INTERNAL
+  RESTRICTED
+  CONFIDENTIAL
 }
 
-// NEW: Change Type Enum
 enum ChangeType {
   INSERT
   DELETE

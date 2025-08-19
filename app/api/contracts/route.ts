@@ -100,7 +100,7 @@ export async function POST(request: Request) {
         ownerId: session.user.id,
         department: department || session.user.department,
         accessRoles: [session.user.role || 'STAFF'],
-        projectId,
+        ...(projectId && { projectId }), // Only include projectId if it's provided
         documentType: 'CONTRACT',
         title,
         content,

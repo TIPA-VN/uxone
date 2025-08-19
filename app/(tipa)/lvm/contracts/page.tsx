@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { ContractList } from '@/components/contracts/ContractList';
-import { EnhancedContractEditor } from '@/components/contracts/EnhancedContractEditor';
-import { useRouter } from 'next/navigation';
+import DocumentEditorWithHistory from '@/components/DocumentEditorWithHistory';
 
 type ViewMode = 'list' | 'editor' | 'viewer';
 
@@ -24,6 +22,7 @@ interface Contract {
   department: string;
   createdAt: string;
   updatedAt: string;
+  content: string;
 }
 
 export default function ContractsPage() {
@@ -74,59 +73,6 @@ export default function ContractsPage() {
     setIsCreating(false);
   };
 
-  const handleSaveContract = async (data: { content: string; title: string; contractType: string }) => {
-    try {
-      if (isCreating) {
-        // Create new contract
-        const response = await fetch('/api/contracts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title: data.title,
-            content: data.content,
-            contractType: data.contractType,
-            projectId: 'default-project', // You might want to make this configurable
-          }),
-        });
-
-        if (response.ok) {
-          const newContract = await response.json();
-          console.log('Contract created:', newContract);
-          setViewMode('list');
-          setIsCreating(false);
-        } else {
-          console.error('Failed to create contract');
-        }
-      } else if (selectedContract) {
-        // Update existing contract
-        const response = await fetch(`/api/contracts/${selectedContract.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title: data.title,
-            content: data.content,
-            contractType: data.contractType,
-          }),
-        });
-
-        if (response.ok) {
-          const updatedContract = await response.json();
-          console.log('Contract updated:', updatedContract);
-          setViewMode('list');
-          setSelectedContract(null);
-        } else {
-          console.error('Failed to update contract');
-        }
-      }
-    } catch (error) {
-      console.error('Error saving contract:', error);
-    }
-  };
-
   const handleCancelEdit = () => {
     setViewMode('list');
     setSelectedContract(null);
@@ -158,6 +104,7 @@ export default function ContractsPage() {
                 <ContractList
                   onEditContract={handleEditContract}
                   onViewContract={handleViewContract}
+                  onNewContract={handleCreateContract}
                 />
               </CardContent>
             </Card>
@@ -174,7 +121,7 @@ export default function ContractsPage() {
                 </h1>
                 <p className="text-muted-foreground mt-2">
                   {isCreating 
-                    ? 'Create a new contract with real-time collaboration'
+                    ? 'Create a new contract with automatic change tracking'
                     : `Editing: ${selectedContract?.title}`
                   }
                 </p>
@@ -189,14 +136,10 @@ export default function ContractsPage() {
 
             <Card className="min-h-[800px]">
               <CardContent className="p-0">
-                <EnhancedContractEditor
-                  contractId={selectedContract?.id || `new-${Date.now()}`}
-                  initialContent={selectedContract ? '' : ''} // You might want to fetch the actual content
+                <DocumentEditorWithHistory
+                  documentId={selectedContract?.id || `new-${Date.now()}`}
+                  initialContent={selectedContract?.content || ''}
                   initialTitle={selectedContract?.title || ''}
-                  initialContractType={selectedContract?.contractType || 'PURCHASE_CONTRACT'}
-                  onSave={handleSaveContract}
-                  onCancel={handleCancelEdit}
-                  isReadOnly={false}
                 />
               </CardContent>
             </Card>
@@ -231,14 +174,10 @@ export default function ContractsPage() {
 
             <Card className="min-h-[800px]">
               <CardContent className="p-0">
-                <EnhancedContractEditor
-                  contractId={selectedContract?.id || ''}
-                  initialContent={''} // You might want to fetch the actual content
+                <DocumentEditorWithHistory
+                  documentId={selectedContract?.id || ''}
+                  initialContent={selectedContract?.content || ''}
                   initialTitle={selectedContract?.title || ''}
-                  initialContractType={selectedContract?.contractType || 'PURCHASE_CONTRACT'}
-                  onSave={handleSaveContract}
-                  onCancel={handleCancelEdit}
-                  isReadOnly={true}
                 />
               </CardContent>
             </Card>

@@ -98,7 +98,7 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const body = await request.json();
+    const body = await req.json();
     const { content, title, contractType, approvers, metadata = {} } = body;
 
     // Get existing contract

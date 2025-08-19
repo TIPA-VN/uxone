@@ -21,9 +21,6 @@ import {
   Eye, 
   Edit, 
   Trash2, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle,
   FileText
 } from 'lucide-react';
 
@@ -36,6 +33,7 @@ interface Contract {
   department: string;
   createdAt: string;
   updatedAt: string;
+  content: string;
   owner: {
     name: string;
     username: string;
@@ -53,13 +51,15 @@ interface Contract {
 }
 
 interface ContractListProps {
-  onContractSelect?: (contract: Contract) => void;
+  onEditContract?: (contract: Contract) => void;
+  onViewContract?: (contract: Contract) => void;
   onNewContract?: () => void;
   projectId?: string;
 }
 
 const ContractList: React.FC<ContractListProps> = ({
-  onContractSelect,
+  onEditContract,
+  onViewContract,
   onNewContract,
   projectId
 }) => {
@@ -152,7 +152,7 @@ const ContractList: React.FC<ContractListProps> = ({
 
   // Handle contract actions
   const handleView = (contract: Contract) => {
-    onContractSelect?.(contract);
+    onViewContract?.(contract);
   };
 
   const handleEdit = (contract: Contract) => {
@@ -160,7 +160,7 @@ const ContractList: React.FC<ContractListProps> = ({
       alert('This contract is locked and cannot be edited');
       return;
     }
-    onContractSelect?.(contract);
+    onEditContract?.(contract);
   };
 
   const handleDelete = async (contract: Contract) => {
@@ -388,4 +388,4 @@ const ContractList: React.FC<ContractListProps> = ({
   );
 };
 
-export default ContractList;
+export { ContractList };
