@@ -52,6 +52,10 @@ model User {
   createdTickets           Ticket[]                  @relation("TicketCreator")
   lastUpdatedTickets       Ticket[]                  @relation("TicketLastUpdatedBy")
   triggeredEvents          WebhookEvent[]
+  
+  // NEW: Contract project relationships
+  contractProjects         Project[]                 @relation("ContractProjectOwner")
+  contractProjectApprovers ContractDetails[]         @relation("ContractProjectApprover")
 
   @@map("users")
 }
@@ -195,7 +199,7 @@ model DocumentHistory {
 
 model ContractDetails {
   id                   String             @id @default(cuid())
-  documentId           String             @unique
+  documentId           String?            @unique
   contractNumber       String?            @unique
   contractType         ContractType?
   isLocked             Boolean            @default(false)
@@ -207,8 +211,28 @@ model ContractDetails {
   currency             String?            @default("USD")
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+  
+  // NEW: Project integration
+  projectId            String?            @unique
+  project              Project?           @relation(fields: [projectId], references: [id])
+  
+  // NEW: Contract workflow fields
+  contractStatus       ContractStatus     @default(DRAFT)
+  counterparty         String?
+  counterpartyContact  String?
+  counterpartyEmail    String?
+  paymentTerms         String?
+  milestones          Json?              // Payment milestones
+  effectiveDate       DateTime?
+  expirationDate      DateTime?
+  renewalTerms        String?
+  
+  // NEW: Contract approver relationship
+  currentApproverId    String?
+  currentApprover      User?              @relation("ContractProjectApprover", fields: [currentApproverId], references: [id])
+  
   approvalHistory      ContractApproval[]
-  document             Document           @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document             Document?          @relation(fields: [documentId], references: [id], onDelete: Cascade)
   revisions            ContractRevision[]
 
   @@map("contract_details")
@@ -335,6 +359,10 @@ model Project {
   requestDate        DateTime?
   lastUpdatedBy      String?
   lastUpdatedById    String?
+  
+  // NEW: Contract integration fields
+  projectType        ProjectType      @default(GENERAL)
+  
   documentNumbers    DocumentNumber[] @relation("ProjectDocuments")
   documents          Document[]
   notes              Note[]
@@ -343,6 +371,11 @@ model Project {
   lastUpdatedByUser  User?            @relation("ProjectLastUpdatedBy", fields: [lastUpdatedById], references: [id])
   owner              User             @relation(fields: [ownerId], references: [id])
   tasks              Task[]
+  
+  // NEW: Contract relationships
+  contractDetails    ContractDetails?
+  contractOwner      User?            @relation("ContractProjectOwner", fields: [contractOwnerId], references: [id])
+  contractOwnerId    String?
 
   @@map("projects")
 }
@@ -1002,6 +1035,15 @@ enum ProjectStatus {
   CANCELLED
 }
 
+// NEW: Add ProjectType enum for contract integration
+enum ProjectType {
+  GENERAL
+  CONTRACT
+  SERVICE
+  MAINTENANCE
+  RESEARCH
+}
+
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -1080,4 +1122,15 @@ enum ChangeType {
   COMMENT
   MOVE
   REPLACE
+}
+
+// NEW: Add Contract status enum for project integration
+enum ContractStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  SIGNED
+  EXECUTING
+  COMPLETED
+  TERMINATED
 }

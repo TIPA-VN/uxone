@@ -28,7 +28,17 @@ export async function GET(request: NextRequest) {
 
     const templates = await prisma.documentTemplate.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        templateName: true,
+        prefix: true,
+        templateCode: true,
+        description: true,
+        isActive: true,
+        year: true,
+        effectiveDate: true,
+        revisionNumber: true,
+        currentSequence: true,
         createdBy: {
           select: {
             id: true,

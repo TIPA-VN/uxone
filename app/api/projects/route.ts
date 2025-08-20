@@ -7,36 +7,7 @@ import { PrismaAudit } from "@/lib/prisma-audit";
 import { setCompressionHeaders } from "@/lib/compression";
 
 
-// Type definitions for better type safety
-interface ProjectWithCounts {
-  id: string;
-  name: string;
-  description?: string;
-  status: string;
-  startDate?: Date;
-  endDate?: Date;
-  budget?: number;
-  ownerId: string;
-  departments: string[];
-  documentTemplate?: string;
-  documentNumber?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  owner: {
-    id: string;
-    name?: string;
-    username: string;
-    department?: string;
-    departmentName?: string;
-  };
-  _count: {
-    tasks: number;
-    documents: number;
-    comments: number;
-    members: number;
-    completedTasks?: number;
-  };
-}
+
 
 interface TaskWithBasicInfo {
   id: string;
@@ -63,11 +34,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if this is a fallback authentication session
-    const isFallbackAuth = (session.user as ExtendedUser).isFallbackAuth;
-    
     // Note: Fallback auth check removed - database is working fine
-    // if (isFallbackAuth) {
     //   return NextResponse.json([]);
     // }
 
@@ -86,7 +53,7 @@ export async function GET(request: NextRequest) {
       "MANAGER", "MANAGER_2"
     ].includes(session.user.role);
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     // Filter by status
     if (status) {
@@ -115,7 +82,13 @@ export async function GET(request: NextRequest) {
       { members: { some: { user: { department: session.user.department } } } }
     ];
 
-    const include: any = {
+    const include: {
+      owner: { select: { id: boolean; name: boolean; username: boolean; department: boolean; departmentName: boolean } };
+      _count: { select: { tasks: boolean; documents: boolean; comments: boolean; members: boolean } };
+      tasks?: unknown;
+      members?: unknown;
+      contractDetails?: boolean;
+    } = {
       owner: {
         select: {
           id: true,
@@ -125,14 +98,15 @@ export async function GET(request: NextRequest) {
           departmentName: true,
         },
       },
-              _count: {
-          select: {
-            tasks: true,
-            documents: true,
-            comments: true,
-            members: true,
-          },
+      _count: {
+        select: {
+          tasks: true,
+          documents: true,
+          comments: true,
+          members: true,
         },
+      },
+      contractDetails: true,
     };
 
     // Include tasks if requested
@@ -183,7 +157,7 @@ export async function GET(request: NextRequest) {
 
     const projects = await prisma.project.findMany({
       where,
-      include,
+      include: include as unknown as any,
       orderBy: [
         { status: "asc" },
         { startDate: "desc" },
@@ -193,7 +167,7 @@ export async function GET(request: NextRequest) {
 
     // Add completed task counts to each project
     const projectsWithTaskCounts = await Promise.all(
-      projects.map(async (project: any) => {
+      (projects as any[]).map(async (project: any) => {
         const completedTasksCount = await prisma.task.count({
           where: {
             projectId: project.id,
@@ -209,7 +183,7 @@ export async function GET(request: NextRequest) {
         return {
           ...project,
           _count: {
-            ...(project as any)._count,
+            ...(project as { _count?: { tasks: number; documents: number; comments: number; members: number } })._count,
             completedTasks: completedTasksCount,
           },
           permissions: {
@@ -227,7 +201,7 @@ export async function GET(request: NextRequest) {
     // Calculate KPI data if requested
     if (includeKPI) {
       const projectsWithKPI = await Promise.all(
-        projectsWithTaskCounts.map(async (project: ProjectWithCounts) => {
+        (projectsWithTaskCounts as any[]).map(async (project: any) => {
           const taskStats = await prisma.task.groupBy({
             by: ["status"],
             where: { projectId: project.id },
@@ -301,7 +275,20 @@ export async function POST(request: NextRequest) {
       departments = [],
       teamMembers = [],
       documentTemplateId,
+      // NEW: Contract integration fields
+      projectType = "GENERAL",
+      contractDetails,
     } = body;
+
+    console.log('Received project creation request:', {
+      name,
+      description,
+      departments,
+      documentTemplateId,
+      projectType,
+      contractDetails,
+      user: session.user.id
+    });
 
     if (!name) {
       return NextResponse.json(
@@ -315,20 +302,31 @@ export async function POST(request: NextRequest) {
     let generatedDocumentNumber = null;
     
     if (documentTemplateId) {
+      console.log('Generating document number for template:', documentTemplateId);
       try {
+        // Use session user ID directly to avoid foreign key constraint issues
         generatedDocumentNumber = await generateDocumentNumber(documentTemplateId, undefined, session.user.id);
         documentNumber = generatedDocumentNumber.documentNumber;
+        console.log('Generated document number:', documentNumber);
       } catch (error) {
+        console.error('Document number generation failed:', error);
         return NextResponse.json(
           { error: "Failed to generate document number" },
           { status: 400 }
         );
       }
+    } else {
+      console.log('No document template provided, skipping document number generation');
     }
 
     // Verify the current user exists in the database
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
+    });
+
+    console.log('User lookup result:', { 
+      sessionUserId: session.user.id, 
+      currentUser: currentUser ? { id: currentUser.id, username: currentUser.username } : null 
     });
 
     if (!currentUser) {
@@ -355,7 +353,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const project = await PrismaAudit.createWithAudit(prisma, prisma.project, {
+    const projectResult = await PrismaAudit.createWithAudit(prisma, prisma.project, {
       name,
       description,
       status,
@@ -366,13 +364,44 @@ export async function POST(request: NextRequest) {
       departments,
       documentTemplate: documentTemplateId,
       documentNumber,
+      // NEW: Contract integration fields
+      projectType,
       members: {
         create: teamMembers.map((memberId: string) => ({
           userId: memberId,
           role: memberId === currentUser.id ? "owner" : "member",
         })),
       },
-    }) as any; // Type assertion to avoid complex Prisma types
+    });
+
+    // Extract the project from the audit result
+    const project = (projectResult as { data?: { id: string; name: string } }).data || projectResult;
+    
+    // Ensure we have a valid project with required properties
+    if (!project || typeof project !== 'object' || !('id' in project)) {
+      throw new Error('Failed to create project: Invalid project data returned');
+    }
+
+    // NEW: Create contract details if provided
+    if (contractDetails && projectType === "CONTRACT") {
+      await prisma.contractDetails.create({
+        data: {
+          projectId: project.id,
+          contractType: contractDetails.contractType,
+          counterparty: contractDetails.counterparty,
+          value: contractDetails.value ? parseFloat(contractDetails.value.toString()) : null,
+          currency: contractDetails.currency || "THB",
+          contractStatus: contractDetails.contractStatus || "DRAFT",
+          currentApproverId: currentUser.id,
+          totalApprovalLevels: 3, // Default approval levels
+          currentApprovalLevel: 1,
+          // Generate contract number if not provided
+          contractNumber: contractDetails.contractType ? 
+            `${contractDetails.contractType.substring(0, 3).toUpperCase()}-${new Date().getFullYear()}-${project.id.substring(0, 8).toUpperCase()}` : 
+            `CON-${new Date().getFullYear()}-${project.id.substring(0, 8).toUpperCase()}`,
+        },
+      });
+    }
 
     // Link the generated document number to the project if it exists
     if (generatedDocumentNumber) {

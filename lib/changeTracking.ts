@@ -54,13 +54,26 @@ export function detectChanges(
   const oldText = stripHtml(oldContent)
   const newText = stripHtml(newContent)
   
+  // Check if HTML content is different even if text is the same (formatting changes)
+  const htmlChanged = oldContent !== newContent;
+  
   if (oldText === newText) {
-    return {
-      type: 'updated',
-      summary: 'Minor formatting changes',
-      wordCount: countWords(newContent),
-      changesCount: 0,
-      details: ['Formatting or styling changes only']
+    if (htmlChanged) {
+      return {
+        type: 'updated',
+        summary: 'Formatting changes',
+        wordCount: countWords(newContent),
+        changesCount: 1, // Important: Count formatting changes as real changes
+        details: ['HTML formatting or styling changes']
+      }
+    } else {
+      return {
+        type: 'updated',
+        summary: 'No changes detected',
+        wordCount: countWords(newContent),
+        changesCount: 0,
+        details: ['No changes']
+      }
     }
   }
 

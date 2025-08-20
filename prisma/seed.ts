@@ -52,7 +52,7 @@ async function main() {
         ownerId: meEngineer?.id || admin.id,
         departments: ["LVM-ME"],
         approvalState: { "LVM-ME": "APPROVED" },
-        status: "IN_PROGRESS",
+        status: "ACTIVE",
         startDate: new Date("2024-01-15"),
         endDate: new Date("2024-06-30"),
         budget: 50000,
@@ -80,7 +80,7 @@ async function main() {
         ownerId: meEngineer?.id || admin.id,
         departments: ["LVM-ME"],
         approvalState: { "LVM-ME": "PENDING" },
-        status: "PENDING",
+        status: "PLANNING",
         startDate: new Date("2024-03-01"),
         endDate: new Date("2024-09-30"),
         budget: 30000,
@@ -106,7 +106,7 @@ async function main() {
         data: {
           title: "Equipment Calibration",
           description: "Calibrate manufacturing equipment for optimal performance",
-          status: "PENDING",
+          status: "TODO",
           priority: "MEDIUM",
           dueDate: new Date("2024-04-30"),
           projectId: meProject1.id,
@@ -134,7 +134,7 @@ async function main() {
         data: {
           title: "Prototype Testing",
           description: "Test prototype equipment and document results",
-          status: "PENDING",
+          status: "TODO",
           priority: "MEDIUM",
           dueDate: new Date("2024-06-15"),
           projectId: meProject2.id,
@@ -149,7 +149,7 @@ async function main() {
         data: {
           title: "System Requirements",
           description: "Define requirements for new quality control system",
-          status: "PENDING",
+          status: "TODO",
           priority: "LOW",
           dueDate: new Date("2024-05-01"),
           projectId: meProject3.id,
@@ -176,9 +176,64 @@ async function main() {
       },
     });
 
+    // NEW: Create sample document templates for different project types
+    const documentTemplates = await Promise.all([
+      prisma.documentTemplate.create({
+        data: {
+          templateName: "General Project Template",
+          templateCode: "GEN-PROJ",
+          description: "Standard template for general projects",
+          prefix: "GP",
+          year: 2025,
+          createdById: admin.id,
+        },
+      }),
+      prisma.documentTemplate.create({
+        data: {
+          templateName: "Contract Project Template",
+          templateCode: "CON-PROJ",
+          description: "Template for contract-based projects",
+          prefix: "CP",
+          year: 2025,
+          createdById: admin.id,
+        },
+      }),
+      prisma.documentTemplate.create({
+        data: {
+          templateName: "Service Project Template",
+          templateCode: "SVC-PROJ",
+          description: "Template for service delivery projects",
+          prefix: "SP",
+          year: 2025,
+          createdById: admin.id,
+        },
+      }),
+      prisma.documentTemplate.create({
+        data: {
+          templateName: "Maintenance Project Template",
+          templateCode: "MAINT-PROJ",
+          description: "Template for maintenance and repair projects",
+          prefix: "MP",
+          year: 2025,
+          createdById: admin.id,
+        },
+      }),
+      prisma.documentTemplate.create({
+        data: {
+          templateName: "Research Project Template",
+          templateCode: "RES-PROJ",
+          description: "Template for research and development projects",
+          prefix: "RP",
+          year: 2025,
+          createdById: admin.id,
+        },
+      }),
+    ]);
+
     console.log("✅ Seeding completed successfully!");
     console.log(`📊 Created ${meProject1 ? 1 : 0} + ${meProject2 ? 1 : 0} + ${meProject3 ? 1 : 0} LVM-ME projects`);
     console.log(`📝 Created multiple tasks for LVM-ME projects`);
+    console.log(`📋 Created ${documentTemplates.length} document templates for different project types`);
   
   } catch (e) {
     console.error("❌ Seeding failed:", e);

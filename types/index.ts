@@ -13,6 +13,17 @@ export type Project = {
   departmentDueDates?: Record<string, string>;
   documentTemplate?: string;
   documentNumber?: string;
+  // NEW: Contract integration fields
+  projectType?: string;
+  contractDetails?: {
+    id: string;
+    contractType?: string;
+    counterparty?: string;
+    value?: number;
+    currency?: string;
+    contractStatus?: string;
+    contractNumber?: string;
+  };
   createdAt: string;
   updatedAt: string;
   _count?: {

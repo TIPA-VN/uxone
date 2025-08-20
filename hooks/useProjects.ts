@@ -30,8 +30,18 @@ export const useProjects = () => {
     description?: string;
     departments: string[];
     documentTemplateId?: string;
+    // NEW: Contract integration fields
+    projectType?: string;
+    contractDetails?: {
+      contractType?: string;
+      counterparty?: string;
+      value?: number;
+      currency?: string;
+      contractStatus?: string;
+    };
   }) => {
     try {
+      console.log('Creating project with data:', projectData);
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,12 +49,15 @@ export const useProjects = () => {
       });
       
       if (!res.ok) {
-        throw new Error('Failed to create project');
+        const errorData = await res.json();
+        console.error('Project creation failed:', res.status, errorData);
+        throw new Error(errorData.error || `Failed to create project: ${res.status}`);
       }
       
       await fetchProjects(); // Refresh the list
       return true;
     } catch (err) {
+      console.error('Error in createProject:', err);
       setError(err instanceof Error ? err.message : 'Failed to create project');
       return false;
     }

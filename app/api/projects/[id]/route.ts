@@ -83,6 +83,7 @@ export async function GET(
             members: true,
           },
         },
+        contractDetails: true,
       },
     });
 

@@ -164,6 +164,16 @@ function convertDocxToHtml(xmlContent: string): string {
 
   let html = ''
   
+  // First, handle tables separately
+  const tableMatches = xmlContent.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g)
+  if (tableMatches) {
+    for (const tableMatch of tableMatches) {
+      html += convertTableToHtml(tableMatch)
+      // Remove the table from xmlContent to avoid double processing
+      xmlContent = xmlContent.replace(tableMatch, '')
+    }
+  }
+  
   // Split XML into paragraphs
   const paragraphs = xmlContent.split(/<\/?w:p[^>]*>/)
   
@@ -177,9 +187,6 @@ function convertDocxToHtml(xmlContent: string): string {
     // Check if this paragraph is a list item
     const isListItem = paragraph.includes('<w:numPr>') || paragraph.includes('<w:ilvl')
     
-    // Check if this paragraph is a table
-    const isTable = paragraph.includes('<w:tbl>')
-    
     if (isHeading) {
       // Extract heading level and text
       const headingLevel = headingMatch[1].match(/Heading(\d+)/)
@@ -189,22 +196,24 @@ function convertDocxToHtml(xmlContent: string): string {
         html += `<h${level}>${headingText}</h${level}>`
       }
     } else if (isListItem) {
-      // Extract list item text
+      // Extract list item text with indentation level
+      const levelMatch = paragraph.match(/<w:ilvl[^>]*w:val="([^"]*)"/)
+      const level = levelMatch ? parseInt(levelMatch[1]) : 0
       const listText = extractTextFromParagraph(paragraph)
       if (listText.trim()) {
-        html += `<li>${listText}</li>`
-      }
-    } else if (isTable) {
-      // Handle table content (simplified - extract as text for now)
-      const tableText = extractTextFromParagraph(paragraph)
-      if (tableText.trim()) {
-        html += `<p><strong>[Table Content]:</strong> ${tableText}</p>`
+        // Add data attribute to track nesting level
+        html += `<li data-level="${level}">${listText}</li>`
       }
     } else {
       // Regular paragraph
       const paragraphText = extractTextFromParagraph(paragraph)
       if (paragraphText.trim()) {
-        html += `<p>${paragraphText}</p>`
+        // Check if the paragraph already has styling (from extractTextFromParagraph)
+        if (paragraphText.startsWith('<div style=')) {
+          html += paragraphText
+        } else {
+          html += `<p>${paragraphText}</p>`
+        }
       }
     }
   }
@@ -215,19 +224,125 @@ function convertDocxToHtml(xmlContent: string): string {
     .replace(/\n\s*\n/g, '\n') // Remove excessive newlines
     .trim()
   
-  // Wrap consecutive list items in ul tags
-  html = html.replace(/(<li>.*?<\/li>)+/g, (match) => {
-    return `<ul>${match}</ul>`
-  })
+  // Wrap consecutive list items in nested ul/ol tags based on levels
+  html = wrapListItems(html)
   
   return html
 }
 
-// Extract formatted text from a paragraph XML
+// Convert Word table XML to HTML table
+function convertTableToHtml(tableXml: string): string {
+  let tableHtml = '<table style="border-collapse: collapse; width: 100%; margin: 10px 0;">'
+  
+  // Extract table rows
+  const rowMatches = tableXml.match(/<w:tr>[\s\S]*?<\/w:tr>/g)
+  if (!rowMatches) return ''
+  
+  for (const rowMatch of rowMatches) {
+    tableHtml += '<tr>'
+    
+    // Extract table cells
+    const cellMatches = rowMatch.match(/<w:tc>[\s\S]*?<\/w:tc>/g)
+    if (cellMatches) {
+      for (const cellMatch of cellMatches) {
+        // Extract cell content (paragraphs within the cell)
+        const cellParagraphs = cellMatch.match(/<w:p[^>]*>[\s\S]*?<\/w:p>/g)
+        let cellContent = ''
+        
+        if (cellParagraphs) {
+          for (const cellParagraph of cellParagraphs) {
+            const paragraphContent = extractTextFromParagraph(cellParagraph)
+            if (paragraphContent.trim()) {
+              cellContent += paragraphContent
+            }
+          }
+        }
+        
+        tableHtml += `<td style="border: 1px solid #ccc; padding: 8px; vertical-align: top;">${cellContent || '&nbsp;'}</td>`
+      }
+    }
+    
+    tableHtml += '</tr>'
+  }
+  
+  tableHtml += '</table>'
+  return tableHtml
+}
+
+// Wrap list items in proper nested ul/ol structure
+function wrapListItems(html: string): string {
+  const listItems = html.match(/<li[^>]*>.*?<\/li>/g)
+  if (!listItems) return html
+  
+  let result = html
+  let listStack: Array<{level: number, type: 'ul' | 'ol'}> = []
+  let currentHtml = ''
+  
+  // Simple approach: wrap consecutive list items in ul tags
+  result = result.replace(/(<li[^>]*data-level="[^"]*">.*?<\/li>)+/g, (match) => {
+    const items = match.match(/<li[^>]*data-level="([^"]*)">(.*?)<\/li>/g)
+    if (!items) return match
+    
+    let nestedHtml = ''
+    let currentLevel = -1
+    
+    for (const item of items) {
+      const levelMatch = item.match(/data-level="([^"]*)"/)
+      const contentMatch = item.match(/<li[^>]*>(.*?)<\/li>/)
+      
+      const level = levelMatch ? parseInt(levelMatch[1]) : 0
+      const content = contentMatch ? contentMatch[1] : ''
+      
+      if (level > currentLevel) {
+        // Start new list
+        nestedHtml += '<ul>'
+        currentLevel = level
+      } else if (level < currentLevel) {
+        // Close previous list
+        nestedHtml += '</ul>'
+        currentLevel = level
+      }
+      
+      nestedHtml += `<li>${content}</li>`
+    }
+    
+    // Close any remaining open lists
+    while (currentLevel >= 0) {
+      nestedHtml += '</ul>'
+      currentLevel--
+    }
+    
+    return nestedHtml
+  })
+  
+  // Fallback: simple ul wrapping for any remaining consecutive li elements
+  result = result.replace(/(<li>.*?<\/li>)+/g, (match) => {
+    return `<ul>${match}</ul>`
+  })
+  
+  return result
+}
+
+// Extract formatted text from a paragraph XML with enhanced formatting preservation
 function extractTextFromParagraph(paragraphXml: string): string {
   if (!paragraphXml) return ''
   
   let result = ''
+  
+  // Check for paragraph-level indentation and alignment
+  const indentMatch = paragraphXml.match(/<w:ind[^>]*w:left="([^"]*)"/)
+  const rightIndentMatch = paragraphXml.match(/<w:ind[^>]*w:right="([^"]*)"/)
+  const firstLineMatch = paragraphXml.match(/<w:ind[^>]*w:firstLine="([^"]*)"/)
+  const hangingMatch = paragraphXml.match(/<w:ind[^>]*w:hanging="([^"]*)"/)
+  
+  // Check for paragraph alignment
+  const alignmentMatch = paragraphXml.match(/<w:jc[^>]*w:val="([^"]*)"/)
+  
+  // Convert Word units (twips) to CSS units (approximate)
+  const leftIndent = indentMatch ? Math.round(parseInt(indentMatch[1]) / 20) : 0 // Convert twips to pixels
+  const rightIndent = rightIndentMatch ? Math.round(parseInt(rightIndentMatch[1]) / 20) : 0
+  const firstLineIndent = firstLineMatch ? Math.round(parseInt(firstLineMatch[1]) / 20) : 0
+  const hangingIndent = hangingMatch ? Math.round(parseInt(hangingMatch[1]) / 20) : 0
   
   // Split into runs (text with consistent formatting)
   const runs = paragraphXml.split(/<\/?w:r[^>]*>/)
@@ -235,36 +350,122 @@ function extractTextFromParagraph(paragraphXml: string): string {
   for (const run of runs) {
     if (!run.trim()) continue
     
-    // Extract text content
-    const textMatch = run.match(/<w:t[^>]*>([^<]*)<\/w:t>/)
-    if (!textMatch) continue
+    // Extract text content (including tabs and spaces)
+    const textMatches = run.match(/<w:t[^>]*>([^<]*)<\/w:t>/g)
+    const tabMatches = run.match(/<w:tab\/>/g)
+    const spaceMatches = run.match(/<w:space[^>]*\/>/g)
+    const breakMatches = run.match(/<w:br[^>]*\/>/g)
     
-    let text = textMatch[1]
-    if (!text.trim()) continue
+    if (!textMatches && !tabMatches && !spaceMatches && !breakMatches) continue
     
-    // Check for bold formatting
+    let text = ''
+    
+    // Process text content
+    if (textMatches) {
+      for (const textMatch of textMatches) {
+        const content = textMatch.match(/<w:t[^>]*>([^<]*)<\/w:t>/)
+        if (content) {
+          text += content[1]
+        }
+      }
+    }
+    
+    // Process tabs - convert to HTML entities or CSS
+    if (tabMatches) {
+      text += '&emsp;'.repeat(tabMatches.length) // Em space for tabs
+    }
+    
+    // Process line breaks
+    if (breakMatches) {
+      text += '<br>'.repeat(breakMatches.length)
+    }
+    
+    // Process spaces (preserve multiple spaces)
+    if (spaceMatches) {
+      text += '&nbsp;'.repeat(spaceMatches.length)
+    }
+    
+    if (!text.trim() && !text.includes('&emsp;') && !text.includes('&nbsp;') && !text.includes('<br>')) continue
+    
+    // Check for character-level formatting
     const isBold = run.includes('<w:b/>') || run.includes('<w:b ')
-    
-    // Check for italic formatting
     const isItalic = run.includes('<w:i/>') || run.includes('<w:i ')
-    
-    // Check for underline formatting
     const isUnderline = run.includes('<w:u/>') || run.includes('<w:u ')
+    const isStrike = run.includes('<w:strike/>') || run.includes('<w:strike ')
+    const isSubscript = run.includes('<w:vertAlign w:val="subscript"')
+    const isSuperscript = run.includes('<w:vertAlign w:val="superscript"')
     
-    // Apply formatting
+    // Check for font size
+    const fontSizeMatch = run.match(/<w:sz[^>]*w:val="([^"]*)"/)
+    const fontSize = fontSizeMatch ? `${Math.round(parseInt(fontSizeMatch[1]) / 2)}px` : null
+    
+    // Check for font color
+    const colorMatch = run.match(/<w:color[^>]*w:val="([^"]*)"/)
+    const color = colorMatch ? `#${colorMatch[1]}` : null
+    
+    // Check for highlighting
+    const highlightMatch = run.match(/<w:highlight[^>]*w:val="([^"]*)"/)
+    const highlight = highlightMatch ? highlightMatch[1] : null
+    
+    // Apply formatting with CSS for complex styles
+    let formattedText = text
+    
+    // Apply basic HTML formatting
     if (isBold && isItalic) {
-      text = `<strong><em>${text}</em></strong>`
+      formattedText = `<strong><em>${formattedText}</em></strong>`
     } else if (isBold) {
-      text = `<strong>${text}</strong>`
+      formattedText = `<strong>${formattedText}</strong>`
     } else if (isItalic) {
-      text = `<em>${text}</em>`
+      formattedText = `<em>${formattedText}</em>`
     }
     
     if (isUnderline) {
-      text = `<u>${text}</u>`
+      formattedText = `<u>${formattedText}</u>`
     }
     
-    result += text
+    if (isStrike) {
+      formattedText = `<del>${formattedText}</del>`
+    }
+    
+    if (isSubscript) {
+      formattedText = `<sub>${formattedText}</sub>`
+    }
+    
+    if (isSuperscript) {
+      formattedText = `<sup>${formattedText}</sup>`
+    }
+    
+    // Apply CSS styles for complex formatting
+    const styles = []
+    if (fontSize) styles.push(`font-size: ${fontSize}`)
+    if (color && color !== '#000000') styles.push(`color: ${color}`)
+    if (highlight) styles.push(`background-color: ${highlight}`)
+    
+    if (styles.length > 0) {
+      formattedText = `<span style="${styles.join('; ')}">${formattedText}</span>`
+    }
+    
+    result += formattedText
+  }
+  
+  // Apply paragraph-level styling
+  const paragraphStyles = []
+  if (leftIndent > 0) paragraphStyles.push(`margin-left: ${leftIndent}px`)
+  if (rightIndent > 0) paragraphStyles.push(`margin-right: ${rightIndent}px`)
+  if (firstLineIndent > 0) paragraphStyles.push(`text-indent: ${firstLineIndent}px`)
+  if (hangingIndent > 0) paragraphStyles.push(`text-indent: -${hangingIndent}px; padding-left: ${hangingIndent}px`)
+  
+  // Apply alignment
+  if (alignmentMatch) {
+    const alignment = alignmentMatch[1]
+    if (alignment === 'center') paragraphStyles.push('text-align: center')
+    else if (alignment === 'right') paragraphStyles.push('text-align: right')
+    else if (alignment === 'justify') paragraphStyles.push('text-align: justify')
+  }
+  
+  // Wrap result with styling if needed
+  if (paragraphStyles.length > 0) {
+    result = `<div style="${paragraphStyles.join('; ')}">${result}</div>`
   }
   
   return result

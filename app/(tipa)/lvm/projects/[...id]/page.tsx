@@ -18,6 +18,7 @@ import { TasksTab } from "./components/TasksTab";
 import { ProjectOverview } from "./components/ProjectOverview";
 import { DepartmentTab } from "./components/DepartmentTab";
 import { ProductionTab } from "./components/ProductionTab";
+import ContractDocumentEditor from "@/components/contracts/ContractDocumentEditor";
 
 // Types
 
@@ -61,7 +62,12 @@ export default function ProjectDetailsPage() {
       }
     } else if (project && !activeTab) {
       // Set default tab to first department or MAIN
-      setActiveTab(project.departments?.[0] || "MAIN");
+      // For contract projects, show contract tab by default
+      if (project.projectType === "CONTRACT" || project.contractDetails) {
+        setActiveTab("CONTRACT");
+      } else {
+        setActiveTab(project.departments?.[0] || "MAIN");
+      }
     }
     
     setUrlTabHandled(true);
@@ -70,7 +76,22 @@ export default function ProjectDetailsPage() {
   // Set initial tab when project loads
   useEffect(() => {
     if (project && !activeTab && !urlTabHandled) {
-      setActiveTab(project.departments?.[0] || "MAIN");
+      // Debug logging
+      console.log('Project data for tab selection:', {
+        projectType: project.projectType,
+        contractDetails: project.contractDetails,
+        hasContractDetails: !!project.contractDetails,
+        departments: project.departments
+      });
+      
+      // For contract projects, show contract tab by default
+      if (project.projectType === "CONTRACT" || project.contractDetails) {
+        console.log('Setting tab to CONTRACT');
+        setActiveTab("CONTRACT");
+      } else {
+        console.log('Setting tab to first department:', project.departments?.[0] || "MAIN");
+        setActiveTab(project.departments?.[0] || "MAIN");
+      }
     }
   }, [project, activeTab, urlTabHandled]);
 
@@ -313,6 +334,116 @@ export default function ProjectDetailsPage() {
               documentsHook.fetchProductionDocuments();
             }}
           />
+        )}
+
+        {/* CONTRACT Tab */}
+        {activeTab === "CONTRACT" && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Contract Management</h3>
+            
+            {/* DEBUG INFO - Remove after testing */}
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h4 className="font-medium text-yellow-800 mb-2">Debug Info:</h4>
+              <div className="text-sm text-yellow-700 space-y-1">
+                <div>projectType: <code className="bg-yellow-100 px-1 rounded">{project.projectType || 'undefined'}</code></div>
+                <div>contractDetails: <code className="bg-yellow-100 px-1 rounded">{project.contractDetails ? 'exists' : 'null'}</code></div>
+                <div>contractDetails ID: <code className="bg-yellow-100 px-1 rounded">{project.contractDetails?.id || 'N/A'}</code></div>
+              </div>
+            </div>
+            
+            {(project.projectType === "CONTRACT" || project.contractDetails) ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Contract Details</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">Type:</span> {project.contractDetails?.contractType || 'N/A'}</div>
+                      <div><span className="font-medium">Counterparty:</span> {project.contractDetails?.counterparty || 'N/A'}</div>
+                      <div><span className="font-medium">Value:</span> {project.contractDetails?.value ? `${project.contractDetails?.value} ${project.contractDetails?.currency}` : 'N/A'}</div>
+                      <div><span className="font-medium">Status:</span> {project.contractDetails?.contractStatus || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Document Editor</h4>
+                    <p className="text-sm text-gray-600 mb-3">Edit and manage contract content with full versioning support.</p>
+                    <button
+                      onClick={() => setActiveTab("CONTRACT_EDITOR")}
+                      className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+                    >
+                      Open Document Editor
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-gray-400 mb-4">
+                  <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Contract Details</h3>
+                <p className="text-gray-500 mb-4">This project is not configured as a contract project.</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      // Convert project to contract project
+                      const res = await fetch(`/api/projects/${projectId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          projectType: "CONTRACT",
+                          contractDetails: {
+                            contractType: "GENERAL",
+                            counterparty: "To be determined",
+                            value: null,
+                            currency: "THB",
+                            contractStatus: "DRAFT"
+                          }
+                        }),
+                      });
+                      
+                      if (res.ok) {
+                        const updated = await res.json();
+                        updateProject(updated);
+                        setActiveTab("CONTRACT_EDITOR");
+                        setActionStatus("Project converted to contract project!");
+                        setTimeout(() => setActionStatus(null), 3000);
+                      } else {
+                        setActionStatus("Failed to convert project to contract.");
+                      }
+                    } catch (error) {
+                      setActionStatus("Error converting project to contract.");
+                    }
+                  }}
+                  className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+                >
+                  Convert to Contract Project
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CONTRACT EDITOR Tab */}
+        {activeTab === "CONTRACT_EDITOR" && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Contract Document Editor</h3>
+              <button
+                onClick={() => setActiveTab("CONTRACT")}
+                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+              >
+                ← Back to Contract Details
+              </button>
+            </div>
+            <ContractDocumentEditor
+              project={project}
+              onShare={() => {
+                console.log('Sharing contract');
+              }}
+            />
+          </div>
         )}
       </div>
 

@@ -28,13 +28,19 @@ export async function generateDocumentNumber(
   createdById?: string
 ): Promise<GeneratedDocumentNumber> {
   const currentYear = new Date().getFullYear();
+  
+  console.log('Starting document number generation:', { templateId, projectId, createdById, currentYear });
 
   // Use transaction to ensure atomicity
   const result = await prisma.$transaction(async (tx) => {
+    console.log('Transaction started, fetching template:', templateId);
+    
     // Get the template and lock it for update
     const template = await tx.documentTemplate.findUnique({
       where: { id: templateId },
     });
+
+    console.log('Template found:', template);
 
     if (!template) {
       throw new Error("Document template not found");
@@ -43,6 +49,8 @@ export async function generateDocumentNumber(
     if (!template.isActive) {
       throw new Error("Document template is not active");
     }
+
+    console.log('Template is active, incrementing sequence from:', template.currentSequence);
 
     // Increment the sequence number
     const updatedTemplate = await tx.documentTemplate.update({
@@ -54,9 +62,13 @@ export async function generateDocumentNumber(
       },
     });
 
+    console.log('Sequence updated to:', updatedTemplate.currentSequence);
+
     // Generate the document number
     const sequenceNumber = updatedTemplate.currentSequence;
     const documentNumber = `${template.prefix}-${currentYear}-${sequenceNumber.toString().padStart(3, '0')}`;
+    
+    console.log('Generated document number:', documentNumber);
 
     // Create the document number record
     const documentNumberRecord = await tx.documentNumber.create({
@@ -70,6 +82,8 @@ export async function generateDocumentNumber(
       },
     });
 
+    console.log('Document number record created:', documentNumberRecord.id);
+
     return {
       id: documentNumberRecord.id,
       documentNumber: documentNumberRecord.documentNumber,
@@ -80,6 +94,7 @@ export async function generateDocumentNumber(
     };
   });
 
+  console.log('Document number generation completed successfully:', result);
   return result;
 }
 

@@ -25,6 +25,16 @@ export default function ProjectsPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  
+  // NEW: Contract integration fields
+  const [projectType, setProjectType] = useState<string>("GENERAL");
+  const [contractType, setContractType] = useState<string>("");
+  const [counterparty, setCounterparty] = useState<string>("");
+  const [contractValue, setContractValue] = useState<string>("");
+  const [contractCurrency, setContractCurrency] = useState<string>("THB");
+
+  // NEW: Project type filter for the projects list
+  const [projectTypeFilter, setProjectTypeFilter] = useState<string>("ALL");
 
   const { 
     projects, 
@@ -41,10 +51,17 @@ export default function ProjectsPage() {
   // Fetch document templates from database
   const fetchTemplates = useCallback(async () => {
     try {
+      console.log('Fetching document templates...');
       const response = await fetch('/api/document-templates');
+      console.log('Response status:', response.status);
       if (response.ok) {
         const data = await response.json();
+        console.log('Document templates received:', data);
         setDocumentTemplates(data);
+      } else {
+        console.error('Failed to fetch templates, status:', response.status);
+        const errorData = await response.json();
+        console.error('Error data:', errorData);
       }
     } catch (error) {
       console.error('Failed to fetch document templates:', error);
@@ -64,7 +81,16 @@ export default function ProjectsPage() {
       name, 
       description, 
       departments,
-      documentTemplateId: documentTemplate || undefined
+      documentTemplateId: documentTemplate || undefined,
+      // NEW: Contract integration data
+      projectType,
+      contractDetails: projectType === "CONTRACT" ? {
+        contractType: contractType || undefined,
+        counterparty: counterparty || undefined,
+        value: contractValue ? parseFloat(contractValue) : undefined,
+        currency: contractCurrency,
+        contractStatus: "DRAFT"
+      } : undefined
     });
     
     if (success) {
@@ -73,6 +99,12 @@ export default function ProjectsPage() {
       setDescription("");
       setDepartments([]);
       setDocumentTemplate("");
+      // NEW: Reset contract fields
+      setProjectType("GENERAL");
+      setContractType("");
+      setCounterparty("");
+      setContractValue("");
+      setContractCurrency("THB");
       setShowCreateForm(false);
     } else {
       setStatus("Failed to create project.");
@@ -104,6 +136,14 @@ export default function ProjectsPage() {
     p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())
   );
 
+  // NEW: Apply project type filter
+  const filteredMyProjects = myProjects.filter(project => 
+    projectTypeFilter === "ALL" || project.projectType === projectTypeFilter
+  );
+  const filteredProjectsIBelongTo = projectsIBelongTo.filter(project => 
+    projectTypeFilter === "ALL" || project.projectType === projectTypeFilter
+  );
+
   const projectColumns = [
     {
       key: "project",
@@ -120,12 +160,20 @@ export default function ProjectsPage() {
             </div>
           </div>
           <div className="ml-2">
-            <Link 
-              href={`/lvm/projects/${project.id}?tab=kpi`}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-            >
-              {project.name}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link 
+                href={`/lvm/projects/${project.id}?tab=kpi`}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+              >
+                {project.name}
+              </Link>
+              {project.projectType === "CONTRACT" && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mr-1"></span>
+                  CONTRACT
+                </span>
+              )}
+            </div>
             {project.description && (
               <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                 {project.description}
@@ -165,6 +213,43 @@ export default function ProjectsPage() {
             </span>
           ) : (
             <span className="text-gray-400 text-xs">None</span>
+          )}
+        </div>
+      )
+    },
+    {
+      key: "contractInfo",
+      header: "Contract",
+      sortable: false,
+      render: (project: Project) => (
+        <div className="text-sm">
+          {project.projectType === "CONTRACT" ? (
+            <div className="flex flex-col gap-1">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="w-2 h-2 bg-purple-400 rounded-full mr-1"></span>
+                Contract
+              </span>
+              {project.contractDetails && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-gray-600">
+                    {project.contractDetails.contractType || 'Unknown Type'}
+                  </span>
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                    project.contractDetails.contractStatus === 'DRAFT' ? 'bg-yellow-100 text-yellow-800' :
+                    project.contractDetails.contractStatus === 'REVIEW' ? 'bg-blue-100 text-blue-800' :
+                    project.contractDetails.contractStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                    project.contractDetails.contractStatus === 'SIGNED' ? 'bg-indigo-100 text-indigo-800' :
+                    project.contractDetails.contractStatus === 'EXECUTING' ? 'bg-purple-100 text-purple-800' :
+                    project.contractDetails.contractStatus === 'COMPLETED' ? 'bg-gray-100 text-gray-800' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {project.contractDetails.contractStatus || 'DRAFT'}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-gray-400 text-xs">-</span>
           )}
         </div>
       )
@@ -226,6 +311,14 @@ export default function ProjectsPage() {
               >
                 MAIN
               </Link>
+              {project.projectType === "CONTRACT" && (
+                <Link
+                  href={`/lvm/projects/${project.id}?tab=contract`}
+                  className="block px-2 py-1 text-xs text-purple-700 hover:bg-purple-50 cursor-pointer text-left font-medium"
+                >
+                  CONTRACT
+                </Link>
+              )}
               <Link
                 href={`/lvm/projects/${project.id}?tab=production`}
                 className="block px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer text-left"
@@ -258,6 +351,112 @@ export default function ProjectsPage() {
               >
                 <Plus className="w-4 h-4 mr-2" />
                 New Project
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Contract Status Summary */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <span className="text-sm font-medium text-purple-600">C</span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">Total Contracts</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {projects.filter(p => p.projectType === "CONTRACT").length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <span className="text-sm font-medium text-yellow-600">D</span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">Draft</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {projects.filter(p => p.projectType === "CONTRACT" && p.contractDetails?.contractStatus === "DRAFT").length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <span className="text-sm font-medium text-blue-600">R</span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">In Review</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {projects.filter(p => p.projectType === "CONTRACT" && p.contractDetails?.contractStatus === "REVIEW").length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <span className="text-sm font-medium text-green-600">A</span>
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">Approved</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {projects.filter(p => p.projectType === "CONTRACT" && p.contractDetails?.contractStatus === "APPROVED").length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Project Type Filter */}
+        <div className="mb-6">
+          <div className="flex items-center space-x-4">
+            <span className="text-sm font-medium text-gray-700">Filter by type:</span>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setProjectTypeFilter("ALL")}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                  projectTypeFilter === "ALL"
+                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                All Projects
+              </button>
+              <button
+                onClick={() => setProjectTypeFilter("GENERAL")}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                  projectTypeFilter === "GENERAL"
+                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                General
+              </button>
+              <button
+                onClick={() => setProjectTypeFilter("CONTRACT")}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                  projectTypeFilter === "CONTRACT"
+                    ? "bg-purple-100 text-purple-700 border border-purple-200"
+                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                Contracts
               </button>
             </div>
           </div>
@@ -299,6 +498,119 @@ export default function ProjectsPage() {
                 </div>
               </div>
               
+              {/* NEW: Project Type Selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Project Type *
+                </label>
+                <select
+                  value={projectType}
+                  onChange={e => setProjectType(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="GENERAL">General Project</option>
+                  <option value="CONTRACT">Contract Project</option>
+                  <option value="SERVICE">Service Project</option>
+                  <option value="MAINTENANCE">Maintenance Project</option>
+                  <option value="RESEARCH">Research Project</option>
+                </select>
+              </div>
+              
+              {/* Document Template - Available for ALL project types */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Document Template
+                </label>
+                <select
+                  value={documentTemplate}
+                  onChange={e => setDocumentTemplate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="">Select a document template</option>
+                  {documentTemplates.map((template: { id: string; templateName: string; prefix: string }) => (
+                    <option key={template.id} value={template.id}>
+                      {template.templateName} ({template.prefix})
+                    </option>
+                  ))}
+                </select>
+                {/* Debug info */}
+                <p className="text-xs text-gray-500 mt-1">
+                  Available templates: {documentTemplates.length} | 
+                  Selected: {documentTemplate || 'None'}
+                </p>
+              </div>
+              
+              {/* NEW: Contract Fields (Conditional) */}
+              {projectType === "CONTRACT" && (
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Contract Details</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Contract Type
+                      </label>
+                      <select
+                        value={contractType}
+                        onChange={e => setContractType(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      >
+                        <option value="">Select contract type</option>
+                        <option value="PURCHASE_CONTRACT">Purchase Contract</option>
+                        <option value="SERVICE_AGREEMENT">Service Agreement</option>
+                        <option value="NDA">Non-Disclosure Agreement</option>
+                        <option value="EMPLOYMENT_CONTRACT">Employment Contract</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Counterparty
+                      </label>
+                      <input
+                        type="text"
+                        value={counterparty}
+                        onChange={e => setCounterparty(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Enter counterparty name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Contract Value
+                      </label>
+                      <input
+                        type="number"
+                        value={contractValue}
+                        onChange={e => setContractValue(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Enter contract value"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Currency
+                      </label>
+                      <select
+                        value={contractCurrency}
+                        onChange={e => setContractCurrency(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      >
+                        <option value="THB">THB (Thai Baht)</option>
+                        <option value="USD">USD (US Dollar)</option>
+                        <option value="EUR">EUR (Euro)</option>
+                        <option value="JPY">JPY (Japanese Yen)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Departments for Approval *
@@ -317,24 +629,6 @@ export default function ProjectsPage() {
                     </label>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Document Template
-                </label>
-                <select
-                  value={documentTemplate}
-                  onChange={e => setDocumentTemplate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
-                  <option value="">Select a document template</option>
-                  {documentTemplates.map((template: { id: string; templateName: string; prefix: string }) => (
-                    <option key={template.id} value={template.id}>
-                      {template.templateName} ({template.prefix})
-                    </option>
-                  ))}
-                </select>
               </div>
 
               {documentTemplate && (
@@ -420,7 +714,7 @@ export default function ProjectsPage() {
                 </div>
               ) : (
                 <DataTable
-                  data={myProjects}
+                  data={filteredMyProjects}
                   columns={projectColumns}
                   loading={loading}
                   emptyMessage="No owned projects"
@@ -455,7 +749,7 @@ export default function ProjectsPage() {
                 </div>
               ) : (
                 <DataTable
-                  data={projectsIBelongTo}
+                  data={filteredProjectsIBelongTo}
                   columns={projectColumns}
                   loading={loading}
                   emptyMessage="No projects to review"
