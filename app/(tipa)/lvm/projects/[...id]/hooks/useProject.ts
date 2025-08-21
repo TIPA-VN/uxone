@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Project } from '../types/project';
+import { Project } from '@/types';
 
 export function useProject(projectId: string) {
   const [project, setProject] = useState<Project | null>(null);

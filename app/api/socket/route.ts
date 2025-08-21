@@ -15,11 +15,8 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error("WebSocket route error:", error);
-    return NextResponse.json(
-      { error: "Failed to access WebSocket" },
-      { status: 500 }
-    );
+    // Handle WebSocket route error silently
+    return NextResponse.json({ error: 'WebSocket route error' }, { status: 500 });
   }
 }
 
@@ -63,10 +60,7 @@ export async function POST(req: NextRequest) {
         );
     }
   } catch (error) {
-    console.error("WebSocket POST error:", error);
-    return NextResponse.json(
-      { error: "Failed to process WebSocket request" },
-      { status: 500 }
-    );
+    // Handle WebSocket POST error silently
+    return NextResponse.json({ error: 'WebSocket POST error' }, { status: 500 });
   }
 }

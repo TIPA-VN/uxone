@@ -250,9 +250,6 @@ Enable debug logging:
 
 ```typescript
 // In your API routes
-console.log('Upload directory:', getCustomUploadDir('tasks'));
-console.log('File path:', filePath);
-console.log('Serve URL:', getCustomServeUrl(filePath));
 ```
 
 ## 🔄 Fallback Behavior

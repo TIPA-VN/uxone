@@ -18,37 +18,17 @@ export default function TestFormPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSuccess = (data: unknown) => {
-    console.log("=== FORM SUCCESS CALLBACK ===");
-    console.log("Form submitted successfully!");
-    console.log("Form data:", data);
-    console.log("=============================");
-    
-    setSuccessMessage("Demand created successfully! Check the console for detailed logs.");
-    setErrorMessage(null);
-    setIsSubmitting(false);
+  const onSuccess = (data: any) => {
+    // Form submitted successfully
   };
 
-  const handleError = (error: string) => {
-    console.log("=== FORM ERROR CALLBACK ===");
-    console.log("Form submission failed!");
-    console.log("Error:", error);
-    console.log("===========================");
-    
-    setErrorMessage(error);
-    setSuccessMessage(null);
-    setIsSubmitting(false);
+  const onError = (error: any) => {
+    // Form submission failed
   };
 
-  // const handleSubmitStart = () => {
-  //   console.log("=== FORM SUBMIT START ===");
-  //   console.log("Form submission started...");
-  //   console.log("=========================");
-    
-  //   setIsSubmitting(true);
-  //   setSuccessMessage(null);
-  //   setErrorMessage(null);
-  // };
+  const onSubmit = (data: any) => {
+    // Form submission started
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -156,8 +136,8 @@ export default function TestFormPage() {
         </CardHeader>
         <CardContent>
           <MultiLineDemandForm
-            onSuccess={handleSuccess}
-            onError={handleError}
+            onSuccess={onSuccess}
+            onError={onError}
             isSubmitting={isSubmitting}
           />
         </CardContent>

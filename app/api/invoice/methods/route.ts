@@ -10,8 +10,8 @@ async function getVNPTClient() {
       const { default: client } = await import('@/lib/vnpt-invoice-client-http');
       vnptClient = client;
     } catch (error) {
-      console.error('Failed to load VNPT client:', error);
-      throw new Error('VNPT client not available');
+      // Handle VNPT client error silently
+      return NextResponse.json({ error: 'Failed to load VNPT client' }, { status: 500 });
     }
   }
   return vnptClient;
@@ -34,11 +34,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<SOAPMethod
       data: methods
     });
   } catch (error: any) {
-    console.error('SOAP methods API error:', error);
-    
-    return NextResponse.json({
-      success: false,
-      message: error.message || 'Failed to get SOAP methods'
-    }, { status: 500 });
+    // Handle SOAP methods error silently
+    return NextResponse.json({ error: 'SOAP methods check failed' }, { status: 500 });
   }
 } 

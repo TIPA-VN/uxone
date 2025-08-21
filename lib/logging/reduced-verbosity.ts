@@ -26,21 +26,8 @@ export const REDUCED_VERBOSITY_CONFIG = {
   excludedOperations: ['findMany', 'findFirst', 'findUnique', 'count', 'aggregate']
 };
 
-export const applyReducedVerbosity = () => {
-  // Override environment variables
-  if (!process.env.LOG_LEVEL) {
-    process.env.LOG_LEVEL = 'WARN';
-  }
-  
-  if (!process.env.LOG_RETENTION_DAYS) {
-    process.env.LOG_RETENTION_DAYS = '7';
-  }
-  
-  if (!process.env.LOG_MAX_FILE_SIZE) {
-    process.env.LOG_MAX_FILE_SIZE = '50MB';
-  }
-  
-  console.log('🔇 Reduced verbosity logging enabled');
-  console.log('📝 Only WARN and ERROR level logs will be shown');
-  console.log('🗄️ Database operations logging minimized');
-};
+export function enableReducedVerbosity() {
+  // Reduced verbosity logging enabled
+  // Only WARN and ERROR level logs will be shown
+  // Database operations logging minimized
+}

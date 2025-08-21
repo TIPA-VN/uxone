@@ -130,11 +130,8 @@ export class DatabaseLogger {
 
     // Check for deduplication
     if (this.shouldDedup(operation)) {
-      // Log when we skip duplicates (only in development)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🔇 Skipping duplicate log for: ${operation.operation} on ${operation.table} (${operation.recordId})`);
-      }
-      return; // Skip duplicate log
+      // Skip duplicate log silently
+      return;
     }
 
     const summary = this.createQuerySummary(

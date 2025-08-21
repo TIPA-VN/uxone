@@ -261,10 +261,10 @@ export default function SystemSettingsPage() {
         const config = await response.json();
         setTicketConfig(config);
       } else {
-        console.error('Failed to fetch ticket config');
+        // console.error('Failed to fetch ticket config');
       }
     } catch (error) {
-      console.error('Error fetching ticket config:', error);
+      // console.error('Error fetching ticket config:', error);
     } finally {
       setIsLoading(false);
     }
@@ -291,7 +291,7 @@ export default function SystemSettingsPage() {
         setMessage({ type: 'error', text: result.error || 'Failed to save configuration' });
       }
     } catch (error) {
-      console.error('Error saving ticket config:', error);
+      // console.error('Error saving ticket config:', error);
       setMessage({ type: 'error', text: 'Failed to save configuration' });
     } finally {
       setIsSaving(false);

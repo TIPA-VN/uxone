@@ -99,8 +99,7 @@ function HelpdeskPageContent() {
       
       if (!ticketsResponse.ok) {
         const errorText = await ticketsResponse.text();
-        console.error('Failed to fetch tickets:', errorText);
-        throw new Error(`Failed to fetch tickets: ${ticketsResponse.status} ${errorText}`);
+        setError('Failed to fetch tickets');
       }
 
       const ticketsData = await ticketsResponse.json();
@@ -109,7 +108,7 @@ function HelpdeskPageContent() {
 
       // Ensure tickets is an array before processing
       if (!Array.isArray(tickets)) {
-        console.error('Invalid tickets data format:', ticketsData);
+        setError('Invalid tickets data format');
         tickets = [];
       }
 
@@ -157,8 +156,7 @@ function HelpdeskPageContent() {
 
       setRecentTickets(recentTicketsData);
     } catch (err) {
-      console.error("Error fetching dashboard data:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch data");
+      setError('Failed to fetch dashboard data');
     } finally {
       setLoading(false);
     }

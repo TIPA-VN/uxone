@@ -89,10 +89,10 @@ const ContractList: React.FC<ContractListProps> = ({
         const data = await response.json();
         setContracts(data);
       } else {
-        console.error('Failed to fetch contracts');
+        // Handle fetch error silently
       }
     } catch (error) {
-      console.error('Error fetching contracts:', error);
+      // Handle fetch error silently
     } finally {
       setLoading(false);
     }
@@ -176,11 +176,10 @@ const ContractList: React.FC<ContractListProps> = ({
       if (response.ok) {
         setContracts(contracts.filter(c => c.id !== contract.id));
       } else {
-        alert('Failed to delete contract');
+        // Handle delete error silently
       }
     } catch (error) {
-      console.error('Error deleting contract:', error);
-      alert('Failed to delete contract');
+      // Handle delete error silently
     }
   };
 

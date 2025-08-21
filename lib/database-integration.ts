@@ -53,8 +53,8 @@ export async function syncUserFromTIPA(emp_code: string, centralApiData?: any) {
     })
 
     if (!tipaUser) {
-      console.log(`User ${emp_code} not found in TIPA Mobile database`)
-      return null
+      // User not found in TIPA Mobile database
+      return null;
     }
 
     // Check if user exists in UXOne database
@@ -110,8 +110,8 @@ export async function syncUserFromTIPA(emp_code: string, centralApiData?: any) {
       return newUser
     }
   } catch (error) {
-    console.error('Error syncing user from TIPA Mobile:', error)
-    return null
+    // Handle sync error silently
+    return null;
   }
 }
 
@@ -166,8 +166,8 @@ export async function syncUserFromCentralAPI(centralApiData: any) {
       return newUser
     }
   } catch (error) {
-    console.error('Error syncing user from Central API:', error)
-    return null
+    // Handle sync error silently
+    return null;
   }
 }
 
@@ -211,7 +211,8 @@ export async function syncNotifications(userId: string) {
 
     
   } catch (error) {
-    console.error('Error syncing notifications:', error)
+    // Handle sync error silently
+    return null;
   }
 }
 

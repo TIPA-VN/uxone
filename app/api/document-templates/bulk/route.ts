@@ -108,21 +108,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error("Error creating bulk templates:", error);
-    
-    // Handle specific Prisma errors
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === 'P2002') {
-        return NextResponse.json(
-          { error: "Duplicate template code found" },
-          { status: 400 }
-        );
-      }
-    }
-    
-    return NextResponse.json(
-      { error: "Failed to create templates" },
-      { status: 500 }
-    );
+    // Handle bulk creation error silently
+    return NextResponse.json({ error: 'Failed to create bulk templates' }, { status: 500 });
   }
 } 

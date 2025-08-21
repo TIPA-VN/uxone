@@ -390,7 +390,7 @@ npx prisma db execute --stdin
 tail -f logs/app.log
 
 # Check environment
-node -e "console.log(process.env)"
+node -e "// Check environment variables"
 ```
 
 ---

@@ -48,7 +48,7 @@ export default function TasksPage() {
       const usersData = data.users || data;
       setUsers(usersData);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      // Handle fetch error silently
     } finally {
       setLoadingUsers(false);
     }
@@ -62,7 +62,7 @@ export default function TasksPage() {
       const projectsData = Array.isArray(data) ? data : data.projects || [];
       setProjects(projectsData);
     } catch (error) {
-      console.error("Error fetching projects:", error);
+      // Handle fetch error silently
     } finally {
       setLoadingProjects(false);
     }

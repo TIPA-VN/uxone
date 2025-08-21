@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 // PATCH /api/projects/[id]/contract - Update contract details
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -16,7 +16,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const { id: projectId } = await params;
     const body = await request.json();
     const {
       contractType,
@@ -48,8 +48,8 @@ export async function PATCH(
     let updatedContract;
     
     if (project.contractDetails) {
-      // Update existing contract details
-      updatedContract = await PrismaAudit.updateWithAudit(prisma, prisma.contractDetails, {
+      // Update existing contract details - ContractDetails doesn't have audit fields
+      updatedContract = await prisma.contractDetails.update({
         where: { id: project.contractDetails.id },
         data: {
           contractType: contractType || undefined,
@@ -57,11 +57,12 @@ export async function PATCH(
           value: value ? parseFloat(value.toString()) : undefined,
           currency: currency || undefined,
           contractStatus: contractStatus || undefined,
-        },
+          updatedAt: new Date(),
+        }
       });
     } else {
-      // Create new contract details
-      updatedContract = await PrismaAudit.createWithAudit(prisma, prisma.contractDetails, {
+      // Create new contract details - ContractDetails doesn't have audit fields
+      updatedContract = await prisma.contractDetails.create({
         data: {
           projectId: projectId,
           contractType: contractType || undefined,
@@ -73,7 +74,7 @@ export async function PATCH(
           totalApprovalLevels: 3,
           currentApprovalLevel: 1,
           contractNumber: `CON-${new Date().getFullYear()}-${projectId.substring(0, 8).toUpperCase()}`,
-        },
+        }
       });
     }
 
@@ -90,7 +91,7 @@ export async function PATCH(
 // GET /api/projects/[id]/contract - Get contract details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -98,7 +99,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const { id: projectId } = await params;
 
     // Get project with contract details
     const project = await prisma.project.findUnique({

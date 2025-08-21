@@ -48,7 +48,7 @@ export default function ERPTestPage() {
         setDemands(result.data.demands || []);
       }
     } catch (error) {
-      console.error("Error fetching demands:", error);
+      // Handle fetch error silently
     } finally {
       setIsLoading(false);
     }

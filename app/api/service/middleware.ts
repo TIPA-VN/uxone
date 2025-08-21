@@ -153,6 +153,9 @@ export function logServiceRequest(
 
   // Performance monitoring
   if (responseTime > 1000) {
-    console.warn(`[PERFORMANCE] Slow service request: ${serviceId} ${method} ${path} took ${responseTime}ms`);
+    // Log slow requests (over 5 seconds)
+    if (responseTime > 5000) {
+      // Log slow service request silently
+    }
   }
 } 

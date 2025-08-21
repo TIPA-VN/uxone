@@ -91,17 +91,61 @@ export async function sendWebhookWithRetry(
   const webhookNotification = transformNotificationForWebhook(notification, targetUserId)
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    console.log(`🔄 UXOne: Webhook attempt ${attempt}/${maxRetries}`)
-    
-    const result = await sendWebhookToTIPA(webhookNotification)
-    
-    if (result.success) {
-      return result
+    try {
+      const response = await fetch(webhookNotification.actionUrl || 'http://localhost:3001/api/notifications/webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Secret': process.env.WEBHOOK_SECRET || 'tipa-mobile-webhook-secret-2024',
+          'X-Webhook-Event': webhookNotification.type,
+          'X-Webhook-Attempt': attempt.toString(),
+          'X-Webhook-Max-Retries': maxRetries.toString()
+        },
+        body: JSON.stringify(webhookNotification),
+        signal: AbortSignal.timeout(30000) // 30 seconds timeout
+      });
+
+      if (response.ok) {
+        // Success - create delivery record
+        // await createWebhookDelivery(webhook.id, event.id, { // This line was not in the original file, so it's removed.
+        //   status: response.status,
+        //   headers: Object.fromEntries(response.headers.entries()),
+        //   response: await response.json().catch(() => ({}))
+        // });
+        return {
+          success: true,
+          notificationId: webhookNotification.notificationId
+        };
+      } else {
+        // HTTP error - create delivery record with error
+        const errorBody = await response.text();
+        // await createWebhookDelivery(webhook.id, event.id, { // This line was not in the original file, so it's removed.
+        //   status: response.status,
+        //   headers: Object.fromEntries(response.headers.entries()),
+        //   error: `HTTP ${response.status}: ${errorBody}`
+        // });
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${errorBody}`
+        };
+      }
+    } catch (error) {
+      // Network/other error - create delivery record with error
+      // await createWebhookDelivery(webhook.id, event.id, { // This line was not in the original file, so it's removed.
+      //   status: 0,
+      //   headers: {},
+      //   error: error instanceof Error ? error.message : 'Unknown error'
+      // });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
-    
+
+    // Wait before retry (exponential backoff)
     if (attempt < maxRetries) {
-      const delay = Math.pow(2, attempt) * 1000 // Exponential backoff: 2s, 4s, 8s
-      await new Promise(resolve => setTimeout(resolve, delay))
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
   

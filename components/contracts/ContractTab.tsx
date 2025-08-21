@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import { useContract } from '@/hooks/useContract';
 import { 
@@ -37,6 +37,21 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
   });
 
   const { updateContract, loading, error } = useContract();
+
+
+
+  // Update local form state when contract data changes
+  useEffect(() => {
+    if (project.contractDetails) {
+      setEditForm({
+        contractType: project.contractDetails.contractType || '',
+        counterparty: project.contractDetails.counterparty || '',
+        value: project.contractDetails.value?.toString() || '',
+        currency: project.contractDetails.currency || 'THB',
+        contractStatus: project.contractDetails.contractStatus || 'DRAFT'
+      });
+    }
+  }, [project.contractDetails?.contractType, project.contractDetails?.counterparty, project.contractDetails?.value, project.contractDetails?.currency, project.contractDetails?.contractStatus]);
 
   if (!project.contractDetails) {
     return (
@@ -82,11 +97,12 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
       value: editForm.value ? parseFloat(editForm.value) : undefined
     };
 
-    const success = await updateContract(project.id, updates);
+    const updatedContract = await updateContract(project.id, updates);
     
-    if (success) {
+    if (updatedContract) {
+      // Update the local contract state with the returned data
       if (onUpdateContract) {
-        onUpdateContract(updates);
+        onUpdateContract(updatedContract);
       }
       setIsEditing(false);
     }

@@ -18,6 +18,7 @@ export default function HistoryPanel({
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null)
   const [versionContent, setVersionContent] = useState<string>('')
   const [loadingVersion, setLoadingVersion] = useState(false)
+  const [error, setError] = useState<string | null>(null);
 
   const handleViewVersion = async (version: number) => {
     try {
@@ -32,8 +33,8 @@ export default function HistoryPanel({
       const data = await response.json()
       setVersionContent(data.version.content)
     } catch (error) {
-      console.error('Error fetching version:', error)
-      alert('Failed to load version')
+      // Handle fetch error silently
+      setError('Failed to fetch version');
     } finally {
       setLoadingVersion(false)
     }

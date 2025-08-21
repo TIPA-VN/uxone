@@ -174,6 +174,13 @@ export async function PATCH(
       processedUpdates.budget = parseFloat(processedUpdates.budget);
     }
 
+    // Handle contract details updates
+    let contractDetailsUpdate = null;
+    if (processedUpdates.contractDetails) {
+      contractDetailsUpdate = processedUpdates.contractDetails;
+      delete processedUpdates.contractDetails; // Remove from main project update
+    }
+
     // Check if trying to complete project with incomplete tasks
     if (processedUpdates.status === 'COMPLETED') {
       const mainTasks = existingProject.tasks.filter(task => !task.parentTaskId);
@@ -211,6 +218,112 @@ export async function PATCH(
       projectId,
       processedUpdates
     );
+
+    // Handle contract details update if provided
+    if (contractDetailsUpdate) {
+      try {
+        if (existingProject.contractDetails) {
+          // Update existing contract details
+          await prisma.contractDetails.update({
+            where: { id: existingProject.contractDetails.id },
+            data: {
+              ...contractDetailsUpdate,
+              updatedAt: new Date()
+            }
+          });
+        } else {
+          // Create new contract details
+          await prisma.contractDetails.create({
+            data: {
+              ...contractDetailsUpdate,
+              projectId: projectId,
+              totalApprovalLevels: 1,
+              currentApprovalLevel: 1,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+          });
+        }
+
+        // Fetch updated project with contract details
+        const projectWithContract = await prisma.project.findUnique({
+          where: { id: projectId },
+          include: {
+            owner: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true,
+                departmentName: true,
+              },
+            },
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    department: true,
+                    departmentName: true,
+                  },
+                },
+              },
+            },
+            tasks: {
+              include: {
+                assignee: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                  },
+                },
+                owner: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: "desc" },
+            },
+            documents: {
+              orderBy: { createdAt: "desc" },
+            },
+            comments: {
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: "desc" },
+            },
+            _count: {
+              select: {
+                tasks: true,
+                documents: true,
+                comments: true,
+                members: true,
+              },
+            },
+            contractDetails: true,
+          },
+        });
+
+        return NextResponse.json(projectWithContract);
+      } catch (contractError) {
+        console.error("Error updating contract details:", contractError);
+        // Return the updated project even if contract update failed
+        return NextResponse.json(updatedProject);
+      }
+    }
 
     return NextResponse.json(updatedProject);
   } catch (error) {

@@ -79,7 +79,6 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
         .then(res => res.json())
         .then((users: User[]) => {
           if (!Array.isArray(users)) {
-            console.error("Expected array from /api/notifications/users, got:", users);
             setUserOptions([]);
             return;
           }
@@ -92,7 +91,6 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
           setUserOptions(mappedUsers);
         })
         .catch(error => {
-          console.error("Error fetching users:", error);
           setUserOptions([]);
         });
     }
@@ -143,7 +141,6 @@ export function AnnouncementDialog({ open, onClose, canAnnounce }: AnnouncementD
         setAnnounceStatus("❌ Failed to send announcement.");
       }
     } catch (error) {
-      console.error("Error sending announcement:", error);
       setAnnounceStatus("❌ Failed to send announcement.");
     } finally {
       setIsLoading(false);

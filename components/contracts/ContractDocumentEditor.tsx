@@ -69,14 +69,14 @@ export default function ContractDocumentEditor({
   // Debug modal visibility
   useEffect(() => {
     if (showUploadModal && pendingUpload) {
-      console.log('🔔 MODAL IS VISIBLE - showUploadModal:', showUploadModal, 'pendingUpload:', pendingUpload.name);
+      // console.log('🔔 MODAL IS VISIBLE - showUploadModal:', showUploadModal, 'pendingUpload:', pendingUpload.name);
     }
   }, [showUploadModal, pendingUpload]);
   
   // Update editor content when newly uploaded content is ready and editor is available
   useEffect(() => {
     if (hasNewlyUploadedContent && editorRef.current && content && isEditing) {
-      console.log('Updating editor with newly uploaded content:', content.substring(0, 100));
+      // console.log('Updating editor with newly uploaded content:', content.substring(0, 100));
       updateEditorContent(content, true);
     }
   }, [hasNewlyUploadedContent, content, isEditing]);
@@ -84,23 +84,21 @@ export default function ContractDocumentEditor({
   const isInitialized = useRef(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Track the actual document ID that gets created
-  const [documentId, setDocumentId] = useState<string | null>(() => {
-    // Try to restore documentId from localStorage
-    const saved = localStorage.getItem(`contract-doc-${project.id}`);
-    return saved ? JSON.parse(saved).documentId : null;
+  // Track the contract ID
+  const [contractId, setContractId] = useState<string | null>(() => {
+    return project.contractDetails?.id || null;
   });
 
   // Save state to localStorage
-  const saveStateToStorage = useCallback((docId: string, content: string) => {
+  const saveStateToStorage = useCallback((cId: string, content: string) => {
     try {
       localStorage.setItem(`contract-doc-${project.id}`, JSON.stringify({
-        documentId: docId,
+        contractId: cId,
         content: content,
         timestamp: Date.now()
       }));
     } catch (error) {
-      console.warn('Failed to save state to localStorage:', error);
+      // console.warn('Failed to save state to localStorage:', error);
     }
   }, [project.id]);
 
@@ -116,42 +114,42 @@ export default function ContractDocumentEditor({
         }
       }
     } catch (error) {
-      console.warn('Failed to load state from localStorage:', error);
+      // console.warn('Failed to load state from localStorage:', error);
     }
     return null;
   }, [project.id]);
 
-  // Load versions for a specific document ID
-  const loadVersionsForDocument = useCallback(async (docId: string) => {
+  // Load versions for a specific contract ID
+  const loadVersionsForContract = useCallback(async (contractId: string) => {
     try {
-      const response = await fetch(`/api/documents/${docId}/history`);
+      const response = await fetch(`/api/contracts/${contractId}/workflow`);
       if (response.ok) {
         const data = await response.json();
-        return data.history.map((entry: { id: string; version: number; content: string; createdAt: string; changedByName: string; summary?: string }) => ({
+        return data.workflowHistory.map((entry: { id: string; version: number; content: string; createdAt: string; creator: { name: string; username: string }; changeSummary?: string }) => ({
           id: entry.id,
           version: entry.version,
           content: entry.content,
           createdAt: entry.createdAt,
-          createdBy: entry.changedByName,
-          changeDescription: entry.summary || `Version ${entry.version}`
+          createdBy: entry.creator.name || entry.creator.username,
+          changeDescription: entry.changeSummary || `Version ${entry.version}`
         }));
       }
       return [];
     } catch (error) {
-      console.error('Error loading versions:', error);
+      // console.error('Error loading contract versions:', error);
       return [];
     }
   }, []);
 
 
 
-  // Save content to the database via API
+  // Save content to the contract via API
   const saveContent = useCallback(async (newContent: string) => {
     try {
-      console.log('=== SAVE CONTENT DEBUG INFO ===');
-      console.log('Input content:', newContent);
-      console.log('Input content length:', newContent.length);
-      console.log('Input content (first 200 chars):', newContent.substring(0, 200));
+      // console.log('=== SAVE CONTRACT CONTENT DEBUG INFO ===');
+      // console.log('Input content:', newContent);
+      // console.log('Input content length:', newContent.length);
+      // console.log('Contract ID:', project.contractDetails?.id);
       
       // Clean and normalize the HTML content before saving
       const cleanContent = newContent
@@ -159,89 +157,51 @@ export default function ContractDocumentEditor({
         .replace(/\s+/g, ' ') // Normalize multiple spaces
         .trim(); // Remove leading/trailing whitespace
       
-      console.log('Original content:', newContent);
-      console.log('Cleaned content:', cleanContent);
-      console.log('Cleaned content length:', cleanContent.length);
-      console.log('Cleaned content (first 200 chars):', cleanContent.substring(0, 200));
+      if (!project.contractDetails?.id) {
+        // console.error('No contract ID available');
+        return false;
+      }
       
-      if (documentId) {
-        // Update existing document
-        console.log('Updating existing document:', documentId);
-        const response = await fetch(`/api/documents/${documentId}/save`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: project.name,
-            content: cleanContent
-          })
-        });
-        
-        if (response.ok) {
-          console.log('Document updated successfully');
-          // Save updated state to localStorage
-          saveStateToStorage(documentId, cleanContent);
-          // Reload versions after save
-          const updatedVersions = await loadVersionsForDocument(documentId);
-          setVersions(updatedVersions);
-          return true;
-        } else {
-          console.error('Failed to update document:', response.status, await response.text());
-          return false;
-        }
+      // Save to contract system
+      const response = await fetch(`/api/contracts/${project.contractDetails.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SAVE_DOCUMENT',
+          content: cleanContent
+        })
+      });
+      
+      if (response.ok) {
+        // console.log('Contract content saved successfully');
+        // Save updated state to localStorage
+        saveStateToStorage(project.contractDetails.id, cleanContent);
+        // Reload versions after save
+        const updatedVersions = await loadVersionsForContract(project.contractDetails.id);
+        setVersions(updatedVersions);
+        return true;
       } else {
-        // Create new document
-        console.log('Creating new document');
-        const response = await fetch('/api/documents', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: project.name,
-            content: cleanContent,
-            // Only include projectId if it's a real project (not demo)
-            ...(project.id && !project.id.includes('demo') ? { projectId: project.id } : {}),
-            department: 'CONTRACT' // Set a department for the contract document
-          })
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          const newDocId = result.document?.id || result.id;
-          if (newDocId) {
-            console.log('New document created with ID:', newDocId);
-            setDocumentId(newDocId);
-            // Save state to localStorage
-            saveStateToStorage(newDocId, cleanContent);
-            // Reload versions after save
-            const updatedVersions = await loadVersionsForDocument(newDocId);
-            setVersions(updatedVersions);
-            return true;
-          } else {
-            console.error('No document ID returned from creation');
-            return false;
-          }
-        } else {
-          console.error('Failed to create document:', response.status, await response.text());
-          return false;
-        }
+        // console.error('Failed to save contract content:', response.status, await response.text());
+        return false;
       }
     } catch (error) {
-      console.error('Error saving content:', error);
+      // console.error('Error saving contract content:', error);
       return false;
     }
-  }, [project.id, project.name, documentId, loadVersionsForDocument]);
+  }, [project.contractDetails?.id, project.name, loadVersionsForContract]);
 
   // Reset initialization when project changes
   useEffect(() => {
-    // Only reset if the project actually changes (different ID)
-    // This prevents resetting when just navigating between tabs
-    if (project.id !== documentId?.split('-')[0]) {
-      console.log('Project changed, resetting state');
+    // Update contract ID when project changes
+    const newContractId = project.contractDetails?.id || null;
+    if (newContractId !== contractId) {
+      // console.log('Contract ID changed, resetting state');
+      setContractId(newContractId);
       isInitialized.current = false;
       setContent('');
-      setDocumentId(null);
       setVersions([]);
     }
-  }, [project.id, documentId]);
+  }, [project.contractDetails?.id, contractId]);
 
   // Function to update editor content without losing cursor position
   const updateEditorContent = useCallback((newContent: string, forceUpdate = false) => {
@@ -251,7 +211,7 @@ export default function ContractDocumentEditor({
         return;
       }
 
-      console.log('Updating editor content:', { newContent, forceUpdate, hasUnsavedChanges });
+      // console.log('Updating editor content:', { newContent, forceUpdate, hasUnsavedChanges });
 
       // Clean the content before setting it in the editor
       const cleanContent = newContent
@@ -292,37 +252,63 @@ export default function ContractDocumentEditor({
     
     // Don't restore from localStorage if we have newly uploaded content
     if (hasNewlyUploadedContent) {
-      console.log('Skipping localStorage restoration due to newly uploaded content');
+      // console.log('Skipping localStorage restoration due to newly uploaded content');
       isInitialized.current = true;
       return;
     }
     
     // Try to restore from localStorage first
     const storedState = loadStateFromStorage();
-    if (storedState && storedState.documentId) {
-      console.log('Restoring state from localStorage:', storedState);
-      setDocumentId(storedState.documentId);
+    if (storedState && storedState.contractId && storedState.contractId === contractId) {
+      // console.log('Restoring state from localStorage:', storedState);
       setContent(storedState.content);
       updateEditorContent(storedState.content, true);
-      // Load versions for the restored document
-      loadVersionsForDocument(storedState.documentId).then(loadedVersions => {
-        setVersions(loadedVersions);
-      });
+      // Load versions for the restored contract
+      if (contractId) {
+        loadVersionsForContract(contractId).then(loadedVersions => {
+          setVersions(loadedVersions);
+        });
+      }
       isInitialized.current = true;
       return;
     }
     
-    // Initialize with sample content or default content
-    const sampleContent = (project.contractDetails as { sampleContent?: string })?.sampleContent;
-    const initialContent = sampleContent || 'This is the initial contract content. Please review and edit as needed.';
-    
-    setContent(initialContent);
-    updateEditorContent(initialContent, true);
-    
-    // Don't create local versions - we'll load from database after first save
-    setVersions([]);
-    isInitialized.current = true;
-  }, [project.contractDetails, updateEditorContent, loadStateFromStorage, loadVersionsForDocument, hasNewlyUploadedContent]);
+    // Load contract content from database if contract exists
+    if (contractId) {
+      loadVersionsForContract(contractId).then(loadedVersions => {
+        setVersions(loadedVersions);
+        if (loadedVersions.length > 0) {
+          // Use the latest version content
+          const latestVersion = loadedVersions[0];
+          setContent(latestVersion.content);
+          updateEditorContent(latestVersion.content, true);
+        } else {
+          // No versions exist, use default content
+          const sampleContent = (project.contractDetails as { sampleContent?: string })?.sampleContent;
+          const initialContent = sampleContent || 'This is the initial contract content. Please review and edit as needed.';
+          setContent(initialContent);
+          updateEditorContent(initialContent, true);
+        }
+        isInitialized.current = true;
+      }).catch(() => {
+        // Fallback to default content on error
+        const sampleContent = (project.contractDetails as { sampleContent?: string })?.sampleContent;
+        const initialContent = sampleContent || 'This is the initial contract content. Please review and edit as needed.';
+        setContent(initialContent);
+        updateEditorContent(initialContent, true);
+        setVersions([]);
+        isInitialized.current = true;
+      });
+    } else {
+      // No contract ID, use default content
+      const sampleContent = (project.contractDetails as { sampleContent?: string })?.sampleContent;
+      const initialContent = sampleContent || 'This is the initial contract content. Please review and edit as needed.';
+      setContent(initialContent);
+      updateEditorContent(initialContent, true);
+      setVersions([]);
+      isInitialized.current = true;
+    }
+  }, [project.contractDetails, updateEditorContent, loadStateFromStorage, loadVersionsForContract, hasNewlyUploadedContent]);
 
   // Handle component re-mounting (e.g., navigating away and back)
   useEffect(() => {
@@ -341,16 +327,16 @@ export default function ContractDocumentEditor({
     if (versions.length > 0 && isInitialized.current && !isEditing && !hasUnsavedChanges) {
       // API returns versions in newest-first order, so first element is latest
       const latestVersion = versions[0];
-      console.log('Updating content from latest version:', latestVersion.content);
+      // console.log('Updating content from latest version:', latestVersion.content);
       setContent(latestVersion.content);
       updateEditorContent(latestVersion.content, true); // Force update when version changes
     }
   }, [versions, isEditing, hasUnsavedChanges, updateEditorContent]);
 
-  // Load versions when documentId changes (after first save)
+  // Load versions when contractId changes (after initialization)
   useEffect(() => {
-    if (documentId && !isInitialized.current) {
-      loadVersionsForDocument(documentId).then(loadedVersions => {
+    if (contractId && !isInitialized.current) {
+      loadVersionsForContract(contractId).then(loadedVersions => {
         setVersions(loadedVersions);
         if (loadedVersions.length > 0) {
           // API returns versions in newest-first order, so first element is latest
@@ -360,31 +346,31 @@ export default function ContractDocumentEditor({
         }
       });
     }
-  }, [documentId, loadVersionsForDocument, updateEditorContent]);
+  }, [contractId, loadVersionsForContract, updateEditorContent]);
 
   // Only update editor content when first entering edit mode, not on every content change
   useEffect(() => {
-    console.log('Edit mode useEffect triggered:', {
-      isEditing,
-      hasEditorRef: !!editorRef.current,
-      hasContent: !!content,
-      hasUnsavedChanges,
-      hasNewlyUploadedContent,
-      editorHTML: editorRef.current?.innerHTML?.substring(0, 50) || 'NO HTML'
-    });
+    // console.log('Edit mode useEffect triggered:', {
+    //   isEditing,
+    //   hasEditorRef: !!editorRef.current,
+    //   hasContent: !!content,
+    //   hasUnsavedChanges,
+    //   hasNewlyUploadedContent,
+    //   editorHTML: editorRef.current?.innerHTML?.substring(0, 50) || 'NO HTML'
+    // });
     
     if (isEditing && editorRef.current && content && !hasUnsavedChanges && !hasNewlyUploadedContent) {
       // Only update if the editor is empty or significantly different
       if (!editorRef.current.innerHTML || editorRef.current.innerHTML.trim() === '') {
-        console.log('Editor is empty, setting content from state:', content);
+        // console.log('Editor is empty, setting content from state:', content);
         editorRef.current.innerHTML = content;
       } else {
-        console.log('Editor has content, syncing state with editor HTML');
+        // console.log('Editor has content, syncing state with editor HTML');
         // Sync the content state with what's actually in the editor
         setContent(editorRef.current.innerHTML);
       }
     } else if (hasNewlyUploadedContent) {
-      console.log('Skipping editor update due to newly uploaded content');
+      // console.log('Skipping editor update due to newly uploaded content');
     }
   }, [isEditing, content, hasUnsavedChanges, hasNewlyUploadedContent]); // Include hasNewlyUploadedContent
 
@@ -396,7 +382,7 @@ export default function ContractDocumentEditor({
         if (editorRef.current && hasUnsavedChanges) {
           const currentEditorContent = editorRef.current.innerHTML;
           if (currentEditorContent !== content) {
-            console.log('Syncing content state with editor:', currentEditorContent);
+            // console.log('Syncing content state with editor:', currentEditorContent);
             setContent(currentEditorContent);
           }
         }
@@ -414,7 +400,7 @@ export default function ContractDocumentEditor({
           if (mutation.type === 'childList' || mutation.type === 'characterData') {
             if (editorRef.current) {
               const newContent = editorRef.current.innerHTML;
-              console.log('DOM mutation detected, new content:', newContent);
+              // console.log('DOM mutation detected, new content:', newContent);
               setContent(newContent);
               setHasUnsavedChanges(true);
             }
@@ -439,13 +425,13 @@ export default function ContractDocumentEditor({
     try {
       // Get the current content from the editor to ensure we have the latest changes
       const currentContent = editorRef.current?.innerHTML || content;
-      console.log('=== SAVE DEBUG INFO ===');
-      console.log('Editor HTML content:', currentContent);
-      console.log('Content state before save:', content);
-      console.log('Has unsaved changes:', hasUnsavedChanges);
-      console.log('Content length:', currentContent.length);
-      console.log('Content state length:', content.length);
-      console.log('Document ID:', documentId);
+      // console.log('=== SAVE DEBUG INFO ===');
+      // console.log('Editor HTML content:', currentContent);
+      // console.log('Content state before save:', content);
+      // console.log('Has unsaved changes:', hasUnsavedChanges);
+      // console.log('Content length:', currentContent.length);
+      // console.log('Content state length:', content.length);
+      // console.log('Document ID:', documentId);
       
       // Check if content is empty or just whitespace
       if (!currentContent || currentContent.trim() === '' || currentContent.replace(/<[^>]*>/g, '').trim() === '') {
@@ -469,7 +455,7 @@ export default function ContractDocumentEditor({
         setSaveMessage('❌ Failed to save document. Please try again.');
       }
     } catch (error) {
-      console.error('Save error:', error);
+      // console.error('Save error:', error);
       setSaveMessage('❌ Error saving document. Please try again.');
     } finally {
       setIsSaving(false);
@@ -493,7 +479,7 @@ export default function ContractDocumentEditor({
     updateEditorContent(version.content, true); // Force update on version restore
     
     // Save the restored content as a new version
-    if (documentId) {
+    if (contractId) {
       const success = await saveContent(version.content);
       if (success) {
         setSaveMessage('Version restored and saved successfully!');
@@ -526,13 +512,13 @@ export default function ContractDocumentEditor({
 
     // Check if there's existing content (even if saved)
     const hasExistingContent = content.trim().length > 0;
-    console.log('Upload check - hasExistingContent:', hasExistingContent, 'hasUnsavedChanges:', hasUnsavedChanges);
-    console.log('Current content:', content);
-    console.log('Content length:', content.length);
+    // console.log('Upload check - hasExistingContent:', hasExistingContent, 'hasUnsavedChanges:', hasUnsavedChanges);
+    // console.log('Current content:', content);
+    // console.log('Content length:', content.length);
     if (hasExistingContent && !hasUnsavedChanges) {
       // Show modal to choose action
-      console.log('Showing upload modal for existing content');
-      console.log('🔔 UPLOAD MODAL SHOULD BE VISIBLE - Check for the modal dialog asking Replace/Append!');
+      // console.log('Showing upload modal for existing content');
+      // console.log('🔔 UPLOAD MODAL SHOULD BE VISIBLE - Check for the modal dialog asking Replace/Append!');
       setPendingUpload(file);
       setShowUploadModal(true);
       return;
@@ -544,12 +530,12 @@ export default function ContractDocumentEditor({
 
   // Process the actual file upload
   const processFileUpload = async (file: File, action: 'replace' | 'append') => {
-    console.log('🚀 processFileUpload started with action:', action, 'file:', file.name);
+    // console.log('🚀 processFileUpload started with action:', action, 'file:', file.name);
     setIsUploading(true);
     setSaveMessage('');
 
     try {
-      console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
+      // console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
 
       // Create FormData for file upload
       const formData = new FormData();
@@ -569,11 +555,11 @@ export default function ContractDocumentEditor({
       }
 
       const result = await response.json();
-      console.log('File uploaded and parsed successfully:', result);
-      console.log('Result content exists:', !!result.content);
-      console.log('Editor ref exists:', !!editorRef.current);
-      console.log('Result content length:', result.content?.length || 0);
-      console.log('Result content preview:', result.content?.substring(0, 100) || 'NO CONTENT');
+      // console.log('File uploaded and parsed successfully:', result);
+      // console.log('Result content exists:', !!result.content);
+      // console.log('Editor ref exists:', !!editorRef.current);
+      // console.log('Result content length:', result.content?.length || 0);
+      // console.log('Result content preview:', result.content?.substring(0, 100) || 'NO CONTENT');
 
       // Update editor with parsed content
       if (result.content) {
@@ -597,12 +583,12 @@ export default function ContractDocumentEditor({
           newContent = content + '\n\n' + cleanContent;
         }
         
-        console.log('=== UPLOAD DEBUG INFO ===');
-        console.log('Original uploaded content (first 200 chars):', result.content.substring(0, 200));
-        console.log('Decoded content (first 200 chars):', cleanContent.substring(0, 200));
-        console.log('Final content to set (first 200 chars):', newContent.substring(0, 200));
-        console.log('Current content before upload:', content);
-        console.log('Action:', action);
+        // console.log('=== UPLOAD DEBUG INFO ===');
+        // console.log('Original uploaded content (first 200 chars):', result.content.substring(0, 200));
+        // console.log('Decoded content (first 200 chars):', cleanContent.substring(0, 200));
+        // console.log('Final content to set (first 200 chars):', newContent.substring(0, 200));
+        // console.log('Current content before upload:', content);
+        // console.log('Action:', action);
         
         // Set the content state first
         setContent(newContent);
@@ -610,20 +596,20 @@ export default function ContractDocumentEditor({
         setHasNewlyUploadedContent(true); // Prevent localStorage restoration
         
         // Update localStorage with the new content to prevent future conflicts
-        if (documentId) {
-          saveStateToStorage(documentId, newContent);
+        if (contractId) {
+          saveStateToStorage(contractId, newContent);
         }
         
-        console.log('Content state after upload:', newContent);
-        console.log('Has unsaved changes:', true);
-        console.log('Has newly uploaded content:', true);
+        // console.log('Content state after upload:', newContent);
+        // console.log('Has unsaved changes:', true);
+        // console.log('Has newly uploaded content:', true);
         
         // Try to update editor if available, but don't fail if it's not
         if (editorRef.current) {
           updateEditorContent(newContent, true);
-          console.log('Editor HTML after upload:', editorRef.current.innerHTML);
+          // console.log('Editor HTML after upload:', editorRef.current.innerHTML);
         } else {
-          console.log('Editor ref not available, will update when editor is ready');
+          // console.log('Editor ref not available, will update when editor is ready');
         }
         
         // Clear any previous save messages
@@ -637,7 +623,7 @@ export default function ContractDocumentEditor({
       setIsEditing(true);
 
     } catch (error) {
-      console.error('File upload error:', error);
+      // console.error('File upload error:', error);
       setSaveMessage(`❌ Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploading(false);
@@ -646,7 +632,7 @@ export default function ContractDocumentEditor({
 
   // Handle upload modal actions
   const handleUploadAction = async (action: 'replace' | 'append') => {
-    console.log('handleUploadAction called with action:', action, 'pendingUpload:', pendingUpload?.name);
+    // console.log('handleUploadAction called with action:', action, 'pendingUpload:', pendingUpload?.name);
     if (pendingUpload) {
       setShowUploadModal(false);
       setPendingUpload(null);
@@ -795,7 +781,7 @@ export default function ContractDocumentEditor({
     
     // Immediately capture the updated content
     const newContent = editor.innerHTML;
-    console.log('Content changed via execCommand:', command, newContent);
+    // console.log('Content changed via execCommand:', command, newContent);
     setContent(newContent);
     setHasUnsavedChanges(true);
     
@@ -852,7 +838,7 @@ export default function ContractDocumentEditor({
                     : content;
                   
                   if (editorRef.current && contentToDisplay) {
-                    console.log('Setting editor content for edit mode:', contentToDisplay);
+                    // console.log('Setting editor content for edit mode:', contentToDisplay);
                     editorRef.current.innerHTML = contentToDisplay;
                     // Update the content state to match what's displayed
                     setContent(contentToDisplay);
@@ -1136,7 +1122,7 @@ export default function ContractDocumentEditor({
                           editorRef.current.innerHTML = testContent;
                           setContent(testContent);
                           setHasUnsavedChanges(true);
-                          console.log('Test content inserted:', testContent);
+                          // console.log('Test content inserted:', testContent);
                         }
                       }}
                       className="p-2 hover:bg-gray-200 rounded text-gray-700 hover:text-gray-900 text-xs"
@@ -1160,7 +1146,7 @@ export default function ContractDocumentEditor({
                   suppressContentEditableWarning={true}
                   onInput={(e) => {
                     const newContent = e.currentTarget.innerHTML;
-                    console.log('Content changed via input:', newContent);
+                    // console.log('Content changed via input:', newContent);
                     setContent(newContent);
                     setHasUnsavedChanges(true);
                   }}
@@ -1169,7 +1155,7 @@ export default function ContractDocumentEditor({
                     setTimeout(() => {
                       if (editorRef.current) {
                         const newContent = editorRef.current.innerHTML;
-                        console.log('Content changed via paste:', newContent);
+                        // console.log('Content changed via paste:', newContent);
                         setContent(newContent);
                         setHasUnsavedChanges(true);
                       }

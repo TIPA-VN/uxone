@@ -18,9 +18,10 @@ import { TasksTab } from "./components/TasksTab";
 import { ProjectOverview } from "./components/ProjectOverview";
 import { DepartmentTab } from "./components/DepartmentTab";
 import { ProductionTab } from "./components/ProductionTab";
-import ContractDocumentEditor from "@/components/contracts/ContractDocumentEditor";
+import EnhancedContractTab from "@/components/contracts/EnhancedContractTab";
 
 // Types
+import { Project } from '@/types';
 
 export default function ProjectDetailsPage() {
   const params = useParams();
@@ -76,20 +77,10 @@ export default function ProjectDetailsPage() {
   // Set initial tab when project loads
   useEffect(() => {
     if (project && !activeTab && !urlTabHandled) {
-      // Debug logging
-      console.log('Project data for tab selection:', {
-        projectType: project.projectType,
-        contractDetails: project.contractDetails,
-        hasContractDetails: !!project.contractDetails,
-        departments: project.departments
-      });
-      
       // For contract projects, show contract tab by default
       if (project.projectType === "CONTRACT" || project.contractDetails) {
-        console.log('Setting tab to CONTRACT');
         setActiveTab("CONTRACT");
       } else {
-        console.log('Setting tab to first department:', project.departments?.[0] || "MAIN");
         setActiveTab(project.departments?.[0] || "MAIN");
       }
     }
@@ -339,42 +330,24 @@ export default function ProjectDetailsPage() {
         {/* CONTRACT Tab */}
         {activeTab === "CONTRACT" && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Contract Management</h3>
-            
-            {/* DEBUG INFO - Remove after testing */}
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <h4 className="font-medium text-yellow-800 mb-2">Debug Info:</h4>
-              <div className="text-sm text-yellow-700 space-y-1">
-                <div>projectType: <code className="bg-yellow-100 px-1 rounded">{project.projectType || 'undefined'}</code></div>
-                <div>contractDetails: <code className="bg-yellow-100 px-1 rounded">{project.contractDetails ? 'exists' : 'null'}</code></div>
-                <div>contractDetails ID: <code className="bg-yellow-100 px-1 rounded">{project.contractDetails?.id || 'N/A'}</code></div>
-              </div>
-            </div>
-            
             {(project.projectType === "CONTRACT" || project.contractDetails) ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-900 mb-2">Contract Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div><span className="font-medium">Type:</span> {project.contractDetails?.contractType || 'N/A'}</div>
-                      <div><span className="font-medium">Counterparty:</span> {project.contractDetails?.counterparty || 'N/A'}</div>
-                      <div><span className="font-medium">Value:</span> {project.contractDetails?.value ? `${project.contractDetails?.value} ${project.contractDetails?.currency}` : 'N/A'}</div>
-                      <div><span className="font-medium">Status:</span> {project.contractDetails?.contractStatus || 'N/A'}</div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-900 mb-2">Document Editor</h4>
-                    <p className="text-sm text-gray-600 mb-3">Edit and manage contract content with full versioning support.</p>
-                    <button
-                      onClick={() => setActiveTab("CONTRACT_EDITOR")}
-                      className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
-                    >
-                      Open Document Editor
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <EnhancedContractTab
+                project={project}
+                onUpdateContract={async (contractData) => {
+                  try {
+                    // Update the project state with the new contract data
+                    const updatedProject = {
+                      ...project,
+                      contractDetails: contractData as Project['contractDetails']
+                    };
+                    updateProject(updatedProject);
+                    setActionStatus("Contract updated successfully!");
+                    setTimeout(() => setActionStatus(null), 3000);
+                  } catch {
+                    setActionStatus("Error updating contract.");
+                  }
+                }}
+              />
             ) : (
               <div className="text-center py-8">
                 <div className="text-gray-400 mb-4">
@@ -406,13 +379,12 @@ export default function ProjectDetailsPage() {
                       if (res.ok) {
                         const updated = await res.json();
                         updateProject(updated);
-                        setActiveTab("CONTRACT_EDITOR");
                         setActionStatus("Project converted to contract project!");
                         setTimeout(() => setActionStatus(null), 3000);
                       } else {
                         setActionStatus("Failed to convert project to contract.");
                       }
-                    } catch (error) {
+                    } catch {
                       setActionStatus("Error converting project to contract.");
                     }
                   }}
@@ -425,26 +397,7 @@ export default function ProjectDetailsPage() {
           </div>
         )}
 
-        {/* CONTRACT EDITOR Tab */}
-        {activeTab === "CONTRACT_EDITOR" && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Contract Document Editor</h3>
-              <button
-                onClick={() => setActiveTab("CONTRACT")}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
-              >
-                ← Back to Contract Details
-              </button>
-            </div>
-            <ContractDocumentEditor
-              project={project}
-              onShare={() => {
-                console.log('Sharing contract');
-              }}
-            />
-          </div>
-        )}
+
       </div>
 
 

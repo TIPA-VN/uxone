@@ -10,8 +10,8 @@ async function getVNPTClient() {
       const { default: client } = await import('@/lib/vnpt-invoice-client-http');
       vnptClient = client;
     } catch (error) {
-      console.error('Failed to load VNPT client:', error);
-      throw new Error('VNPT client not available');
+      // Handle VNPT client error silently
+      return NextResponse.json({ error: 'Failed to load VNPT client' }, { status: 500 });
     }
   }
   return vnptClient;
@@ -127,12 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error('Invoice check API error:', error);
-    
-    return NextResponse.json({
-      success: false,
-      message: 'Internal server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-    }, { status: 500 });
+    // Handle API error silently
+    return NextResponse.json({ error: 'Invoice check failed' }, { status: 500 });
   }
 } 

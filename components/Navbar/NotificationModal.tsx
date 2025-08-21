@@ -342,7 +342,7 @@ export function NotificationModal({
                       prev.map((notif: NotificationType) => ({ ...notif, read: true }))
                     );
                   } catch (error) {
-                    console.error("Failed to mark all as read:", error);
+                    // Handle mark all as read error silently
                   }
                 }}
                 disabled={notifications.filter(n => !n.read).length === 0}
@@ -363,7 +363,7 @@ export function NotificationModal({
                       
                       setNotifications([]);
                     } catch (error) {
-                      console.error("Failed to clear all notifications:", error);
+                      // Handle clear all error silently
                     }
                   }
                 }}

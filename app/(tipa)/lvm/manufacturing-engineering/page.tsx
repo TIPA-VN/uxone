@@ -82,8 +82,8 @@ export default function ManufacturingEngineeringPage() {
           setTasks(tasksData);
         }
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load data');
+        // Handle fetch error silently
+        setError('Failed to fetch data');
       } finally {
         setLoading(false);
       }

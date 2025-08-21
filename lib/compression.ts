@@ -19,8 +19,8 @@ export function compressResponse(response: NextResponse, data: any): NextRespons
     
     return response;
   } catch (error) {
-    console.error('Compression error:', error);
-    return response;
+    // Handle compression error silently
+    return data;
   }
 }
 

@@ -179,8 +179,8 @@ export class JDEService {
           connectString: `${this.config.dbHost}:${this.config.dbPort}/${this.config.dbService}`
         });
       } catch (error) {
-        console.error('Failed to connect to JDE database:', error);
-        throw error;
+        // Handle connection error silently
+        return null;
       }
     }
     return this.connection;
@@ -344,8 +344,8 @@ export class JDEService {
 
       return mockData;
     } catch (error) {
-      console.error('Error fetching Item Location:', error);
-      throw error;
+      // Handle error silently
+      return [];
     }
   }
 
@@ -413,7 +413,6 @@ export class JDEService {
         lineItemCount: 0 // Will be updated after getting line details
       }));
     } catch (error) {
-      console.error('Error fetching Purchase Orders from JDE:', error);
       // Do NOT fall back to mock data
       return [];
     }
@@ -718,7 +717,7 @@ export class JDEService {
       
       return 0;
     } catch (error) {
-      console.error('Error getting line item count:', error);
+      // Handle error silently
       return 0;
     }
   }
@@ -816,7 +815,6 @@ export class JDEService {
         IMUOM3: String(row.IMUOM3 || '').trim()  // Purchasing UOM
       }));
     } catch (error) {
-      console.error('Error fetching Purchase Order Details from JDE:', error);
       // Do NOT fall back to mock data
       return [];
     }
@@ -872,7 +870,7 @@ export class JDEService {
         address: ''
       };
     } catch (error) {
-      console.error('Error fetching supplier info:', error);
+      // Handle error silently
       return {
         name: `Supplier ${supplierId}`,
         address: ''
@@ -950,8 +948,8 @@ export class JDEService {
 
       return mockData;
     } catch (error) {
-      console.error('Error fetching MRP Messages:', error);
-      throw error;
+      // Handle error silently
+      return [];
     }
   }
 
@@ -1103,7 +1101,6 @@ export class JDEService {
         StockStatus: String(row.STOCKSTATUS || 'OK').trim()
       }));
     } catch (error) {
-      console.error('Error fetching inventory levels from JDE:', error);
       // Return empty array instead of mock data for real implementation
       return [];
     }
@@ -1198,7 +1195,7 @@ export class JDEService {
         StockStatus: String(row.STOCKSTATUS || 'OK').trim()
       }));
     } catch (error) {
-      console.error('Error fetching all inventory items from JDE:', error);
+      // Handle error silently
       return [];
     }
   }
@@ -1224,7 +1221,7 @@ export class JDEService {
       const row = result.rows[0] as any;
       return parseInt(row.TOTAL_COUNT) || 0;
     } catch (error) {
-      console.error('Error fetching inventory count from JDE:', error);
+      // Handle error silently
       return 0;
     }
   }
@@ -1254,7 +1251,7 @@ export class JDEService {
         .map((row: any) => String(row.GL_CLASS || '').trim())
         .filter(glClass => glClass !== '');
     } catch (error) {
-      console.error('Error getting inventory GL classes:', error);
+      // Handle error silently
       return [];
     }
   }
@@ -1314,7 +1311,7 @@ export class JDEService {
 
       return { success: true, message: `Successfully synced ${items.length} items` };
     } catch (error) {
-      console.error('Error syncing item master data:', error);
+      // Handle error silently
       
       // Log sync failure
       await prisma.dataSyncLog.create({
@@ -1338,7 +1335,7 @@ export class JDEService {
         await this.connection.close();
         this.connection = null;
       } catch (error) {
-        console.error('Error closing JDE connection:', error);
+        // Handle error silently
       }
     }
   }

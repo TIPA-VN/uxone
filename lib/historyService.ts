@@ -60,8 +60,8 @@ export async function checkForConcurrentEdits(
 
     return { hasConflict: false, latestVersion, differences: null };
   } catch (error) {
-    console.error('Error checking for concurrent edits:', error);
-    return { hasConflict: false, latestVersion: null, differences: null };
+    // Handle concurrent edit error silently
+    return false;
   }
 }
 

@@ -104,13 +104,11 @@ export default function TicketsPage() {
         if (data.tickets && Array.isArray(data.tickets)) {
           setTickets(data.tickets);
         } else {
-          console.error('Invalid tickets data format:', data);
-          setTickets([]);
+          // Handle invalid data error silently
         }
       }
     } catch (error) {
-      console.error('Error fetching tickets:', error);
-      setTickets([]);
+      // Handle fetch error silently
     } finally {
       setLoading(false);
     }

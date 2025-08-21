@@ -1,86 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import crypto from 'crypto';
-import { generateContractPDF } from '@/lib/pdf-generator';
-import { generateDigitalSignature } from '@/lib/digital-signature';
-
-// Helper function to create finalized document
-async function createFinalizedDocument(contractDetails: any, approverId: string) {
-  try {
-    // Get the document content
-    const document = await prisma.document.findUnique({
-      where: { id: contractDetails.documentId }
-    });
-
-    if (!document) return;
-
-    // Generate checksum for document integrity
-    const checksum = crypto.createHash('sha256').update(document.content || '').digest('hex');
-    
-    // Generate PDF for the finalized document
-    const pdfBase64 = await generateContractPDF({
-      title: `Approved Contract - ${contractDetails.contractNumber || 'N/A'}`,
-      content: document.content || '',
-      contractNumber: contractDetails.contractNumber,
-      counterparty: contractDetails.counterparty,
-      value: contractDetails.value?.toString(),
-      currency: contractDetails.currency,
-      contractStatus: 'APPROVED',
-      approvedBy: [approverId],
-      approvedAt: new Date()
-    });
-    
-    // Generate digital signature
-    const digitalSignature = await generateDigitalSignature({
-      content: document.content || '',
-      signerId: approverId,
-      signerName: session.user.name || 'Unknown',
-      timestamp: new Date(),
-      contractNumber: contractDetails.contractNumber
-    });
-    
-    // Create finalized document
-    await prisma.finalizedDocument.create({
-      data: {
-        originalDocumentId: contractDetails.documentId,
-        finalizedContent: document.content || '',
-        finalizedHtml: document.content || '', // Convert to HTML if needed
-        finalizedPdf: pdfBase64,
-        approvedBy: [approverId],
-        approvedAt: new Date(),
-        title: `Approved Contract - ${contractDetails.contractNumber || 'N/A'}`,
-        contractNumber: contractDetails.contractNumber,
-        version: document.version || 1,
-        revisionNumber: 1,
-        digitalSignature: JSON.stringify(digitalSignature),
-        checksum: checksum,
-        isLegallyBinding: true,
-        storageLocation: 'ACTIVE_ARCHIVE',
-        storageType: 'ACTIVE_ARCHIVE',
-        finalizationNotes: 'Contract approved and finalized',
-        archivedBy: approverId
-      }
-    });
-
-    // Lock the original document
-    await prisma.document.update({
-      where: { id: contractDetails.documentId },
-      data: {
-        isEditable: false,
-        workflowState: 'APPROVED',
-        workflowMeta: {
-          approvedAt: new Date(),
-          approvedBy: approverId,
-          finalVersion: document.version || 1,
-          finalized: true
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error creating finalized document:', error);
-  }
-}
 
 export async function POST(
   request: NextRequest,
@@ -114,7 +34,7 @@ export async function POST(
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    // Check if user has permission to approve
+    // Check if user has permission to perform workflow actions
     const user = await prisma.user.findUnique({
       where: { id: session.user.id }
     });
@@ -126,31 +46,40 @@ export async function POST(
     // Determine new status based on action
     let newStatus = contractDetails.contractStatus;
     let requiresApproval = false;
+    let workflowMessage = '';
 
     switch (action) {
       case 'SEND_REVIEW':
         newStatus = 'REVIEW';
+        workflowMessage = 'Contract sent for review';
         break;
       case 'APPROVE':
         newStatus = 'APPROVED';
+        workflowMessage = 'Contract approved';
         break;
       case 'REJECT':
         newStatus = 'TERMINATED';
+        workflowMessage = 'Contract terminated';
         break;
       case 'SIGN':
         newStatus = 'SIGNED';
+        workflowMessage = 'Contract signed';
         break;
       case 'EXECUTE':
         newStatus = 'EXECUTING';
+        workflowMessage = 'Contract execution started';
         break;
       case 'COMPLETE':
         newStatus = 'COMPLETED';
+        workflowMessage = 'Contract completed';
         break;
       case 'REOPEN':
         newStatus = 'DRAFT';
+        workflowMessage = 'Contract reopened for editing';
         break;
       case 'REQUEST_APPROVAL':
         requiresApproval = true;
+        workflowMessage = 'Approval request sent';
         break;
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -180,11 +109,6 @@ export async function POST(
               contractStatus: nextLevel === contractDetails.totalApprovalLevels ? 'APPROVED' : 'REVIEW'
             }
           });
-        } else {
-          // Final approval - create finalized document
-          if (contractDetails.documentId) {
-            await createFinalizedDocument(contractDetails, session.user.id);
-          }
         }
       }
     }
@@ -228,6 +152,34 @@ export async function POST(
       }
     }
 
+    // Create workflow log entry
+                    // Get current revision count
+                const existingRevisions = await prisma.contractRevision.findMany({
+                  where: { contractId: id },
+                  orderBy: { createdAt: 'desc' }
+                });
+
+                await prisma.contractRevision.create({
+                  data: {
+                    contractId: id,
+                    version: 1,
+                    revisionNumber: existingRevisions.length + 1,
+                    content: contractDetails.document?.content || '',
+                    changes: {
+                      action,
+                      previousStatus: contractDetails.contractStatus,
+                      newStatus,
+                      comment,
+                      performedBy: session.user.id,
+                      timestamp: new Date().toISOString()
+                    },
+                    changeSummary: `${action} - ${workflowMessage}`,
+                    changeCount: 1,
+                    requiresApproval: false,
+                    createdBy: session.user.id
+                  }
+                });
+
     // Get updated contract details
     const updatedContract = await prisma.contractDetails.findUnique({
       where: { id },
@@ -246,13 +198,13 @@ export async function POST(
     return NextResponse.json({
       success: true,
       contract: updatedContract,
-      message: `Contract ${action.toLowerCase()}d successfully`
+      message: workflowMessage
     });
 
   } catch (error) {
-    console.error('Contract approval error:', error);
+    console.error('Contract workflow error:', error);
     return NextResponse.json(
-      { error: 'Failed to process contract approval' },
+      { error: 'Failed to process contract workflow action' },
       { status: 500 }
     );
   }
@@ -270,24 +222,30 @@ export async function GET(
 
     const { id } = await params;
 
-    // Get contract approval history
-    const approvalHistory = await prisma.contractApproval.findMany({
+    // Get contract workflow history (revisions)
+    const workflowHistory = await prisma.contractRevision.findMany({
       where: { contractId: id },
       include: {
-        approver: true
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            username: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
 
     return NextResponse.json({
       success: true,
-      approvalHistory
+      workflowHistory
     });
 
   } catch (error) {
-    console.error('Error fetching approval history:', error);
+    console.error('Error fetching workflow history:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch approval history' },
+      { error: 'Failed to fetch workflow history' },
       { status: 500 }
     );
   }

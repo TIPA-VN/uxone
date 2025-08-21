@@ -147,7 +147,6 @@ async function analyzeFileSimilarity(filePath1: string, filePath2: string): Prom
       return await compareFileSizes(content1, content2);
     }
   } catch (error) {
-    console.error('Error analyzing file similarity:', error);
     return 0.0;
   }
 }
@@ -233,7 +232,6 @@ export async function findIdenticalFile(
     // For now, return a placeholder - the actual implementation will be in the API route
     return { found: false };
   } catch (error) {
-    console.error('Error finding identical file:', error);
     return { found: false };
   }
 }

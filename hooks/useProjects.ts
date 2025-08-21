@@ -41,7 +41,6 @@ export const useProjects = () => {
     };
   }) => {
     try {
-      console.log('Creating project with data:', projectData);
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -50,14 +49,12 @@ export const useProjects = () => {
       
       if (!res.ok) {
         const errorData = await res.json();
-        console.error('Project creation failed:', res.status, errorData);
         throw new Error(errorData.error || `Failed to create project: ${res.status}`);
       }
       
       await fetchProjects(); // Refresh the list
       return true;
     } catch (err) {
-      console.error('Error in createProject:', err);
       setError(err instanceof Error ? err.message : 'Failed to create project');
       return false;
     }

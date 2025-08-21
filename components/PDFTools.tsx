@@ -48,7 +48,8 @@ export const PDFTools: React.FC<PDFToolsProps> = ({
         setAvailablePages(pdfFiles);
       }
     } catch (error) {
-      console.error('Error loading pages:', error);
+      // Handle loading error silently
+      setError('Failed to load pages');
     }
   }, [projectId, department]);
 

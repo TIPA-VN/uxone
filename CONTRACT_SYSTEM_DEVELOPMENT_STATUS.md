@@ -135,10 +135,10 @@ const prisma = new PrismaClient();
 async function testDB() {
   try {
     const users = await prisma.user.findMany({ take: 1 });
-    console.log('✅ Database connection successful');
-    console.log('Users found:', users.length);
+    // Database connection successful
+    // Users found: [count]
   } catch (error) {
-    console.error('❌ Database error:', error.message);
+    // Database error: [error message]
   } finally {
     await prisma.\$disconnect();
   }

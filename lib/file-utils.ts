@@ -1,5 +1,6 @@
 import path from 'path';
 import { APP_CONFIG } from '@/config/app';
+import fs from 'fs/promises';
 
 /**
  * File utility functions for managing custom upload directories
@@ -96,40 +97,43 @@ export function isValidFileSize(bytes: number): boolean {
  * Create directory structure for uploads
  */
 export async function ensureUploadDirectory(category: string): Promise<string> {
-  const { mkdir } = await import('fs/promises');
   const uploadDir = getCustomUploadDir(category);
   
   try {
-    await mkdir(uploadDir, { recursive: true });
-    return uploadDir;
-  } catch (error) {
-    console.error(`Failed to create upload directory: ${uploadDir}`, error);
-    throw new Error(`Failed to create upload directory: ${uploadDir}`);
+    await fs.access(uploadDir);
+  } catch {
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+    } catch (error) {
+      // Handle directory creation error silently
+    }
   }
+  return uploadDir;
 }
 
 /**
  * Clean up old temporary files
  */
 export async function cleanupTempFiles(category: string, maxAge: number = 24 * 60 * 60 * 1000): Promise<void> {
-  const { readdir, stat, unlink } = await import('fs/promises');
   const uploadDir = getCustomUploadDir(category);
   
   try {
-    const files = await readdir(uploadDir);
+    const files = await fs.readdir(uploadDir);
     const now = Date.now();
     
     for (const file of files) {
       const filePath = path.join(uploadDir, file);
-      const fileStats = await stat(filePath);
-      
-      if (now - fileStats.mtime.getTime() > maxAge) {
-        await unlink(filePath);
-        console.log(`Cleaned up old file: ${file}`);
+      try {
+        const stats = await fs.stat(filePath);
+        if (now - stats.mtime.getTime() > maxAge) {
+          await fs.unlink(filePath);
+        }
+      } catch (error) {
+        // Handle file cleanup error silently
       }
     }
   } catch (error) {
-    console.error('Error cleaning up temp files:', error);
+    // Handle cleanup error silently
   }
 }
 

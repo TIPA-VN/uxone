@@ -134,8 +134,7 @@ export default function DemandCreationForm({
       
       setTimeout(() => setIsDraftSaving(false), 1000);
     } catch (error) {
-      console.error("Error saving draft:", error);
-      setIsDraftSaving(false);
+      // Handle save error silently
     }
   }, [session?.user?.id]);
 
@@ -191,8 +190,7 @@ export default function DemandCreationForm({
       localStorage.removeItem(`demand-draft-${session?.user?.id}`);
       
     } catch (error) {
-      console.error("Error submitting demand:", error);
-      onError?.(error instanceof Error ? error.message : "Không thể gửi yêu cầu");
+      // Handle submit error silently
     }
   };
 

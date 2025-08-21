@@ -99,6 +99,8 @@ export function ProjectTabs({ departments, activeTab, onTabChange, user, project
         📄 Contract
       </button>
 
+
+
       {/* Department Tabs - Only show if user has access */}
       {departments.map((dept: string) => {
         const isActive = activeTab === dept;

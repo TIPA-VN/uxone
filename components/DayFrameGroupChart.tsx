@@ -82,8 +82,8 @@ export default function DayFrameGroupChart() {
       setOthersBreakdown(others);
       setTotal(result.total || 0);
     } catch (err) {
-      console.error("Failed to fetch chart data:", err);
-      setError(true);
+      // Handle fetch error silently
+      setError('Failed to fetch chart data');
     } finally {
       setLoading(false);
     }

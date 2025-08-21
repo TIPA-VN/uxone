@@ -63,8 +63,8 @@ export default function BUDepartmentSelector({
           setError('Failed to fetch department accounts');
         }
       } catch (err) {
-        setError('Error loading department accounts');
-        console.error('Error fetching department accounts:', err);
+        // Handle fetch error silently
+        setError('Failed to fetch department accounts');
       } finally {
         setIsLoading(false);
       }

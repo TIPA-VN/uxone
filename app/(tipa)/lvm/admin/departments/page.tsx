@@ -111,8 +111,9 @@ export default function DepartmentsPage() {
         setDepartments(parsed);
         setHasUnsavedChanges(true);
         return;
-      } catch {
-        console.warn('Failed to parse saved departments, falling back to config');
+      } catch (error) {
+        // Handle parse error silently
+        setDepartments(defaultDepartments);
       }
     }
     

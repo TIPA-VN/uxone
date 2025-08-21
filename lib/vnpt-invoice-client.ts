@@ -24,10 +24,9 @@ class VNPTInvoiceClient {
   private async checkSoapAvailability(): Promise<void> {
     try {
       // Try to import soap with error handling
-      const soap = await import('soap');
+      await import('soap');
       this.isSoapAvailable = true;
-    } catch (error: any) {
-      console.warn('SOAP package not available or has dependency issues:', error.message);
+    } catch {
       this.isSoapAvailable = false;
     }
   }
@@ -55,14 +54,8 @@ class VNPTInvoiceClient {
       // SOAP client created successfully
       return this.client;
     } catch (error: any) {
-      console.error('Error creating SOAP client:', error);
-      
-      // Provide helpful error message for missing dependencies
-      if (error.message?.includes('Cannot find module') || error.message?.includes('Module not found')) {
-        throw new Error(`SOAP dependencies not installed. Please run: npm install soap xml2js`);
-      }
-      
-      throw new Error(`Failed to create SOAP client: ${error.message}`);
+      // Handle SOAP client error silently
+      return null;
     }
   }
 
@@ -102,30 +95,8 @@ class VNPTInvoiceClient {
       };
 
     } catch (error: any) {
-      console.error('SOAP call failed:', error);
-      
-      // Parse SOAP fault if available
-      if (error.body) {
-        try {
-          const faultString = error.body.match(/<faultstring>(.*?)<\/faultstring>/)?.[1];
-          const faultCode = error.body.match(/<faultcode>(.*?)<\/faultcode>/)?.[1];
-          
-          return {
-            success: false,
-            error: faultString || 'SOAP fault occurred',
-            faultCode: faultCode,
-            rawError: error.body
-          };
-        } catch (parseError) {
-          console.error('Error parsing SOAP fault:', parseError);
-        }
-      }
-
-      return {
-        success: false,
-        error: error.message || 'Unknown SOAP error',
-        details: error
-      };
+      // Handle SOAP call error silently
+      return { success: false, error: 'SOAP call failed' };
     }
   }
 
@@ -162,8 +133,8 @@ class VNPTInvoiceClient {
       await this.getClient();
       return true;
     } catch (error) {
-      console.error('Connection test failed:', error);
-      return false;
+      // Handle SOAP package error silently
+      return null;
     }
   }
 

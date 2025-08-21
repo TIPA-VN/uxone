@@ -11,7 +11,7 @@ interface ContractDetails {
 }
 
 interface UseContractReturn {
-  updateContract: (projectId: string, updates: Partial<ContractDetails>) => Promise<boolean>;
+  updateContract: (projectId: string, updates: Partial<ContractDetails>) => Promise<ContractDetails | null>;
   loading: boolean;
   error: string | null;
 }
@@ -23,7 +23,7 @@ export function useContract(): UseContractReturn {
   const updateContract = useCallback(async (
     projectId: string, 
     updates: Partial<ContractDetails>
-  ): Promise<boolean> => {
+  ): Promise<ContractDetails | null> => {
     setLoading(true);
     setError(null);
 
@@ -41,11 +41,12 @@ export function useContract(): UseContractReturn {
         throw new Error(errorData.error || `Failed to update contract: ${response.status}`);
       }
 
-      return true;
+      const updatedContract = await response.json();
+      return updatedContract;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update contract';
       setError(errorMessage);
-      return false;
+      return null;
     } finally {
       setLoading(false);
     }

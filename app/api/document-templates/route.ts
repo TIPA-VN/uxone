@@ -60,11 +60,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(templates);
   } catch (error) {
-    console.error("Error fetching document templates:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch document templates" },
-      { status: 500 }
-    );
+    // Handle fetch error silently
+    return NextResponse.json({ error: 'Failed to fetch document templates' }, { status: 500 });
   }
 }
 
@@ -129,11 +126,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(template, { status: 201 });
   } catch (error) {
-    console.error("Error creating document template:", error);
-    return NextResponse.json(
-      { error: "Failed to create document template" },
-      { status: 500 }
-    );
+    // Handle creation error silently
+    return NextResponse.json({ error: 'Failed to create document template' }, { status: 500 });
   }
 }
 
@@ -200,11 +194,8 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(updatedTemplate);
   } catch (error) {
-    console.error("Error updating document template:", error);
-    return NextResponse.json(
-      { error: "Failed to update document template" },
-      { status: 500 }
-    );
+    // Handle update error silently
+    return NextResponse.json({ error: 'Failed to update document template' }, { status: 500 });
   }
 }
 
@@ -268,10 +259,7 @@ export async function DELETE(request: NextRequest) {
       message: "Document template deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting document template:", error);
-    return NextResponse.json(
-      { error: "Failed to delete document template" },
-      { status: 500 }
-    );
+    // Handle deletion error silently
+    return NextResponse.json({ error: 'Failed to delete document template' }, { status: 500 });
   }
 } 

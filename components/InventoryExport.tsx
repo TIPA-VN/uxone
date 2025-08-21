@@ -64,7 +64,7 @@ export function InventoryExport({ filters, selectedItems = [], totalItems = 0, o
       setIsOpen(false);
       onExport?.();
     } catch (error) {
-      console.error('Export error:', error);
+      // Handle export error silently
       alert('Export failed. Please try again.');
     } finally {
       setIsExporting(false);

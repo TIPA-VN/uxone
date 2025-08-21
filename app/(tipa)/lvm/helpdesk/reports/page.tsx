@@ -69,7 +69,7 @@ export default function ReportsPage() {
           setReportData(data);
         }
       } catch (error) {
-        console.error('Error fetching report data:', error);
+        // Handle error silently
       } finally {
         setLoading(false);
       }
@@ -78,9 +78,36 @@ export default function ReportsPage() {
     fetchReportData();
   }, [timeRange]);
 
-  const exportReport = () => {
-    // Implementation for exporting report data
-    console.log('Exporting report...');
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/helpdesk/reports/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startDate: startDate,
+          endDate: endDate,
+          format: exportFormat
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `helpdesk-report-${startDate}-${endDate}.${exportFormat}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      // Handle error silently
+    }
   };
 
   if (loading) {

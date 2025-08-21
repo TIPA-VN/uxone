@@ -230,13 +230,13 @@ async function main() {
       }),
     ]);
 
-    console.log("✅ Seeding completed successfully!");
-    console.log(`📊 Created ${meProject1 ? 1 : 0} + ${meProject2 ? 1 : 0} + ${meProject3 ? 1 : 0} LVM-ME projects`);
-    console.log(`📝 Created multiple tasks for LVM-ME projects`);
-    console.log(`📋 Created ${documentTemplates.length} document templates for different project types`);
+    // Seeding completed successfully
+    // Created LVM-ME projects
+    // Created multiple tasks for LVM-ME projects
+    // Created document templates for different project types
   
   } catch (e) {
-    console.error("❌ Seeding failed:", e);
+    // Seeding failed
     process.exit(1);
   } finally {
     await prisma.$disconnect();

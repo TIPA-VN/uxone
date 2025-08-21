@@ -152,7 +152,8 @@ export default function TicketDetailPage() {
         setAgents(data.users || []);
       }
     } catch (err) {
-      console.error('Failed to fetch agents:', err);
+      // Handle fetch error silently
+      setError('Failed to fetch agents');
     }
   }, []);
 
@@ -164,7 +165,8 @@ export default function TicketDetailPage() {
         setProjects(data.projects || []);
       }
     } catch (err) {
-      console.error('Failed to fetch projects:', err);
+      // Handle fetch error silently
+      setError('Failed to fetch projects');
     }
   }, []);
 
@@ -206,7 +208,8 @@ export default function TicketDetailPage() {
         setTicket(prev => prev ? { ...prev, status: newStatus } : null);
       }
     } catch (err) {
-      console.error('Failed to update status:', err);
+      // Handle update error silently
+      setError('Failed to update status');
     }
   };
 
@@ -249,7 +252,8 @@ export default function TicketDetailPage() {
         setShowAssignmentModal(false);
       }
     } catch (err) {
-      console.error('Failed to assign ticket:', err);
+      // Handle assignment error silently
+      setError('Failed to assign ticket');
     } finally {
       setAssigning(false);
     }
@@ -279,7 +283,8 @@ export default function TicketDetailPage() {
         fetchTicket(); // Refresh to get new comment
       }
     } catch (err) {
-      console.error('Failed to submit comment:', err);
+      // Handle comment error silently
+      setError('Failed to submit comment');
     } finally {
       setSubmittingComment(false);
     }
@@ -316,10 +321,12 @@ export default function TicketDetailPage() {
         }
       } else {
         const error = await response.json();
-        console.error('Failed to convert ticket:', error);
+        // Handle conversion error silently
+        setError('Failed to convert ticket');
       }
     } catch (err) {
-      console.error('Failed to convert ticket to task:', err);
+      // Handle conversion error silently
+      setError('Failed to convert ticket to task');
     } finally {
       setConverting(false);
     }

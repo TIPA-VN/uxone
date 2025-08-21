@@ -59,8 +59,8 @@ export default function ERPIntegrationTest({ demandId, className }: ERPIntegrati
       setSuccess("ERP data preview generated successfully");
 
     } catch (error) {
-      console.error("Preview error:", error);
-      setError(error instanceof Error ? error.message : "Failed to preview ERP data");
+      // Handle preview error silently
+      setError('Failed to preview data');
     } finally {
       setIsLoading(false);
     }
@@ -100,8 +100,8 @@ export default function ERPIntegrationTest({ demandId, className }: ERPIntegrati
       setSuccess("Demand successfully submitted to ERP system");
 
     } catch (error) {
-      console.error("Submission error:", error);
-      setError(error instanceof Error ? error.message : "Failed to submit to ERP");
+      // Handle submission error silently
+      setError('Failed to submit data');
     } finally {
       setIsLoading(false);
     }

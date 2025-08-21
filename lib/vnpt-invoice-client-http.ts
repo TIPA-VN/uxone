@@ -72,8 +72,8 @@ class VNPTInvoiceClientHTTP {
       const xmlResponse = await response.text();
       return this.parseSOAPResponse(xmlResponse, methodName);
     } catch (error: any) {
-      console.error('SOAP request failed:', error);
-      throw error;
+      // Handle SOAP request error silently
+      return { success: false, error: 'SOAP request failed' };
     }
   }
 
@@ -100,8 +100,8 @@ class VNPTInvoiceClientHTTP {
       // If no result found, return the full response for debugging
       return xmlResponse;
     } catch (error) {
-      console.error('Error parsing SOAP response:', error);
-      return xmlResponse;
+      // Handle SOAP response error silently
+      return { success: false, error: 'Failed to parse SOAP response' };
     }
   }
 
@@ -129,13 +129,8 @@ class VNPTInvoiceClientHTTP {
       };
 
     } catch (error: any) {
-      console.error('SOAP call failed:', error);
-      
-      return {
-        success: false,
-        error: error.message || 'Unknown SOAP error',
-        details: error
-      };
+      // Handle SOAP call error silently
+      return { success: false, error: 'SOAP call failed' };
     }
   }
 
@@ -151,7 +146,7 @@ class VNPTInvoiceClientHTTP {
       
       return response.ok;
     } catch (error) {
-      console.error('Connection test failed:', error);
+      // Handle connection test error silently
       return false;
     }
   }
@@ -206,14 +201,9 @@ class VNPTInvoiceClientHTTP {
         wsdl: { definitions: { services: {} } },
         services: {}
       };
-    } catch (error: any) {
-      console.error('Error parsing WSDL:', error);
-      // Return default method if parsing fails
-      return {
-        methods: ['GetMCCQThueByFkeys'],
-        wsdl: { definitions: { services: {} } },
-        services: {}
-      };
+    } catch (error) {
+      // Handle WSDL parse error silently
+      return { success: false, error: 'Failed to parse WSDL' };
     }
   }
 

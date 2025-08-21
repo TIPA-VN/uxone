@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import { 
   CheckCircle, 
@@ -44,26 +44,45 @@ export default function ContractWorkflowActions({
   const [actionType, setActionType] = useState<string>('');
   const [message, setMessage] = useState('');
   const [showApprovalHistory, setShowApprovalHistory] = useState(false);
+  const [approvalHistory, setApprovalHistory] = useState<ApprovalRequest[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  // Mock approval requests - in real app, this would come from API
-  const [approvalRequests] = useState<ApprovalRequest[]>([
-    {
-      id: 'req1',
-      requestedBy: 'John Doe',
-      requestedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      status: 'PENDING',
-      comment: 'Please review the contract terms and conditions'
-    },
-    {
-      id: 'req2',
-      requestedBy: 'Jane Smith',
-      requestedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-      status: 'APPROVED',
-      comment: 'Contract terms look good',
-      approvedBy: 'Legal Team',
-      approvedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+  // Fetch approval history from API
+  const fetchApprovalHistory = async () => {
+    if (!project.contractDetails?.id) return;
+    
+    setIsLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/contracts/${project.contractDetails.id}/approve`);
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) {
+          // Transform API data to component format
+          const history = result.approvalHistory.map((item: any) => ({
+            id: item.id,
+            requestedBy: item.approver.name || item.approver.username,
+            requestedAt: item.createdAt,
+            status: item.status,
+            comment: item.comments,
+            approvedBy: item.approver.name || item.approver.username,
+            approvedAt: item.approvedAt
+          }));
+          setApprovalHistory(history);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching approval history:', error);
+    } finally {
+      setIsLoadingHistory(false);
     }
-  ]);
+  };
+
+  // Load approval history when component mounts or when showing history
+  useEffect(() => {
+    if (showApprovalHistory && approvalHistory.length === 0) {
+      fetchApprovalHistory();
+    }
+  }, [showApprovalHistory]);
 
   if (!project.contractDetails) {
     return null;
@@ -323,39 +342,50 @@ export default function ContractWorkflowActions({
             <h3 className="text-sm font-medium text-gray-900">Approval History</h3>
           </div>
           <div className="p-4">
-            <div className="space-y-3">
-              {approvalRequests.map((request) => (
-                <div key={request.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-sm font-medium text-gray-900">
-                        {request.requestedBy}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {formatDate(request.requestedAt)}
-                      </span>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        request.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                        request.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {request.status}
-                      </span>
+            {isLoadingHistory ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-sm text-gray-600 mt-2">Loading approval history...</p>
+              </div>
+            ) : approvalHistory.length > 0 ? (
+              <div className="space-y-3">
+                {approvalHistory.map((request) => (
+                  <div key={request.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-sm font-medium text-gray-900">
+                          {request.requestedBy}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formatDate(request.requestedAt)}
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          request.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                          request.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {request.status}
+                        </span>
+                      </div>
+                      {request.comment && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          {request.comment}
+                        </p>
+                      )}
+                      {request.approvedBy && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Approved by {request.approvedBy} on {formatDate(request.approvedAt!)}
+                        </p>
+                      )}
                     </div>
-                    {request.comment && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        {request.comment}
-                      </p>
-                    )}
-                    {request.approvedBy && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Approved by {request.approvedBy} on {formatDate(request.approvedAt!)}
-                      </p>
-                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <p className="text-sm">No approval history found</p>
+              </div>
+            )}
           </div>
         </div>
       )}

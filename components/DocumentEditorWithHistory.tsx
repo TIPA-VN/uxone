@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -70,7 +70,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
     content: initialContent,
     immediatelyRender: false,
     onCreate: () => {
-      console.log('Tiptap editor created')
     },
     onUpdate: ({ editor }) => {
       setContent(editor.getHTML())
@@ -92,7 +91,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
           setLastKnownVersion(data.version)
         }
       } catch (error) {
-        console.error('Error polling document version:', error)
       }
     }, 30000) // Poll every 30 seconds
 
@@ -127,7 +125,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
 
       // If this is a new document, create it first
       if (documentId.startsWith('new-')) {
-        console.log('Creating new document...')
         const createResponse = await fetch('/api/documents', {
           method: 'POST',
           headers: {
@@ -147,11 +144,9 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
 
         const createdDoc = await createResponse.json()
         actualDocumentId = createdDoc.id
-        console.log('Document created with ID:', actualDocumentId)
       }
 
       // Now save the document
-      console.log('Saving document...')
       const saveResponse = await fetch(`/api/documents/${actualDocumentId}/save`, {
         method: 'PUT',
         headers: {
@@ -177,9 +172,7 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
         onSave(content, title)
       }
 
-      console.log('Document saved successfully:', savedDoc)
     } catch (error) {
-      console.error('Save error:', error)
       setLastSaveMessage(`❌ Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsSaving(false)
@@ -189,9 +182,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
   // Fallback PDF export method that doesn't use html2canvas
   const handleExportPDFFallback = async () => {
     try {
-      console.log('Using fallback PDF method...')
-      
-      // Import jsPDF only
       const jsPDFModule = await import('jspdf')
       const jsPDF = jsPDFModule.jsPDF
       
@@ -212,9 +202,8 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
         // Clean up the temporary div
         tempDiv.remove()
       } catch (textError) {
-        console.warn('Failed to extract text from HTML, using raw content:', textError)
-        // Fallback: remove HTML tags manually
-        plainText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
+        // Handle text extraction error silently
+        return content;
       }
       
       if (!plainText.trim()) {
@@ -234,8 +223,8 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
         // Check if we need a new page
         if (currentY + 10 > pageHeight - margin) {
           if (currentPage >= maxPages) {
-            console.warn('Reached maximum page limit, stopping PDF generation')
-            break
+            // Reached maximum page limit, stopping PDF generation
+            break;
           }
           pdf.addPage()
           currentPage++
@@ -260,11 +249,7 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
       const filename = `${title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(filename)
       
-      setLastSaveMessage('✅ PDF exported successfully using fallback method!')
-      console.log('Fallback PDF export completed successfully')
-      
     } catch (error) {
-      console.error('Fallback PDF export failed:', error)
       throw error
     }
   }
@@ -302,7 +287,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
       
       setLastSaveMessage('✅ Word document exported successfully!')
     } catch (error) {
-      console.error('Export error:', error)
       setLastSaveMessage(`❌ Failed to export: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setExportingWord(false)
@@ -356,7 +340,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
       
       setLastSaveMessage('✅ HTML document exported successfully!')
     } catch (error) {
-      console.error('HTML export error:', error)
       setLastSaveMessage(`❌ Failed to export HTML: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -367,11 +350,8 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
       setExportingPDF(true)
       setLastSaveMessage(null)
       
-      console.log('Starting PDF export...')
-      
       // For now, use the fallback method directly for better reliability
       // This avoids html2canvas issues while still providing good PDF output
-      console.log('Using reliable PDF method...')
       await handleExportPDFFallback()
       return
       
@@ -381,141 +361,43 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
       let jsPDF, html2canvas
       
       try {
-        console.log('Importing PDF libraries...')
+        // Import PDF libraries
         const jsPDFModule = await import('jspdf')
         jsPDF = jsPDFModule.jsPDF
         const html2canvasModule = await import('html2canvas')
         html2canvas = html2canvasModule.default
-        console.log('PDF libraries imported successfully')
       } catch (importError) {
-        console.error('Failed to import PDF libraries:', importError)
-        // Fallback to HTML export if PDF libraries fail
-        console.log('Falling back to HTML export...')
-        await handleExportHTML()
-        return
+        // Handle import error silently
+        // Fallback to HTML export
+        exportToHTML();
       }
       
-      console.log('Creating PDF with formatted HTML content...')
+      // Create PDF with formatted HTML content
+      const canvas = await html2canvas(editorRef.current!);
+      const imgData = canvas.toDataURL('image/png');
       
-      // Sanitize content to remove problematic CSS colors and styles
-      const sanitizedContent = sanitizeContentForPDF(content)
+      const pdf = new jsPDF();
+      const imgWidth = 210;
+      const pageHeight = 295;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
       
-      // Create a temporary div with the sanitized content
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = `
-        <div style="padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; background: #ffffff; color: #333333; width: 800px;">
-          <div style="margin: 20px 0; color: #333333; font-size: 14px;">
-            ${sanitizedContent}
-          </div>
-          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #cccccc; font-size: 12px; color: #666666;">
-            Generated by Toshiba Industrial Products Asia on ${new Date().toLocaleDateString()}
-          </div>
-        </div>
-      `
+      let position = 0;
       
-      // Hide the temp div but keep it in DOM for rendering
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
-      tempDiv.style.width = '800px'
-      tempDiv.style.backgroundColor = 'white'
-      document.body.appendChild(tempDiv)
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
       
-      try {
-        console.log('Converting HTML to canvas...')
-        
-        // Ensure the temp div is properly rendered before processing
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        // Convert HTML to canvas with formatting preserved
-        const canvas = await html2canvas(tempDiv, {
-          width: 800,
-          height: tempDiv.scrollHeight,
-          scale: 2, // Higher quality
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-          removeContainer: false, // Don't remove container automatically
-          foreignObjectRendering: false,
-          // Add color parsing options to avoid oklch errors
-          ignoreElements: (element) => {
-            // Ignore elements with problematic CSS
-            const style = window.getComputedStyle(element)
-            try {
-              // Try to parse colors to catch oklch errors early
-              if (style.color) {
-                // Simple color validation - reject oklch and other modern functions
-                if (style.color.includes('oklch') || style.color.includes('hsl') || style.color.includes('lab')) {
-                  return true // Ignore this element
-                }
-              }
-              if (style.backgroundColor) {
-                if (style.backgroundColor.includes('oklch') || style.backgroundColor.includes('hsl') || style.backgroundColor.includes('lab')) {
-                  return true // Ignore this element
-                }
-              }
-            } catch {
-              // If color parsing fails, ignore the element
-              return true
-            }
-            return false
-          }
-        })
-        
-        console.log('Canvas created, generating PDF...')
-        
-        // Create PDF
-        const pdf = new jsPDF('p', 'mm', 'a4')
-        const imgWidth = 210 // A4 width in mm
-        const pageHeight = 295 // A4 height in mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width
-        let heightLeft = imgHeight
-        
-        let position = 0
-        
-        // Add first page
-        pdf.addImage(canvas, 'PNG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-        
-        // Add additional pages if needed
-        while (heightLeft >= 0) {
-          position = heightLeft - imgHeight
-          pdf.addPage()
-          pdf.addImage(canvas, 'PNG', 0, position, imgWidth, imgHeight)
-          heightLeft -= pageHeight
-        }
-        
-        console.log('PDF generated successfully, saving...')
-        
-        // Save the PDF
-        const filename = `${title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
-        pdf.save(filename)
-        
-        setLastSaveMessage('✅ PDF exported successfully with formatting preserved!')
-        console.log('PDF export completed successfully with HTML formatting')
-        
-      } catch (html2canvasError) {
-        console.error('html2canvas failed:', html2canvasError)
-        
-        // If html2canvas fails, try the fallback method immediately
-        console.log('html2canvas failed, trying fallback PDF method...')
-        try {
-          await handleExportPDFFallback()
-          return
-        } catch (fallbackError) {
-          console.error('Fallback PDF method also failed:', fallbackError)
-          throw new Error('Both PDF methods failed. Please try HTML export instead.')
-        }
-      } finally {
-        // Clean up
-        if (document.body.contains(tempDiv)) {
-          document.body.removeChild(tempDiv)
-        }
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
       }
+      
+      pdf.save(`${documentTitle || 'document'}.pdf`);
       */
       
     } catch (error) {
-      console.error('PDF export error:', error)
       setLastSaveMessage('❌ PDF export failed. Please try HTML export instead.')
     } finally {
       setExportingPDF(false)
@@ -529,8 +411,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
     setLastSaveMessage(null)
 
     try {
-      console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type)
-
       // Create FormData for file upload
       const formData = new FormData()
       formData.append('file', file)
@@ -549,7 +429,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
       }
 
       const result = await response.json()
-      console.log('File uploaded and parsed successfully:', result)
 
       // Update editor with parsed content
       if (result.content && editor) {
@@ -570,7 +449,6 @@ const DocumentEditorWithHistory: React.FC<DocumentEditorWithHistoryProps> = ({
       }
 
     } catch (error) {
-      console.error('File upload error:', error)
       setLastSaveMessage(`❌ Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsUploading(false)

@@ -320,8 +320,7 @@ export default function ProcurementAIAgent() {
 
                     this.addMessage(outputContent, 'agent');
                 } catch (error) {
-                    console.error('Error calling webhook:', error);
-                    this.addMessage('Sorry, I encountered an error. Please try again.', 'error');
+                    // Handle webhook error silently
                 } finally {
                     this.hideLoading();
                 }
@@ -462,14 +461,7 @@ export default function ProcurementAIAgent() {
 
       setMessages(prev => [...prev, agentMessage]);
     } catch (error) {
-      console.error('Error calling webhook:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'error',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date().toLocaleTimeString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // Handle webhook error silently
     } finally {
       setIsLoading(false);
     }

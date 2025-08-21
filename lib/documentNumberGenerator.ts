@@ -27,75 +27,81 @@ export async function generateDocumentNumber(
   projectId?: string,
   createdById?: string
 ): Promise<GeneratedDocumentNumber> {
-  const currentYear = new Date().getFullYear();
-  
-  console.log('Starting document number generation:', { templateId, projectId, createdById, currentYear });
+  try {
+    // Start transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Fetch template
+      const template = await tx.documentTemplate.findUnique({
+        where: { id: templateId }
+      });
 
-  // Use transaction to ensure atomicity
-  const result = await prisma.$transaction(async (tx) => {
-    console.log('Transaction started, fetching template:', templateId);
-    
-    // Get the template and lock it for update
-    const template = await tx.documentTemplate.findUnique({
-      where: { id: templateId },
-    });
+      if (!template) {
+        throw new Error(`Template not found: ${templateId}`);
+      }
 
-    console.log('Template found:', template);
+      if (!template.isActive) {
+        throw new Error(`Template is not active: ${templateId}`);
+      }
 
-    if (!template) {
-      throw new Error("Document template not found");
-    }
+      // Get current year
+      const currentYear = new Date().getFullYear();
+      
+      // Check if we need to reset sequence for new year
+      if (template.year !== currentYear) {
+        // Reset sequence for new year
+        await tx.documentTemplate.update({
+          where: { id: templateId },
+          data: {
+            year: currentYear,
+            currentSequence: 0
+          }
+        });
+      }
 
-    if (!template.isActive) {
-      throw new Error("Document template is not active");
-    }
+      // Increment sequence
+      const updatedTemplate = await tx.documentTemplate.update({
+        where: { id: templateId },
+        data: {
+          currentSequence: {
+            increment: 1
+          }
+        }
+      });
 
-    console.log('Template is active, incrementing sequence from:', template.currentSequence);
+      // Generate document number
+      const documentNumber = `${template.prefix}${updatedTemplate.year}${String(updatedTemplate.currentSequence).padStart(4, '0')}`;
 
-    // Increment the sequence number
-    const updatedTemplate = await tx.documentTemplate.update({
-      where: { id: templateId },
-      data: {
-        currentSequence: {
-          increment: 1,
-        },
-      },
-    });
+      // Create document number record
+      const documentNumberRecord = await tx.documentNumber.create({
+        data: {
+          documentNumber,
+          templateId,
+          projectId,
+          sequenceNumber: updatedTemplate.currentSequence,
+          year: updatedTemplate.year,
+          status: 'ACTIVE',
+          createdById: createdById || 'system'
+        }
+      });
 
-    console.log('Sequence updated to:', updatedTemplate.currentSequence);
-
-    // Generate the document number
-    const sequenceNumber = updatedTemplate.currentSequence;
-    const documentNumber = `${template.prefix}-${currentYear}-${sequenceNumber.toString().padStart(3, '0')}`;
-    
-    console.log('Generated document number:', documentNumber);
-
-    // Create the document number record
-    const documentNumberRecord = await tx.documentNumber.create({
-      data: {
+      return {
+        success: true,
         documentNumber,
+        sequenceNumber: updatedTemplate.currentSequence,
+        year: updatedTemplate.year,
         templateId,
         projectId,
-        sequenceNumber,
-        year: currentYear,
-        createdById: createdById || 'system', // Use provided ID or fallback
-      },
+        recordId: documentNumberRecord.id
+      };
     });
 
-    console.log('Document number record created:', documentNumberRecord.id);
-
+    return result;
+  } catch (error) {
     return {
-      id: documentNumberRecord.id,
-      documentNumber: documentNumberRecord.documentNumber,
-      templateId: documentNumberRecord.templateId,
-      projectId: documentNumberRecord.projectId || undefined,
-      sequenceNumber: documentNumberRecord.sequenceNumber,
-      year: documentNumberRecord.year,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
-  });
-
-  console.log('Document number generation completed successfully:', result);
-  return result;
+  }
 }
 
 /**

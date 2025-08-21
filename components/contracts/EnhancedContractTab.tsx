@@ -10,56 +10,87 @@ import {
   FileText, 
   Edit3, 
   Workflow,
-  Save,
   Download,
   Share2
 } from 'lucide-react';
 
 interface EnhancedContractTabProps {
   project: Project;
-  onUpdateContract?: (updates: any) => void;
+  onUpdateContract?: (updates: Partial<Project['contractDetails']>) => void;
 }
 
 type TabType = 'details' | 'document' | 'workflow';
 
 export default function EnhancedContractTab({ project, onUpdateContract }: EnhancedContractTabProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
-  const { updateContract, loading, error } = useContract();
+  const { updateContract } = useContract();
 
-  const handleContractUpdate = async (updates: any) => {
-    const success = await updateContract(project.id, updates);
-    if (success && onUpdateContract) {
-      onUpdateContract(updates);
+  const handleContractUpdate = async (updates: Partial<Project['contractDetails']>) => {
+    const updatedContract = await updateContract(project.id, updates as Parameters<typeof updateContract>[1]);
+    if (updatedContract && onUpdateContract) {
+      onUpdateContract(updatedContract);
     }
-    return success;
+    return !!updatedContract;
   };
 
-  const handleDocumentSave = async (content: string): Promise<boolean> => {
-    // In a real app, this would save to a document storage system
-    console.log('Saving document content:', content);
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(true), 1000); // Simulate API call
-    });
-  };
+
 
   const handleStatusChange = async (newStatus: string, comment?: string): Promise<boolean> => {
-    return await handleContractUpdate({
-      contractStatus: newStatus,
-      // In a real app, you might also save the comment to an audit log
-    });
+    if (!project.contractDetails?.id) return false;
+    
+    try {
+      const res = await fetch(`/api/contracts/${project.contractDetails.id}/workflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: newStatus,
+          comment
+        }),
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success && onUpdateContract) {
+          onUpdateContract({ contractStatus: result.contract.contractStatus });
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
   };
 
   const handleRequestApproval = async (): Promise<boolean> => {
-    // In a real app, this would send notifications to approvers
-    console.log('Requesting approval for contract');
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(true), 1000); // Simulate API call
-    });
+    if (!project.contractDetails?.id) return false;
+    
+    try {
+      const res = await fetch(`/api/contracts/${project.contractDetails.id}/workflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REQUEST_APPROVAL'
+        }),
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success && onUpdateContract) {
+          onUpdateContract({ contractStatus: result.contract.contractStatus });
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
   };
 
   const handleShare = () => {
     // In a real app, this would open a share dialog
-    console.log('Sharing contract');
+    // For now, just copy the project URL to clipboard
+    const projectUrl = `${window.location.origin}/lvm/projects/${project.id}?tab=CONTRACT`;
+    navigator.clipboard.writeText(projectUrl);
   };
 
   const tabs = [
@@ -142,7 +173,6 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
         {activeTab === 'document' && (
           <ContractDocumentEditor
             project={project}
-            onSaveContent={handleDocumentSave}
             onShare={handleShare}
           />
         )}

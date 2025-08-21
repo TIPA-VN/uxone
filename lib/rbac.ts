@@ -46,7 +46,6 @@ export const withEndpointRBAC = (handler: Function, endpoint: keyof typeof APP_C
       const mappedRole = mapRoleToConfigKey(session.user.role) as keyof typeof APP_CONFIG.roles;
       
       if (!mappedRole || !APP_CONFIG.roles[mappedRole]) {
-        console.error('Invalid user role:', session.user.role, 'mapped to:', mappedRole);
         return NextResponse.json({ error: "Invalid user role" }, { status: 403 });
       }
 
@@ -465,6 +464,8 @@ export const canAccessProjectTab = (
     case "PRODUCTION":
       // Only managers and above can access Published tab
       return isUserManager(userRole) || isUserSupervisor(userRole);
+    
+
     
     default:
       // For department tabs, only department members can access

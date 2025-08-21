@@ -24,8 +24,7 @@ export function useNotifications() {
         setPermission(result);
         return result;
       } catch (error) {
-        console.error('Error requesting notification permission:', error);
-        return 'denied';
+        // Handle permission error silently
       }
     }
     return 'denied';
@@ -41,12 +40,8 @@ export function useNotifications() {
       
       setNotifications(data);
     } catch (e) {
-      console.error('Error fetching notifications:', e);
-      if (e instanceof Error) {
-        setError(e);
-      } else {
-        setError(new Error(String(e)));
-      }
+      // Handle fetch error silently
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -91,12 +86,12 @@ export function useNotifications() {
             return [notif, ...prev];
           });
         } catch (error) {
-          console.error('Error handling SSE message:', error);
+          // Handle SSE message error silently
         }
       };
 
       evtSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
+        // Handle SSE connection error silently
         
         // Close the connection
         if (evtSource) {
@@ -109,7 +104,7 @@ export function useNotifications() {
         // Connection opened successfully
       };
     } catch (error) {
-      console.error('Failed to create SSE connection:', error);
+      // Handle SSE connection error silently
     }
 
     return () => {

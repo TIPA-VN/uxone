@@ -71,8 +71,8 @@ export default function PurchaseOrderDetailPage() {
         setError('Purchase order not found');
       }
     } catch (err) {
-      setError('Error loading purchase order details');
-      console.error('Error fetching PO details:', err);
+      // Handle fetch error silently
+      setError('Failed to fetch PO details');
     } finally {
       setLoading(false);
     }

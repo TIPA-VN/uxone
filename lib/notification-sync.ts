@@ -25,8 +25,6 @@ export async function syncNotificationsEnhanced(userId: string): Promise<SyncSta
     const tipaPrisma = await getTIPAPrisma()
     const uxonePrisma = await getUXOnePrisma()
 
-    console.log(`🔄 Starting notification sync for user ${userId}`)
-
     // Get notifications from TIPA Mobile database
     const tipaNotifications = await tipaPrisma.notification.findMany({
       where: { userId },
@@ -75,7 +73,6 @@ export async function syncNotificationsEnhanced(userId: string): Promise<SyncSta
               }
             })
             syncStatus.syncedNotifications++
-            console.log(`🔄 Updated notification: ${tipaNotif.title}`)
           } else {
             syncStatus.skippedNotifications++
           }
@@ -83,7 +80,6 @@ export async function syncNotificationsEnhanced(userId: string): Promise<SyncSta
       } catch (error) {
         const errorMsg = `Failed to sync notification ${tipaNotif.id}: ${error}`
         syncStatus.errors.push(errorMsg)
-        console.error(errorMsg)
       }
     }
 
@@ -92,7 +88,6 @@ export async function syncNotificationsEnhanced(userId: string): Promise<SyncSta
   } catch (error) {
     const errorMsg = `Notification sync failed for user ${userId}: ${error}`
     syncStatus.errors.push(errorMsg)
-    console.error(errorMsg)
   }
 
   return syncStatus
@@ -110,8 +105,6 @@ export async function syncNotificationsToTIPA(userId: string): Promise<SyncStatu
   try {
     const tipaPrisma = await getTIPAPrisma()
     const uxonePrisma = await getUXOnePrisma()
-
-    console.log(`🔄 Starting UXOne to TIPA notification sync for user ${userId}`)
 
     // Get notifications from UXOne database
     const uxoneNotifications = await uxonePrisma.notification.findMany({
@@ -156,7 +149,6 @@ export async function syncNotificationsToTIPA(userId: string): Promise<SyncStatu
       } catch (error) {
         const errorMsg = `Failed to sync UXOne notification ${uxoneNotif.id}: ${error}`
         syncStatus.errors.push(errorMsg)
-        console.error(errorMsg)
       }
     }
 
@@ -165,7 +157,6 @@ export async function syncNotificationsToTIPA(userId: string): Promise<SyncStatu
   } catch (error) {
     const errorMsg = `UXOne to TIPA notification sync failed for user ${userId}: ${error}`
     syncStatus.errors.push(errorMsg)
-    console.error(errorMsg)
   }
 
   return syncStatus
@@ -176,8 +167,6 @@ export async function syncNotificationsBidirectional(userId: string): Promise<{
   tipaToUXOne: SyncStatus
   uxoneToTIPA: SyncStatus
 }> {
-  console.log(`🔄 Starting bidirectional notification sync for user ${userId}`)
-
   const tipaToUXOne = await syncNotificationsEnhanced(userId)
   const uxoneToTIPA = await syncNotificationsToTIPA(userId)
 
@@ -191,8 +180,6 @@ export async function markNotificationAsRead(userId: string, notificationId: str
   try {
     const tipaPrisma = await getTIPAPrisma()
     const uxonePrisma = await getUXOnePrisma()
-
-    console.log(`📝 Marking notification ${notificationId} as ${isRead ? 'read' : 'unread'} for user ${userId}`)
 
     // Update in TIPA Mobile database
     await tipaPrisma.notification.updateMany({
@@ -216,7 +203,6 @@ export async function markNotificationAsRead(userId: string, notificationId: str
     return true
 
   } catch (error) {
-    console.error(`❌ Failed to mark notification as read: ${error}`)
     return false
   }
 }
@@ -264,7 +250,6 @@ export async function getNotificationCounts(userId: string): Promise<{
     }
 
   } catch (error) {
-    console.error(`❌ Failed to get notification counts: ${error}`)
     return {
       tipaCount: 0,
       uxoneCount: 0,
@@ -285,8 +270,6 @@ export async function cleanupOldNotifications(userId: string, daysOld: number = 
 
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - daysOld)
-
-    console.log(`🧹 Cleaning up notifications older than ${daysOld} days for user ${userId}`)
 
     // Clean up TIPA Mobile notifications
     const tipaResult = await tipaPrisma.notification.deleteMany({
@@ -318,7 +301,6 @@ export async function cleanupOldNotifications(userId: string, daysOld: number = 
     }
 
   } catch (error) {
-    console.error(`❌ Failed to cleanup old notifications: ${error}`)
     return {
       tipaCleaned: 0,
       uxoneCleaned: 0

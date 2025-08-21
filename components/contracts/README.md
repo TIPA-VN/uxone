@@ -23,7 +23,6 @@ import ContractTab from '@/components/contracts/ContractTab';
   project={projectData} 
   onUpdateContract={(updates) => {
     // Handle contract updates
-    console.log('Contract updated:', updates);
   }}
 />
 ```
@@ -201,7 +200,6 @@ import EnhancedContractTab from '@/components/contracts/EnhancedContractTab';
   project={projectData}
   onUpdateContract={(updates) => {
     // Handle contract updates
-    console.log('Contract updated:', updates);
   }}
 />
 ```

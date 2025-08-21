@@ -130,7 +130,6 @@ const ContractEditor: React.FC<ContractEditorProps> = ({
       // Track changes for collaboration
       const content = editor.getHTML();
       // Here you would implement change tracking
-      console.log('Content updated:', content);
     }
   });
 
@@ -149,7 +148,7 @@ const ContractEditor: React.FC<ContractEditorProps> = ({
       onVersionChange?.(newVersion);
       
     } catch (error) {
-      console.error('Failed to save contract:', error);
+      // Handle error silently
     } finally {
       setIsSaving(false);
     }
@@ -160,14 +159,12 @@ const ContractEditor: React.FC<ContractEditorProps> = ({
     if (!editor) return;
     const content = editor.getHTML();
     // Implementation for Word export
-    console.log('Exporting to Word:', content);
   };
 
   const exportToPDF = () => {
     if (!editor) return;
     const content = editor.getHTML();
     // Implementation for PDF export
-    console.log('Exporting to PDF:', content);
   };
 
   // Toolbar actions

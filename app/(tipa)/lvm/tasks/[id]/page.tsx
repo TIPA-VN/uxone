@@ -175,11 +175,9 @@ export default function TaskDetailPage() {
         const taskData = await res.json();
         setTask(taskData);
       } else {
-        console.error('Error fetching task:', res.status);
         setTask(null);
       }
     } catch (error) {
-      console.error('Error fetching task:', error);
       setTask(null);
     }
   }, [taskId]);
@@ -190,7 +188,6 @@ export default function TaskDetailPage() {
       const data = await res.json();
       setComments(data);
     } catch (error) {
-      console.error('Error fetching comments:', error);
     }
   }, [taskId]);
 
@@ -200,7 +197,6 @@ export default function TaskDetailPage() {
       const data = await res.json();
       setAttachments(data);
     } catch (error) {
-      console.error('Error fetching attachments:', error);
     }
   }, [taskId]);
 
@@ -213,11 +209,9 @@ export default function TaskDetailPage() {
         const subtaskList = Array.isArray(data) ? data : (data.subtasks || data.data || []);
         setSubtasks(subtaskList);
       } else {
-        console.error('Error fetching subtasks:', res.status, res.statusText);
         setSubtasks([]);
       }
     } catch (error) {
-      console.error('Error fetching subtasks:', error);
       setSubtasks([]);
     }
   }, [taskId]);
@@ -231,11 +225,9 @@ export default function TaskDetailPage() {
         const userList = data.users || data;
         setUsers(userList);
       } else {
-        console.error('Error fetching users:', res.status, res.statusText);
         setUsers([]);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
       setUsers([]);
     }
   }, []);
@@ -287,7 +279,6 @@ export default function TaskDetailPage() {
         }
       }
     } catch (error) {
-      console.error("Error updating task status:", error);
       alert("Failed to update task status");
     } finally {
       setUpdatingStatus(false);
@@ -311,7 +302,6 @@ export default function TaskDetailPage() {
         await fetchComments();
       }
     } catch (error) {
-      console.error('Error adding comment:', error);
     } finally {
       setSubmittingComment(false);
     }
@@ -336,10 +326,8 @@ export default function TaskDetailPage() {
         await fetchAttachments();
       } else {
         const errorData = await res.json();
-        console.error('Upload failed:', errorData.error);
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
     } finally {
       setUploading(false);
     }
@@ -377,7 +365,6 @@ export default function TaskDetailPage() {
         await fetchSubtasks();
       }
     } catch (error) {
-      console.error('Error creating subtask:', error);
     } finally {
       setCreatingSubtask(false);
     }
@@ -396,10 +383,8 @@ export default function TaskDetailPage() {
           await fetchAttachments();
         } else {
           const errorData = await res.json();
-          console.error('Delete failed:', errorData.error);
         }
       } catch (error) {
-        console.error('Error deleting attachment:', error);
       }
     }
   };

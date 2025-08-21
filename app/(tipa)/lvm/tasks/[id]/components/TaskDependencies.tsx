@@ -72,11 +72,9 @@ export default function TaskDependencies({ taskId, canEdit }: TaskDependenciesPr
       } else if (res.status === 404) {
         setDependencies({ dependencies: [], blockingTasks: [] });
       } else {
-        console.error(`Error fetching dependencies: ${res.status} ${res.statusText}`);
         setDependencies({ dependencies: [], blockingTasks: [] });
       }
     } catch (error) {
-      console.error("Error fetching dependencies:", error);
       setDependencies({ dependencies: [], blockingTasks: [] });
     } finally {
       setLoading(false);
@@ -96,7 +94,7 @@ export default function TaskDependencies({ taskId, canEdit }: TaskDependenciesPr
         setAvailableTasks(filteredTasks);
       }
     } catch (error) {
-      console.error("Error fetching available tasks:", error);
+      // Handle fetch error silently
     }
   };
 
@@ -121,7 +119,7 @@ export default function TaskDependencies({ taskId, canEdit }: TaskDependenciesPr
         alert(error.error || "Failed to add dependency");
       }
     } catch (error) {
-      console.error("Error adding dependency:", error);
+      // Handle add error silently
       alert("Failed to add dependency");
     } finally {
       setAdding(false);
@@ -141,7 +139,6 @@ export default function TaskDependencies({ taskId, canEdit }: TaskDependenciesPr
         alert("Failed to remove dependency");
       }
     } catch (error) {
-      console.error("Error removing dependency:", error);
       alert("Failed to remove dependency");
     }
   };

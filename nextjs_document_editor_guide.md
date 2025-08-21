@@ -510,8 +510,8 @@ export async function importWordDocument(file: File): Promise<string> {
     const result = await mammoth.convertToHtml({ arrayBuffer })
     return result.value
   } catch (error) {
-    console.error('Error importing Word document:', error)
-    throw new Error('Failed to import Word document')
+    // Handle import error silently
+    throw new Error('Failed to import Word document');
   }
 }
 
@@ -591,8 +591,8 @@ export default function FileUpload({ onFileImported }: FileUploadProps) {
       
       onFileImported(content, file.name)
     } catch (error) {
-      console.error('File import error:', error)
-      alert('Failed to import file')
+      // Handle file import error silently
+      alert('Failed to import file');
     }
   }, [onFileImported])
 

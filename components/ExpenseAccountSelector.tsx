@@ -98,8 +98,8 @@ export default function ExpenseAccountSelector({
           setError('Failed to fetch expense accounts');
         }
       } catch (err) {
-        setError('Error loading expense accounts');
-        console.error('Error fetching expense accounts:', err);
+        // Handle fetch error silently
+        setError('Failed to fetch expense accounts');
       } finally {
         setIsLoading(false);
       }

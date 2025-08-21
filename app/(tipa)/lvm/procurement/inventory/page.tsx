@@ -35,7 +35,8 @@ export default function InventoryPage() {
 
   // Background loading effect - load more data when component mounts or filters change
   React.useEffect(() => {
-    if (data?.data?.pagination?.totalItems > pageSize) {
+    const totalItems = data?.data?.pagination?.totalItems;
+    if (totalItems && totalItems > pageSize) {
       setIsLoadingMore(true);
       
       // Simulate background loading of remaining data
@@ -46,8 +47,7 @@ export default function InventoryPage() {
           await new Promise(resolve => setTimeout(resolve, 2000));
           setIsLoadingMore(false);
         } catch (error) {
-          console.error('Background loading failed:', error);
-          setIsLoadingMore(false);
+          // Handle background loading error silently
         }
       };
       
@@ -326,7 +326,7 @@ export default function InventoryPage() {
                   await fetch('/api/jde/inventory/cached', { method: 'DELETE' });
                   refetch();
                 } catch (error) {
-                  console.error('Failed to clear cache:', error);
+                  // Handle cache clear error silently
                 }
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
@@ -344,7 +344,6 @@ export default function InventoryPage() {
               totalItems={pagination?.totalItems || 0}
               onExport={() => {
                 // Optional: Add any post-export logic here
-                console.log('Export completed');
               }}
             />
           </div>
