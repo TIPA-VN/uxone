@@ -12,7 +12,7 @@ export interface PDFGenerationOptions {
   approvedAt?: Date;
 }
 
-export async function generateContractPDF(options: PDFGenerationOptions): Promise<string> {
+export async function generateContractPDF(options: PDFGenerationOptions): Promise<Buffer> {
   try {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -88,9 +88,9 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
       doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
     }
 
-    // Convert to base64 string
-    const pdfBase64 = doc.output('datauristring');
-    return pdfBase64;
+    // Convert to Buffer
+    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+    return pdfBuffer;
     
   } catch (error) {
     console.error('Error generating PDF:', error);

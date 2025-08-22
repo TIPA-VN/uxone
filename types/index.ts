@@ -23,6 +23,8 @@ export type Project = {
     currency?: string;
     contractStatus?: string;
     contractNumber?: string;
+    currentApprovalLevel?: number;
+    totalApprovalLevels?: number;
   };
   createdAt: string;
   updatedAt: string;

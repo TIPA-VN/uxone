@@ -33,7 +33,14 @@ export function useProject(projectId: string) {
   }, [projectId]);
 
   const updateProject = (updates: Partial<Project>) => {
-    setProject(prev => prev ? { ...prev, ...updates } : null);
+    console.log('🔄 useProject: Updating project with:', updates);
+    setProject(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updates };
+      console.log('🔄 useProject: Previous state:', prev);
+      console.log('🔄 useProject: New state:', updated);
+      return updated;
+    });
   };
 
   return {

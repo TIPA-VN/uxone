@@ -333,17 +333,26 @@ export default function ProjectDetailsPage() {
             {(project.projectType === "CONTRACT" || project.contractDetails) ? (
               <EnhancedContractTab
                 project={project}
-                onUpdateContract={async (contractData) => {
+                onUpdateContract={async (contractData: any) => {
                   try {
+                    console.log('🔄 Parent: Received contract update:', contractData);
+                    console.log('🔄 Parent: Current project state:', project);
+                    console.log('🔄 Parent: Old contract details:', project.contractDetails);
+                    console.log('🔄 Parent: New contract details:', contractData);
+                    
                     // Update the project state with the new contract data
                     const updatedProject = {
                       ...project,
                       contractDetails: contractData as Project['contractDetails']
                     };
+                    
+                    console.log('🔄 Parent: Updated project state:', updatedProject);
+                    console.log('🔄 Parent: Updated contract details:', updatedProject.contractDetails);
                     updateProject(updatedProject);
                     setActionStatus("Contract updated successfully!");
                     setTimeout(() => setActionStatus(null), 3000);
-                  } catch {
+                  } catch (error) {
+                    console.error('❌ Parent: Error updating contract:', error);
                     setActionStatus("Error updating contract.");
                   }
                 }}

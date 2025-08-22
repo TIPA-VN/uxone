@@ -14,6 +14,8 @@ export async function GET(
 
     const { id } = await params;
 
+    console.log('🔍 Fetching finalized document for contract:', id);
+
     // Get contract details
     const contractDetails = await prisma.contractDetails.findUnique({
       where: { id },
@@ -21,28 +23,60 @@ export async function GET(
     });
 
     if (!contractDetails) {
+      console.log('❌ Contract not found:', id);
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    // Check if finalized document exists
-    const finalizedDocument = await prisma.finalizedDocument.findFirst({
-      where: { 
-        OR: [
-          { originalDocumentId: contractDetails.documentId },
-          { contractNumber: contractDetails.contractNumber }
-        ]
-      }
+    console.log('📄 Contract details:', {
+      id: contractDetails.id,
+      contractNumber: contractDetails.contractNumber,
+      documentId: contractDetails.documentId,
+      contractStatus: contractDetails.contractStatus,
+      hasDocument: !!contractDetails.document,
+      hasContent: !!contractDetails.document?.content,
+      contentLength: contractDetails.document?.content?.length || 0
     });
 
-    // Get all finalized documents for this contract (for debugging)
-    const allFinalizedDocs = await prisma.finalizedDocument.findMany({
-      where: { 
-        OR: [
-          { originalDocumentId: contractDetails.documentId },
-          { contractNumber: contractDetails.contractNumber }
-        ]
+    // Check if finalized document exists
+    let finalizedDocument = null;
+    let allFinalizedDocs = [];
+    
+    try {
+      // Build the where condition carefully
+      const whereCondition: any = { OR: [] };
+      
+      if (contractDetails.contractNumber) {
+        whereCondition.OR.push({ contractNumber: contractDetails.contractNumber });
       }
-    });
+      
+      if (contractDetails.documentId) {
+        whereCondition.OR.push({ originalDocumentId: contractDetails.documentId });
+      }
+      
+      // Only query if we have at least one condition
+      if (whereCondition.OR.length > 0) {
+        console.log('🔍 Querying finalized documents with condition:', whereCondition);
+        
+        finalizedDocument = await prisma.finalizedDocument.findFirst({
+          where: whereCondition
+        });
+
+        allFinalizedDocs = await prisma.finalizedDocument.findMany({
+          where: whereCondition
+        });
+        
+        console.log('📄 Finalized document query results:', {
+          found: !!finalizedDocument,
+          totalFound: allFinalizedDocs.length,
+          finalizedDocId: finalizedDocument?.id
+        });
+      } else {
+        console.log('⚠️ No query conditions available - missing contractNumber and documentId');
+      }
+    } catch (queryError) {
+      console.error('❌ Error querying finalized documents:', queryError);
+      // Continue without finalized document data
+    }
 
     return NextResponse.json({
       success: true,
@@ -95,8 +129,8 @@ export async function POST(
         const finalizedDoc = await prisma.finalizedDocument.findFirst({
           where: { 
             OR: [
-              { originalDocumentId: id },
-              { contractNumber: id }
+              { contractNumber: id },
+              { originalDocumentId: id }
             ]
           }
         });
@@ -109,7 +143,7 @@ export async function POST(
         return NextResponse.json({
           success: true,
           pdf: finalizedDoc.finalizedPdf,
-          filename: `${finalizedDoc.contractNumber || 'contract'}.pdf`
+          filename: finalizedDoc.title || 'contract.pdf'
         });
 
       case 'VERIFY_SIGNATURE':
@@ -117,8 +151,8 @@ export async function POST(
         const docToVerify = await prisma.finalizedDocument.findFirst({
           where: { 
             OR: [
-              { originalDocumentId: id },
-              { contractNumber: id }
+              { contractNumber: id },
+              { originalDocumentId: id }
             ]
           }
         });

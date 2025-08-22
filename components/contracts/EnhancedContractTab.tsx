@@ -6,7 +6,7 @@ import { useContract } from '@/hooks/useContract';
 import ContractTab from './ContractTab';
 import ContractDocumentEditor from './ContractDocumentEditor';
 import ContractWorkflowActions from './ContractWorkflowActions';
-import FinalizedDocumentCard from './FinalizedDocumentCard';
+import FinalizedDocumentTab from './FinalizedDocumentTab';
 import WorkflowProgressBar from './WorkflowProgressBar';
 import DocumentVersionTimeline from './DocumentVersionTimeline';
 import { 
@@ -28,6 +28,7 @@ type TabType = 'details' | 'document' | 'workflow' | 'finalized' | 'versions';
 
 export default function EnhancedContractTab({ project, onUpdateContract }: EnhancedContractTabProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
+  const [workflowRefreshKey, setWorkflowRefreshKey] = useState(0);
   const { updateContract } = useContract();
 
   const handleContractUpdate = async (updates: Partial<Project['contractDetails']>) => {
@@ -38,10 +39,37 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
     return !!updatedContract;
   };
 
+  // Wrapper function for ContractTab that matches its expected signature
+  const handleContractTabUpdate = (updates: Partial<{
+    contractType: string;
+    counterparty: string;
+    value: number | null;
+    currency: string;
+    contractStatus: string;
+  }>) => {
+    // Convert the updates to the format expected by handleContractUpdate
+    const contractUpdates: Partial<Project['contractDetails']> = {
+      ...updates,
+      value: updates.value !== null ? updates.value : undefined
+    };
+    
+    handleContractUpdate(contractUpdates);
+  };
+
 
 
   const handleStatusChange = async (newStatus: string, comment?: string): Promise<boolean> => {
-    if (!project.contractDetails?.id) return false;
+    console.log('🔍 FRONTEND: handleStatusChange called with:', { 
+      newStatus, 
+      comment, 
+      contractId: project.contractDetails?.id,
+      contractStatus: project.contractDetails?.contractStatus 
+    });
+    
+    if (!project.contractDetails?.id) {
+      console.error('❌ FRONTEND: No contract ID found!', project.contractDetails);
+      return false;
+    }
     
     try {
       // Map status to action for the backend
@@ -74,40 +102,148 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
       
       console.log('🚀 FRONTEND: Sending workflow action:', { action, newStatus, comment, contractId: project.contractDetails.id });
       
-      const res = await fetch(`/api/contracts/${project.contractDetails.id}/workflow`, {
+      const requestBody = {
+        action,
+        comment
+      };
+      const requestUrl = `/api/contracts/${project.contractDetails.id}/workflow`;
+      
+      console.log('🚀 FRONTEND: Request details:', {
+        url: requestUrl,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          comment
-        }),
+        body: requestBody
       });
       
-      if (res.ok) {
-        const result = await res.json();
-        console.log('Workflow API response:', result);
+      let res;
+      try {
+        res = await fetch(requestUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        
+        console.log('🚀 FRONTEND: Response status:', res.status, res.statusText);
+      } catch (fetchError: any) {
+        console.error('🚨 FRONTEND: Fetch error:', fetchError);
+        throw new Error(`Network request failed: ${fetchError?.message || 'Unknown error'}`);
+      }
+      
+              if (res.ok) {
+          const result = await res.json();
+          console.log('Workflow API response:', result);
+          console.log('🔍 Response analysis:', {
+            success: result.success,
+            hasContract: !!result.contract,
+            contractStatus: result.contract?.contractStatus,
+            resultStatus: result.contractStatus,
+            message: result.message,
+            targetStatus: newStatus,
+            fullResponse: result
+          });
         
         // Handle both success field and direct contract response
         if ((result.success || result.contract) && onUpdateContract) {
           const updatedContractData = result.contract || {};
           
-          // Extract the key fields we need to update
-          const contractStatus = updatedContractData.contractStatus || result.contractStatus;
-          const currentApprovalLevel = updatedContractData.currentApprovalLevel || result.currentApprovalLevel;
-          const totalApprovalLevels = updatedContractData.totalApprovalLevels || result.totalApprovalLevels;
+          // Extract the key fields we need to update - prioritize the response fields
+          let contractStatus = result.contractStatus || updatedContractData.contractStatus;
+          const currentApprovalLevel = result.currentApprovalLevel || updatedContractData.currentApprovalLevel;
+          const totalApprovalLevels = result.totalApprovalLevels || updatedContractData.totalApprovalLevels;
+          
+          console.log('🔍 Extracted fields:', {
+            contractStatus,
+            currentApprovalLevel,
+            totalApprovalLevels,
+            fromResult: {
+              contractStatus: result.contractStatus,
+              currentApprovalLevel: result.currentApprovalLevel,
+              totalApprovalLevels: result.totalApprovalLevels
+            },
+            fromContract: {
+              contractStatus: updatedContractData.contractStatus,
+              currentApprovalLevel: updatedContractData.currentApprovalLevel,
+              totalApprovalLevels: updatedContractData.totalApprovalLevels
+            }
+          });
+          
+          // Special handling for different workflow messages
+          if (result.message === 'Already approved this level') {
+            // When backend says "Already approved this level", we should fetch the latest status
+            // to see if the contract is actually approved now
+            try {
+              const statusRes = await fetch(`/api/contracts/${project.contractDetails?.id}`);
+              if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                if (statusData.contract) {
+                  contractStatus = statusData.contract.contractStatus || contractStatus;
+                  console.log('🔄 Fetched latest contract status:', contractStatus);
+                }
+              }
+            } catch (fetchError) {
+              console.warn('Could not fetch latest contract status:', fetchError);
+            }
+          } else if (result.message === 'Contract fully approved') {
+            // When backend says "Contract fully approved", use the returned contract data
+            console.log('🎉 Contract fully approved! Using returned contract data');
+            contractStatus = updatedContractData.contractStatus || 'APPROVED';
+          } else if (result.success && result.contract) {
+            // For all other successful workflow actions, use the returned contract status
+            console.log('✅ Workflow action successful, updating status');
+            contractStatus = result.contract.contractStatus || contractStatus;
+          } else if (!contractStatus && newStatus) {
+            // Fallback: if no status in response, use the status we were trying to set
+            console.log('⚠️ No status in response, using target status:', newStatus);
+            contractStatus = newStatus;
+          }
+          
+          // Only use fallback if we truly have no status from the backend
+          if (!contractStatus) {
+            console.log('🔄 No status from backend, using target status as fallback:', newStatus);
+            contractStatus = newStatus;
+          }
           
           console.log('🔄 Updating contract state:', {
             contractStatus,
             currentApprovalLevel,
-            totalApprovalLevels
+            totalApprovalLevels,
+            message: result.message
           });
           
-          // Update the parent component's state
-          onUpdateContract({ 
+          console.log('🔍 Preserving existing contract details:', {
+            id: project.contractDetails?.id,
+            existingFields: Object.keys(project.contractDetails || {})
+          });
+          
+          // Update the parent component's state with the correct type
+          // CRITICAL: Always preserve the existing contractDetails and merge updates
+          const updates: Partial<Project['contractDetails']> = {
+            ...project.contractDetails, // Preserve ALL existing fields including id
             contractStatus,
             currentApprovalLevel,
-            totalApprovalLevels,
-            ...updatedContractData // Pass all other updated contract data
+            totalApprovalLevels
+          };
+          
+          console.log('🔍 Final updates object:', {
+            id: updates.id,
+            contractStatus: updates.contractStatus,
+            currentApprovalLevel: updates.currentApprovalLevel
+          });
+          
+          // Override with any new data from the backend response
+          if (updatedContractData.contractType) updates.contractType = updatedContractData.contractType;
+          if (updatedContractData.counterparty) updates.counterparty = updatedContractData.counterparty;
+          if (updatedContractData.value !== undefined) updates.value = updatedContractData.value;
+          if (updatedContractData.currency) updates.currency = updatedContractData.currency;
+          if (updatedContractData.contractNumber) updates.contractNumber = updatedContractData.contractNumber;
+          
+          onUpdateContract(updates);
+          
+          // Force re-render of workflow component
+          console.log('🔄 Force re-rendering workflow component with new key');
+          setWorkflowRefreshKey(prev => {
+            const newKey = prev + 1;
+            console.log('🔄 New workflow refresh key:', newKey);
+            return newKey;
           });
         }
         
@@ -217,7 +353,7 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
         {activeTab === 'details' && (
           <ContractTab 
             project={project}
-            onUpdateContract={handleContractUpdate}
+            onUpdateContract={handleContractTabUpdate}
           />
         )}
         
@@ -230,33 +366,17 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
         
         {activeTab === 'workflow' && (
           <ContractWorkflowActions
+            key={`workflow-${project.contractDetails?.contractStatus}-${project.contractDetails?.currentApprovalLevel}-${project.contractDetails?.totalApprovalLevels}-${workflowRefreshKey}`}
             project={project}
             onStatusChange={handleStatusChange}
           />
         )}
         
         {activeTab === 'finalized' && (
-          <div className="space-y-6">
-            <div className="text-center py-8">
-              <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Finalized Document</h3>
-              <p className="text-sm text-gray-500">
-                View the approved and finalized version of this contract
-              </p>
-            </div>
-            
-            {/* Finalized Document Card will be added here when API is ready */}
-            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-              <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Finalized Document</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                This contract will show the finalized document once it's approved
-              </p>
-              <p className="text-xs text-gray-400">
-                Status: {project.contractDetails?.contractStatus || 'DRAFT'}
-              </p>
-            </div>
-          </div>
+          <FinalizedDocumentTab 
+            project={project}
+            onRefresh={() => setWorkflowRefreshKey(prev => prev + 1)}
+          />
         )}
         
         {activeTab === 'versions' && (
