@@ -1,17 +1,22 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import { useContract } from '@/hooks/useContract';
 import ContractTab from './ContractTab';
 import ContractDocumentEditor from './ContractDocumentEditor';
 import ContractWorkflowActions from './ContractWorkflowActions';
+import FinalizedDocumentCard from './FinalizedDocumentCard';
+import WorkflowProgressBar from './WorkflowProgressBar';
+import DocumentVersionTimeline from './DocumentVersionTimeline';
 import { 
   FileText, 
   Edit3, 
   Workflow,
   Download,
-  Share2
+  Share2,
+  CheckCircle,
+  History
 } from 'lucide-react';
 
 interface EnhancedContractTabProps {
@@ -19,7 +24,7 @@ interface EnhancedContractTabProps {
   onUpdateContract?: (updates: Partial<Project['contractDetails']>) => void;
 }
 
-type TabType = 'details' | 'document' | 'workflow';
+type TabType = 'details' | 'document' | 'workflow' | 'finalized' | 'versions';
 
 export default function EnhancedContractTab({ project, onUpdateContract }: EnhancedContractTabProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
@@ -39,52 +44,86 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
     if (!project.contractDetails?.id) return false;
     
     try {
+      // Map status to action for the backend
+      let action = newStatus;
+      switch (newStatus) {
+        case 'APPROVED':
+          action = 'APPROVE';
+          break;
+        case 'REJECTED':
+          action = 'REJECT';
+          break;
+        case 'SIGNED':
+          action = 'SIGN';
+          break;
+        case 'EXECUTING':
+          action = 'EXECUTE';
+          break;
+        case 'COMPLETED':
+          action = 'COMPLETE';
+          break;
+        case 'DRAFT':
+          action = 'REOPEN';
+          break;
+        case 'REVIEW':
+          action = 'SEND_REVIEW';
+          break;
+        default:
+          action = newStatus;
+      }
+      
+      console.log('🚀 FRONTEND: Sending workflow action:', { action, newStatus, comment, contractId: project.contractDetails.id });
+      
       const res = await fetch(`/api/contracts/${project.contractDetails.id}/workflow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: newStatus,
+          action,
           comment
         }),
       });
       
       if (res.ok) {
         const result = await res.json();
-        if (result.success && onUpdateContract) {
-          onUpdateContract({ contractStatus: result.contract.contractStatus });
+        console.log('Workflow API response:', result);
+        
+        // Handle both success field and direct contract response
+        if ((result.success || result.contract) && onUpdateContract) {
+          const updatedContractData = result.contract || {};
+          
+          // Extract the key fields we need to update
+          const contractStatus = updatedContractData.contractStatus || result.contractStatus;
+          const currentApprovalLevel = updatedContractData.currentApprovalLevel || result.currentApprovalLevel;
+          const totalApprovalLevels = updatedContractData.totalApprovalLevels || result.totalApprovalLevels;
+          
+          console.log('🔄 Updating contract state:', {
+            contractStatus,
+            currentApprovalLevel,
+            totalApprovalLevels
+          });
+          
+          // Update the parent component's state
+          onUpdateContract({ 
+            contractStatus,
+            currentApprovalLevel,
+            totalApprovalLevels,
+            ...updatedContractData // Pass all other updated contract data
+          });
         }
-        return true;
+        
+        return true; // Return true if API call succeeded (200 status)
+      } else {
+        const errorResult = await res.json().catch(() => ({}));
+        console.error('Workflow API error:', errorResult);
+        return false;
       }
-      return false;
     } catch (error) {
+      console.error('Error in handleStatusChange:', error);
       return false;
     }
   };
 
-  const handleRequestApproval = async (): Promise<boolean> => {
-    if (!project.contractDetails?.id) return false;
-    
-    try {
-      const res = await fetch(`/api/contracts/${project.contractDetails.id}/workflow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'REQUEST_APPROVAL'
-        }),
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success && onUpdateContract) {
-          onUpdateContract({ contractStatus: result.contract.contractStatus });
-        }
-        return true;
-      }
-      return false;
-    } catch (error) {
-      return false;
-    }
-  };
+
 
   const handleShare = () => {
     // In a real app, this would open a share dialog
@@ -111,6 +150,18 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
       label: 'Workflow',
       icon: Workflow,
       description: 'Manage approval and execution workflow'
+    },
+    {
+      id: 'finalized' as TabType,
+      label: 'Finalized Document',
+      icon: CheckCircle,
+      description: 'View approved and finalized contract'
+    },
+    {
+      id: 'versions' as TabType,
+      label: 'Version History',
+      icon: History,
+      description: 'Track document changes and versions'
     }
   ];
 
@@ -181,8 +232,55 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
           <ContractWorkflowActions
             project={project}
             onStatusChange={handleStatusChange}
-            onRequestApproval={handleRequestApproval}
           />
+        )}
+        
+        {activeTab === 'finalized' && (
+          <div className="space-y-6">
+            <div className="text-center py-8">
+              <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Finalized Document</h3>
+              <p className="text-sm text-gray-500">
+                View the approved and finalized version of this contract
+              </p>
+            </div>
+            
+            {/* Finalized Document Card will be added here when API is ready */}
+            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Finalized Document</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                This contract will show the finalized document once it's approved
+              </p>
+              <p className="text-xs text-gray-400">
+                Status: {project.contractDetails?.contractStatus || 'DRAFT'}
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'versions' && (
+          <div className="space-y-6">
+            <div className="text-center py-8">
+              <History className="mx-auto h-12 w-12 text-blue-500 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Version History</h3>
+              <p className="text-sm text-gray-500">
+                Track all changes and versions of this contract document
+              </p>
+            </div>
+            
+            {/* Document Version Timeline will be added here when API is ready */}
+            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <History className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Version History</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Document versions and change history will appear here
+              </p>
+              <p className="text-xs text-gray-400">
+                Track changes, compare versions, and restore previous content
+              </p>
+            </div>
+          </div>
         )}
       </div>
 

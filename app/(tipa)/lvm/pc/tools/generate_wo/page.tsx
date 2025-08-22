@@ -96,7 +96,7 @@ const SOUploadInterface: React.FC = () => {
   const progressCleanupRef = useRef<(() => void) | null>(null);
 
   // API Configuration
-  const API_BASE_URL: string = "http://10.116.2.72:8091/api/generate-wo";
+  const API_BASE_URL: string = "http://10.116.2.72:8091";
 
   // CSV parsing function
   const parseCSV = useCallback((csvText: string): CSVData => {

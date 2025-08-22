@@ -49,6 +49,7 @@ export async function PATCH(
     
     if (project.contractDetails) {
       // Update existing contract details - ContractDetails doesn't have audit fields
+      // IMPORTANT: Preserve approval levels when updating
       updatedContract = await prisma.contractDetails.update({
         where: { id: project.contractDetails.id },
         data: {
@@ -58,6 +59,9 @@ export async function PATCH(
           currency: currency || undefined,
           contractStatus: contractStatus || undefined,
           updatedAt: new Date(),
+          // Preserve approval levels - don't reset them
+          currentApprovalLevel: project.contractDetails.currentApprovalLevel || 1,
+          totalApprovalLevels: project.contractDetails.totalApprovalLevels || 3,
         }
       });
     } else {

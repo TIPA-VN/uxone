@@ -11,15 +11,12 @@ import {
   AlertTriangle,
   UserCheck,
   FileText,
-  Lock,
   Unlock
 } from 'lucide-react';
 
 interface ContractWorkflowActionsProps {
   project: Project;
   onStatusChange?: (newStatus: string, comment?: string) => Promise<boolean>;
-  onRequestApproval?: () => Promise<boolean>;
-  onUnlockDocument?: () => Promise<boolean>;
 }
 
 interface ApprovalRequest {
@@ -34,9 +31,7 @@ interface ApprovalRequest {
 
 export default function ContractWorkflowActions({ 
   project, 
-  onStatusChange,
-  onRequestApproval,
-  onUnlockDocument
+  onStatusChange
 }: ContractWorkflowActionsProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -84,6 +79,8 @@ export default function ContractWorkflowActions({
     }
   }, [showApprovalHistory]);
 
+  // Component re-renders automatically when contract details change
+
   if (!project.contractDetails) {
     return null;
   }
@@ -107,6 +104,9 @@ export default function ContractWorkflowActions({
       let newStatus = currentStatus;
       
       switch (actionType) {
+        case 'SEND_REVIEW':
+          newStatus = 'REVIEW';
+          break;
         case 'APPROVE':
           newStatus = 'APPROVED';
           break;
@@ -132,6 +132,13 @@ export default function ContractWorkflowActions({
         setMessage(`Contract ${actionType.toLowerCase()}d successfully!`);
         setShowCommentModal(false);
         
+        // Component will re-render automatically with updated data
+        
+        // Refresh approval history if it's currently showing
+        if (showApprovalHistory) {
+          fetchApprovalHistory();
+        }
+        
         // Clear message after 3 seconds
         setTimeout(() => setMessage(''), 3000);
       } else {
@@ -144,26 +151,7 @@ export default function ContractWorkflowActions({
     }
   };
 
-  const handleRequestApproval = async () => {
-    if (!onRequestApproval) return;
-    
-    setIsProcessing(true);
-    setMessage('');
-    
-    try {
-      const success = await onRequestApproval();
-      if (success) {
-        setMessage('Approval request sent successfully!');
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        setMessage('Failed to send approval request. Please try again.');
-      }
-    } catch (error) {
-      setMessage('Error sending approval request. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+
 
   const getAvailableActions = () => {
     const actions = [];
@@ -175,11 +163,28 @@ export default function ContractWorkflowActions({
         );
         break;
       case 'REVIEW':
-        actions.push(
-          { key: 'APPROVE', label: 'Approve', icon: CheckCircle, color: 'green', action: () => handleAction('APPROVE') },
-          { key: 'REJECT', label: 'Reject', icon: XCircle, color: 'red', action: () => handleAction('REJECT') },
-          { key: 'REQUEST_APPROVAL', label: 'Request Approval', icon: UserCheck, color: 'purple', action: handleRequestApproval }
-        );
+        // Show approval level and appropriate actions
+        const currentLevel = contract.currentApprovalLevel || 1;
+        const totalLevels = contract.totalApprovalLevels || 3;
+        
+        if (currentLevel <= totalLevels) {
+          actions.push(
+            { 
+              key: 'APPROVE', 
+              label: `Approve (Level ${currentLevel} of ${totalLevels})`, 
+              icon: CheckCircle, 
+              color: 'green', 
+              action: () => handleAction('APPROVE') 
+            },
+            { 
+              key: 'REJECT', 
+              label: 'Reject & Terminate', 
+              icon: XCircle, 
+              color: 'red', 
+              action: () => handleAction('REJECT') 
+            }
+          );
+        }
         break;
       case 'APPROVED':
         actions.push(
@@ -295,11 +300,40 @@ export default function ContractWorkflowActions({
                 {getStatusIcon(currentStatus)}
                 <span className="ml-2">{currentStatus}</span>
               </span>
+              
+              {/* Show approval level for REVIEW status */}
+              {currentStatus === 'REVIEW' && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  Level {contract.currentApprovalLevel || 1} of {contract.totalApprovalLevels || 3}
+                </span>
+              )}
             </div>
             <div className="text-sm text-gray-500">
               Last updated: {formatDate(new Date().toISOString())}
             </div>
           </div>
+          
+          {/* Approval Progress Bar for REVIEW status */}
+          {currentStatus === 'REVIEW' && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                <span>Approval Progress</span>
+                <span>{contract.currentApprovalLevel || 1} of {contract.totalApprovalLevels || 3} levels</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((contract.currentApprovalLevel || 1) / (contract.totalApprovalLevels || 3)) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Level 1</span>
+                <span>Level 2</span>
+                <span>Level 3</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -307,7 +341,14 @@ export default function ContractWorkflowActions({
       {availableActions.length > 0 && (
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-3 border-b border-gray-200">
-            <h3 className="text-sm font-medium text-gray-900">Available Actions</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-gray-900">Available Actions</h3>
+              {currentStatus === 'REVIEW' && (
+                <div className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
+                  💡 Each approval advances to the next level
+                </div>
+              )}
+            </div>
           </div>
           <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

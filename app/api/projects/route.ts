@@ -404,7 +404,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Link the generated document number to the project if it exists
-    if (generatedDocumentNumber) {
+    if (generatedDocumentNumber && generatedDocumentNumber.id) {
       await prisma.documentNumber.update({
         where: { id: generatedDocumentNumber.id },
         data: { projectId: project.id },

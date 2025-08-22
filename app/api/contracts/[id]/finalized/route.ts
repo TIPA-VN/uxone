@@ -14,47 +14,63 @@ export async function GET(
 
     const { id } = await params;
 
-    // Get the contract details
+    // Get contract details
     const contractDetails = await prisma.contractDetails.findUnique({
       where: { id },
-      include: {
-        project: true,
-        document: true,
-        finalizedDocument: true
-      }
+      include: { project: true, document: true }
     });
 
     if (!contractDetails) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    // Check if user has access to this contract
-    const isOwner = contractDetails.project?.ownerId === session.user.id;
-    const isManager = ["MANAGER", "SENIOR_MANAGER", "GENERAL_MANAGER", "ADMIN"].includes(session.user.role || "");
-    
-    if (!isOwner && !isManager) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
+    // Check if finalized document exists
+    const finalizedDocument = await prisma.finalizedDocument.findFirst({
+      where: { 
+        OR: [
+          { originalDocumentId: contractDetails.documentId },
+          { contractNumber: contractDetails.contractNumber }
+        ]
+      }
+    });
 
-    // Return finalized document if it exists
-    if (contractDetails.finalizedDocument) {
-      return NextResponse.json({
-        success: true,
-        finalizedDocument: contractDetails.finalizedDocument
-      });
-    }
+    // Get all finalized documents for this contract (for debugging)
+    const allFinalizedDocs = await prisma.finalizedDocument.findMany({
+      where: { 
+        OR: [
+          { originalDocumentId: contractDetails.documentId },
+          { contractNumber: contractDetails.contractNumber }
+        ]
+      }
+    });
 
-    // Return contract details if not yet finalized
     return NextResponse.json({
       success: true,
-      finalizedDocument: null,
-      contract: contractDetails
+      contractDetails: {
+        id: contractDetails.id,
+        contractNumber: contractDetails.contractNumber,
+        contractStatus: contractDetails.contractStatus,
+        currentApprovalLevel: contractDetails.currentApprovalLevel,
+        totalApprovalLevels: contractDetails.totalApprovalLevels,
+        hasDocument: !!contractDetails.documentId,
+        documentId: contractDetails.documentId
+      },
+      finalizedDocument: finalizedDocument || null,
+      allFinalizedDocs: allFinalizedDocs,
+      debug: {
+        isReadyForFinalization: 
+          contractDetails.currentApprovalLevel >= contractDetails.totalApprovalLevels,
+        approvalProgress: `${contractDetails.currentApprovalLevel}/${contractDetails.totalApprovalLevels}`,
+        hasDocument: !!contractDetails.documentId,
+        documentContent: contractDetails.document?.content ? 
+          `${contractDetails.document.content.length} characters` : 'No content'
+      }
     });
 
   } catch (error) {
-    console.error('Error fetching finalized document:', error);
+    console.error('Error checking finalized document:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch finalized document' },
+      { error: 'Failed to check finalized document' },
       { status: 500 }
     );
   }
@@ -73,74 +89,53 @@ export async function POST(
     const { id } = await params;
     const { action } = await request.json();
 
-    // Get the contract details
-    const contractDetails = await prisma.contractDetails.findUnique({
-      where: { id },
-      include: {
-        project: true,
-        document: true,
-        finalizedDocument: true
-      }
-    });
-
-    if (!contractDetails) {
-      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
-    }
-
-    // Check if user has access to this contract
-    const isOwner = contractDetails.project?.ownerId === session.user.id;
-    const isManager = ["MANAGER", "SENIOR_MANAGER", "GENERAL_MANAGER", "ADMIN"].includes(session.user.role || "");
-    
-    if (!isOwner && !isManager) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
-
     switch (action) {
       case 'DOWNLOAD_PDF':
-        if (!contractDetails.finalizedDocument?.finalizedPdf) {
-          return NextResponse.json({ error: 'PDF not available' }, { status: 404 });
+        // Download finalized PDF
+        const finalizedDoc = await prisma.finalizedDocument.findFirst({
+          where: { 
+            OR: [
+              { originalDocumentId: id },
+              { contractNumber: id }
+            ]
+          }
+        });
+
+        if (!finalizedDoc) {
+          return NextResponse.json({ error: 'Finalized document not found' }, { status: 404 });
         }
-        
+
+        // Return PDF data
         return NextResponse.json({
           success: true,
-          pdf: contractDetails.finalizedDocument.finalizedPdf
+          pdf: finalizedDoc.finalizedPdf,
+          filename: `${finalizedDoc.contractNumber || 'contract'}.pdf`
         });
 
       case 'VERIFY_SIGNATURE':
-        if (!contractDetails.finalizedDocument?.digitalSignature) {
-          return NextResponse.json({ error: 'Digital signature not available' }, { status: 404 });
-        }
-        
-        try {
-          const signature = JSON.parse(contractDetails.finalizedDocument.digitalSignature);
-          return NextResponse.json({
-            success: true,
-            signature,
-            verified: true
-          });
-        } catch (error) {
-          return NextResponse.json({
-            success: true,
-            signature: null,
-            verified: false
-          });
+        // Verify digital signature
+        const docToVerify = await prisma.finalizedDocument.findFirst({
+          where: { 
+            OR: [
+              { originalDocumentId: id },
+              { contractNumber: id }
+            ]
+          }
+        });
+
+        if (!docToVerify) {
+          return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }
 
-      case 'GET_METADATA':
+        // Basic signature verification
+        const signature = JSON.parse(docToVerify.digitalSignature || '{}');
+        const isValid = signature.signature && signature.hash;
+
         return NextResponse.json({
           success: true,
-          metadata: {
-            contractNumber: contractDetails.contractNumber,
-            contractType: contractDetails.contractType,
-            counterparty: contractDetails.counterparty,
-            value: contractDetails.value,
-            currency: contractDetails.currency,
-            contractStatus: contractDetails.contractStatus,
-            approvedAt: contractDetails.finalizedDocument?.approvedAt,
-            approvedBy: contractDetails.finalizedDocument?.approvedBy,
-            checksum: contractDetails.finalizedDocument?.checksum,
-            isLegallyBinding: contractDetails.finalizedDocument?.isLegallyBinding
-          }
+          isValid,
+          signature: signature,
+          checksum: docToVerify.checksum
         });
 
       default:

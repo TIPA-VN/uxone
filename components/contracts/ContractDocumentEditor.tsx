@@ -122,21 +122,34 @@ export default function ContractDocumentEditor({
   // Load versions for a specific contract ID
   const loadVersionsForContract = useCallback(async (contractId: string) => {
     try {
-      const response = await fetch(`/api/contracts/${contractId}/workflow`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.workflowHistory.map((entry: { id: string; version: number; content: string; createdAt: string; creator: { name: string; username: string }; changeSummary?: string }) => ({
-          id: entry.id,
-          version: entry.version,
-          content: entry.content,
-          createdAt: entry.createdAt,
-          createdBy: entry.creator.name || entry.creator.username,
-          changeDescription: entry.changeSummary || `Version ${entry.version}`
-        }));
+      // First, try to get the contract details with document content
+      const contractResponse = await fetch(`/api/contracts/${contractId}`);
+      if (contractResponse.ok) {
+        const contractData = await contractResponse.json();
+        const contract = contractData.contract;
+        
+        // If there's a document, use its content
+        if (contract.document && contract.document.content) {
+          setContent(contract.document.content);
+        }
+        
+        // Also load workflow history for versions
+        const workflowResponse = await fetch(`/api/contracts/${contractId}/workflow`);
+        if (workflowResponse.ok) {
+          const workflowData = await workflowResponse.json();
+          return workflowData.workflowHistory?.map((entry: { id: string; version: number; content: string; createdAt: string; creator: { name: string; username: string }; changeSummary?: string }) => ({
+            id: entry.id,
+            version: entry.version,
+            content: entry.content,
+            createdAt: entry.createdAt,
+            createdBy: entry.creator.name || entry.creator.username,
+            changeDescription: entry.changeSummary || `Version ${entry.version}`
+          })) || [];
+        }
       }
       return [];
     } catch (error) {
-      // console.error('Error loading contract versions:', error);
+      console.error('Error loading contract versions:', error);
       return [];
     }
   }, []);
