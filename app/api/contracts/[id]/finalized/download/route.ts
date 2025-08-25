@@ -19,7 +19,10 @@ export async function GET(
     // First, get the contract details to get the proper identifiers
     const contractDetails = await prisma.contractDetails.findUnique({
       where: { id },
-      include: { document: true }
+      include: { 
+        document: true,
+        project: true
+      }
     });
 
     if (!contractDetails) {
@@ -56,12 +59,102 @@ export async function GET(
       return NextResponse.json({ error: 'Finalized document not found' }, { status: 404 });
     }
 
+    console.log('📄 Found finalized document:', finalizedDoc.id);
+    console.log('📄 Finalized document details:', {
+      title: finalizedDoc.title,
+      finalizedContentLength: finalizedDoc.finalizedContent?.length || 0,
+      finalizedContentPreview: finalizedDoc.finalizedContent?.substring(0, 500),
+      hasFinalizedContent: !!finalizedDoc.finalizedContent,
+      hasFinalizedHtml: !!finalizedDoc.finalizedHtml
+    });
+
     // Generate the PDF on-demand if it doesn't exist
     let pdfBuffer: Buffer;
-    if (finalizedDoc.finalizedPdf) {
-      // Use stored PDF if available
-      console.log('📄 Using stored PDF, length:', finalizedDoc.finalizedPdf.length);
-      console.log('📄 PDF data preview:', finalizedDoc.finalizedPdf.substring(0, 100));
+    
+    // FORCE REGENERATION: Always generate new PDF when content is available
+    if (finalizedDoc.finalizedContent || contractDetails.document?.content) {
+      console.log('📄 Content available, forcing PDF regeneration...');
+      
+      // Generate PDF from finalized document content or fallback to original content
+      const { generateContractPDF } = await import('@/lib/pdf-generator');
+      let content = finalizedDoc.finalizedContent || contractDetails.document?.content || '';
+      
+      // If content is still empty, use a fallback
+      if (!content || content.trim().length === 0) {
+        content = 'Contract content not available. Please check the database.';
+      }
+      
+      console.log('📄 Generating PDF with content length:', content.length);
+      
+      // Fetch user information for approvers to display names in PDF
+      const approverUsers = await prisma.user.findMany({
+        where: {
+          id: {
+            in: finalizedDoc.approvedBy || []
+          }
+        },
+        select: {
+          id: true,
+          name: true,
+          username: true
+        }
+      });
+
+      // Create array of approver names
+      const approverNames = (finalizedDoc.approvedBy || []).map(approverId => {
+        const user = approverUsers.find(u => u.id === approverId);
+        const approverName = user?.name || user?.username || approverId;
+        console.log('🔍 API Route - Approver data (DIRECT DB):', { 
+          approverId, 
+          userName: user?.name, 
+          username: user?.username, 
+          finalName: approverName,
+          nameType: typeof user?.name,
+          usernameType: typeof user?.username,
+          source: 'database'
+        });
+        return approverName;
+      });
+
+      console.log('🔍 About to call generateContractPDF with approverNames:', approverNames);
+      console.log('🔍 Data source verification:', {
+        approverNamesFromDB: approverNames,
+        approvedByFromDoc: finalizedDoc.approvedBy,
+        source: 'API Route - Direct Database Query'
+      });
+      
+      pdfBuffer = await generateContractPDF({
+        title: finalizedDoc.title || contractDetails.document?.title || 'Contract Document',
+        content: content,
+        contractNumber: finalizedDoc.contractNumber || contractDetails.contractNumber,
+        contractTitle: contractDetails.contractTitle || contractDetails.document?.title || 'Contract Document',
+        counterparty: contractDetails.counterparty,
+        value: contractDetails.value?.toString(),
+        currency: contractDetails.currency,
+        contractStatus: contractDetails.contractStatus,
+        startDate: contractDetails.startDate || contractDetails.effectiveDate,
+        expirationDate: contractDetails.expirationDate,
+        approvedBy: finalizedDoc.approvedBy || [],
+        approverNames: approverNames,
+        approvedAt: finalizedDoc.approvedAt || new Date(),
+        finalizationDate: finalizedDoc.finalizationDate || new Date(),
+        version: finalizedDoc.version || 1,
+        revisionNumber: finalizedDoc.revisionNumber || 1,
+        checksum: finalizedDoc.checksum || 'N/A'
+      });
+      
+      console.log('📄 PDF generated successfully, size:', pdfBuffer.length);
+      
+      // Update the finalized document with the generated PDF
+      await prisma.finalizedDocument.update({
+        where: { id: finalizedDoc.id },
+        data: {
+          finalizedPdf: pdfBuffer.toString('base64')
+        }
+      });
+    } else if (finalizedDoc.finalizedPdf) {
+      // Only use stored PDF if no content is available (fallback)
+      console.log('📄 No content available, using stored PDF as fallback, length:', finalizedDoc.finalizedPdf.length);
       
       try {
         // Remove data URL prefix if present
@@ -78,24 +171,11 @@ export async function GET(
         console.log('📄 PDF buffer created, size:', pdfBuffer.length);
       } catch (decodeError) {
         console.error('❌ Error decoding PDF from base64:', decodeError);
-        // Fall back to regenerating the PDF
-        finalizedDoc.finalizedPdf = null;
+        pdfBuffer = null;
       }
     }
     
-    if (!pdfBuffer && contractDetails.document?.content) {
-      // Generate PDF from document content
-      const { generateContractPDF } = await import('@/lib/pdf-generator');
-      pdfBuffer = await generateContractPDF(contractDetails);
-      
-      // Update the finalized document with the generated PDF
-      await prisma.finalizedDocument.update({
-        where: { id: finalizedDoc.id },
-        data: {
-          finalizedPdf: pdfBuffer.toString('base64')
-        }
-      });
-    } else {
+    if (!pdfBuffer) {
       return NextResponse.json({ error: 'No document content available' }, { status: 404 });
     }
 

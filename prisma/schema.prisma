@@ -201,6 +201,7 @@ model ContractDetails {
   id                   String             @id @default(cuid())
   documentId           String?            @unique
   contractNumber       String?            @unique
+  contractTitle        String?            // Human-readable contract title
   contractType         ContractType?
   isLocked             Boolean            @default(false)
   currentApprovalLevel Int                @default(1)

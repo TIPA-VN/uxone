@@ -61,7 +61,7 @@ const Navbar = () => {
   // Removed unused handleNotificationClick
 
   return (
-    <div className="flex items-center justify-between p-4 bg-indigo-100 shadow-md text-slate-600 rounded-lg relative">
+    <div className="flex items-center justify-between p-4 bg-indigo-100 shadow-md text-slate-600 rounded-lg relative navbar-component">
       {/* SEARCH BAR */}
       <div className="hidden md:flex items-center gap-2 bg-slate-50 text-xs rounded-full ring-[1.5px] ring-gray-400 px-2">
         <Image src="/images/search.png" alt="Search" width={14} height={14} />

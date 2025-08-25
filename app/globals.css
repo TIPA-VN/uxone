@@ -132,3 +132,107 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Print Styles for Audit Page */
+@media print {
+  /* Hide all navigation and UI elements */
+  nav, header, footer, .sidebar, .navbar, .menu, .navigation,
+  [data-testid="navbar"], [data-testid="sidebar"], [data-testid="menu"],
+  [data-testid="header"], [data-testid="top-nav"], [data-testid="main-nav"] {
+    display: none !important;
+  }
+  
+  /* Hide specific navbar elements */
+  .navbar, .top-nav, .main-nav, .header-nav, .navigation-bar, .navbar-component {
+    display: none !important;
+  }
+  
+  /* Hide action buttons and UI elements */
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Reset page margins and layout */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  
+  /* Make content full width */
+  .container {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+  
+  /* Prevent page breaks inside cards */
+  .card, .bg-white, .bg-gray-50 {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Style cards for print */
+  .card {
+    border: 1px solid #ddd !important;
+    margin-bottom: 20px !important;
+  }
+  
+  /* Ensure text is readable */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+  
+  /* Hide badges and decorative elements */
+  .badge {
+    border: 1px solid #333 !important;
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Ensure proper spacing */
+  .space-y-6 > * + * {
+    margin-top: 1.5rem !important;
+  }
+  
+  /* Hide print header on screen */
+  .print-hidden {
+    display: none !important;
+  }
+  
+  /* Show print header when printing */
+  .print-block {
+    display: block !important;
+  }
+  
+  /* Style the print header */
+  .print-header {
+    margin-bottom: 2rem !important;
+    border-bottom: 1px solid #d1d5db !important;
+    padding-bottom: 1rem !important;
+  }
+  
+  /* Force page breaks for major sections */
+  .audit-section {
+    page-break-before: auto;
+    page-break-after: auto;
+  }
+  
+  /* Ensure content flows properly */
+  .grid, .flex {
+    display: block !important;
+  }
+  
+  /* Remove any flexbox issues */
+  .grid > *, .flex > * {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 1rem !important;
+  }
+}

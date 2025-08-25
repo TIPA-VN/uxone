@@ -280,6 +280,19 @@ export default function FinalizedDocumentCard({
             <Shield className="w-4 h-4 mr-2" />
             Verify Signature
           </Button>
+          
+          <a
+            href={`/lvm/contracts/finalized/${finalizedDocument.id}/audit`}
+            className="flex-1"
+          >
+            <Button
+              variant="outline"
+              className="w-full"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Audit
+            </Button>
+          </a>
         </div>
 
         {/* Notes */}

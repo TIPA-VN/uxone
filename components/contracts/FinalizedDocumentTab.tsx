@@ -205,14 +205,23 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
             </div>
           </div>
           
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            {downloading ? 'Downloading...' : 'Download PDF'}
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {downloading ? 'Downloading...' : 'Download PDF'}
+            </button>
+            <a
+              href={`/lvm/contracts/finalized/${finalizedDocument.id}/audit`}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Audit
+            </a>
+          </div>
         </div>
 
         {/* Document Details */}
