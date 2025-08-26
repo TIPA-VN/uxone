@@ -172,16 +172,19 @@ export default function FinalizedDocumentOverviewCard({
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <a href={`/lvm/contracts/finalized/${doc.id}/audit`} className="flex-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <Eye className="w-4 h-4 mr-1" />
-              Audit
-            </Button>
-          </a>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => {
+              // Audit functionality is now integrated into the project's contract tab
+              // The user can view audit information directly in the project view
+              window.location.href = `/lvm/projects/${doc.originalDocument.contractDetails?.id || 'unknown'}`;
+            }}
+          >
+            <Eye className="w-4 h-4 mr-1" />
+            View Project
+          </Button>
         </div>
       </CardContent>
     </Card>

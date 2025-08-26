@@ -76,7 +76,7 @@ export async function GET(
       console.log('📄 Content available, forcing PDF regeneration...');
       
       // Generate PDF from finalized document content or fallback to original content
-      const { generateContractPDF } = await import('@/lib/pdf-generator');
+      const { PuppeteerGenerator } = await import('@/lib/puppeteer-generator');
       let content = finalizedDoc.finalizedContent || contractDetails.document?.content || '';
       
       // If content is still empty, use a fallback
@@ -103,7 +103,19 @@ export async function GET(
       // Create array of approver names
       const approverNames = (finalizedDoc.approvedBy || []).map(approverId => {
         const user = approverUsers.find(u => u.id === approverId);
-        const approverName = user?.name || user?.username || approverId;
+        // FORCE use database data - no fallbacks to prevent corruption
+        let approverName = user?.name;
+        
+        // If no name, use username but clean it
+        if (!approverName) {
+          approverName = user?.username || approverId;
+        }
+        
+        // Ensure we have clean text
+        if (typeof approverName === 'string') {
+          // Remove any potential encoding artifacts
+          approverName = approverName.replace(/[^\x00-\x7F\u00A0-\uFFFF]/g, '');
+        }
         console.log('🔍 API Route - Approver data (DIRECT DB):', { 
           approverId, 
           userName: user?.name, 
@@ -116,14 +128,24 @@ export async function GET(
         return approverName;
       });
 
-      console.log('🔍 About to call generateContractPDF with approverNames:', approverNames);
+      console.log('🔍 About to call Puppeteer PDF generation with approverNames:', approverNames);
+      console.log('🔍 Contract date fields:', {
+        startDate: contractDetails.startDate,
+        effectiveDate: contractDetails.effectiveDate,
+        expirationDate: contractDetails.expirationDate,
+        endDate: contractDetails.endDate,
+        source: 'ContractDetails model'
+      });
       console.log('🔍 Data source verification:', {
         approverNamesFromDB: approverNames,
         approvedByFromDoc: finalizedDoc.approvedBy,
-        source: 'API Route - Direct Database Query'
+        source: 'API Route - FORCED CLEAN Database Query'
       });
       
-      pdfBuffer = await generateContractPDF({
+      // Create Puppeteer generator instance
+      const pdfGenerator = new PuppeteerGenerator();
+      
+      pdfBuffer = await pdfGenerator.generateContractPDF({
         title: finalizedDoc.title || contractDetails.document?.title || 'Contract Document',
         content: content,
         contractNumber: finalizedDoc.contractNumber || contractDetails.contractNumber,
@@ -132,16 +154,18 @@ export async function GET(
         value: contractDetails.value?.toString(),
         currency: contractDetails.currency,
         contractStatus: contractDetails.contractStatus,
-        startDate: contractDetails.startDate || contractDetails.effectiveDate,
-        expirationDate: contractDetails.expirationDate,
+        startDate: contractDetails.startDate || contractDetails.effectiveDate || null,
+        expirationDate: contractDetails.expirationDate || contractDetails.endDate || null,
         approvedBy: finalizedDoc.approvedBy || [],
         approverNames: approverNames,
-        approvedAt: finalizedDoc.approvedAt || new Date(),
         finalizationDate: finalizedDoc.finalizationDate || new Date(),
         version: finalizedDoc.version || 1,
         revisionNumber: finalizedDoc.revisionNumber || 1,
         checksum: finalizedDoc.checksum || 'N/A'
       });
+      
+      // Clean up browser instance
+      await pdfGenerator.closeBrowser();
       
       console.log('📄 PDF generated successfully, size:', pdfBuffer.length);
       

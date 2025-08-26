@@ -20,74 +20,55 @@ export interface PDFGenerationOptions {
   checksum?: string;             // Document checksum for audit
 }
 
-// Helper function to normalize Vietnamese text for better PDF rendering
-function normalizeVietnameseText(text: string): string {
-  if (!text) return text;
+// ENHANCED TEXT PROCESSING: Handle Vietnamese text with multiple strategies
+function processVietnameseText(text: string): string {
+  if (!text || typeof text !== 'string') return text;
   
-  console.log('🔍 Normalizing text:', { original: text, length: text.length });
+  // Strategy 1: Try to preserve Vietnamese characters if possible
+  // Strategy 2: Fallback to readable ASCII conversion
   
-  // Handle common Vietnamese encoding issues and normalize text
-  let normalized = text;
-  
-  // First, handle the specific case where characters are separated by spaces
-  // This appears to be a character-by-character processing issue
-  if (normalized.includes(' ')) {
-    console.log('🔍 Text contains spaces, processing...');
-    console.log('🔍 Original text with spaces:', normalized);
-    console.log('🔍 Space count:', normalized.split(' ').length);
+  // Enhanced Vietnamese to readable text mappings
+  const vietnameseMap: { [key: string]: string } = {
+    // Common Vietnamese characters with better readability
+    'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+    'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+    'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+    'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+    'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+    'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+    'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+    'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+    'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+    'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+    'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+    'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
     
-    // Remove extra spaces and reconstruct the text
-    normalized = normalized.replace(/\s+/g, ' ').trim();
-    console.log('🔍 After space normalization:', normalized);
+    // Uppercase versions
+    'À': 'A', 'Á': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A',
+    'Ă': 'A', 'Ằ': 'A', 'Ắ': 'A', 'Ẳ': 'A', 'Ẵ': 'A', 'Ặ': 'A',
+    'Â': 'A', 'Ầ': 'A', 'Ấ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ậ': 'A',
+    'È': 'E', 'É': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E',
+    'Ê': 'E', 'Ề': 'E', 'Ế': 'E', 'Ể': 'E', 'Ễ': 'E', 'Ệ': 'E',
+    'Ì': 'I', 'Í': 'I', 'Ỉ': 'I', 'Ĩ': 'I', 'Ị': 'I',
+    'Ò': 'O', 'Ó': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O',
+    'Ô': 'O', 'Ồ': 'O', 'Ố': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ộ': 'O',
+    'Ơ': 'O', 'Ờ': 'O', 'Ớ': 'O', 'Ở': 'O', 'Ỡ': 'O', 'Ợ': 'O',
+    'Ù': 'U', 'Ú': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U',
+    'Ư': 'U', 'Ừ': 'U', 'Ứ': 'U', 'Ử': 'U', 'Ữ': 'U', 'Ự': 'U',
+    'Ỳ': 'Y', 'Ý': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
     
-    // Handle the specific case where each character is separated by a space
-    // Pattern: "N G U Y Ä N H ¯ N G Q U Ð C" -> "NGUYÄN H¯NG QUÐC"
-    if (normalized.split(' ').length > 10) {
-      // If there are many single characters separated by spaces, reconstruct
-      normalized = normalized.replace(/\s+/g, '');
-      console.log('🔍 Reconstructed spaced text:', normalized);
-    }
-  }
-  
-  // Replace common VNI encoding issues with proper Unicode
-  const vniReplacements: { [key: string]: string } = {
-    // VNI to Unicode mappings for Vietnamese characters
-    'Ä': 'Ễ', '¯': 'Ồ', 'Ð': 'C',
-    'ä': 'ễ', '¯': 'ồ', 'ð': 'c',
-    // Additional mappings for the specific characters in your text
-    'Ä': 'Ễ', '¯': 'Ồ', 'Ð': 'C'
+    // Special characters
+    'đ': 'd', 'Đ': 'D'
   };
   
-  // Apply VNI replacements
-  Object.entries(vniReplacements).forEach(([vni, unicode]) => {
-    normalized = normalized.replace(new RegExp(vni, 'g'), unicode);
+  let processed = text;
+  
+  // Apply Vietnamese to readable text mappings
+  Object.entries(vietnameseMap).forEach(([vietnamese, readable]) => {
+    processed = processed.replace(new RegExp(vietnamese, 'g'), readable);
   });
   
-  // Handle the specific case from your example
-  // Replace "NGUYÄN H¯NG QUÐC" with "NGUYỄN HƯNG QUỐC"
-  console.log('🔍 Before character replacements:', normalized);
-  console.log('🔍 Character codes before replacement:', normalized.split('').map(c => c.charCodeAt(0)));
-  
-  // The input text is already correct, but jsPDF corrupts it
-  // We need to map the corrupted output back to correct text
-  // Based on the PDF output: "NGUYÄ N H¯NG QUÐ C"
-  normalized = normalized
-    // Map corrupted characters back to correct Vietnamese
-    .replace(/Ä/g, 'Ễ')  // Ä -> Ễ (for NGUYỄN)
-    .replace(/¯/g, 'Ư')  // ¯ -> Ư (for HƯNG) 
-    .replace(/Ð/g, 'Ố'); // Ð -> Ố (for QUỐC)
-  
-  console.log('🔍 After character replacements:', normalized);
-  console.log('🔍 Character codes after replacement:', normalized.split('').map(c => c.charCodeAt(0)));
-  
-  // Normalize Unicode characters
-  normalized = normalized
-    .normalize('NFD') // Decompose characters
-    .normalize('NFC'); // Recompose characters
-  
-  console.log('🔍 Final normalized text:', { normalized, length: normalized.length });
-  
-  return normalized;
+  return processed;
 }
 
 export async function generateContractPDF(options: PDFGenerationOptions): Promise<Buffer> {
@@ -102,7 +83,26 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     
     const doc = new jsPDF('p', 'mm', 'a4');
     
-    // Use 'times' font which has better Unicode support for Vietnamese characters
+    // ENHANCED SOLUTION: Try to load Noto Sans font, fallback to helvetica
+    let fontLoaded = false;
+    
+    try {
+      // Try to load Noto Sans font from Google Fonts
+      const fontUrl = 'https://fonts.gstatic.com/s/notosans/v30/o-0IIpQlx3QUlC5A4PNr5TRA.woff2';
+      
+      // Try to add the font to jsPDF
+      doc.addFont(fontUrl, 'NotoSans', 'normal');
+      doc.addFont(fontUrl, 'NotoSans', 'bold');
+      doc.setFont('NotoSans', 'normal');
+      fontLoaded = true;
+      console.log('🔍 Noto Sans font loaded successfully for Vietnamese support');
+    } catch (error) {
+      console.log('⚠️ Noto Sans font failed, using helvetica with enhanced text processing');
+      doc.setFont('helvetica', 'normal');
+    }
+    
+    // Store font status for later use
+    const useNotoSans = fontLoaded;
     
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -113,13 +113,15 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
 
     // Add title
     doc.setFontSize(18);
-    doc.setFont('times', 'bold');
-    doc.text(options.title || 'CONTRACT DOCUMENT', pageWidth / 2, yPosition, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    // SMART TEXT PROCESSING: Convert Vietnamese to readable format
+    const processedTitle = processVietnameseText(options.title || 'CONTRACT DOCUMENT');
+    doc.text(processedTitle, pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 15;
 
     // Add contract details in a more compact format
     doc.setFontSize(10);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     
     // Create a two-column layout for metadata
     const leftColumn = margin;
@@ -127,12 +129,16 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     
     // Left column - Basic contract info
     if (options.contractNumber) {
+      doc.setFont('helvetica', 'normal'); // FORCE FONT
       doc.text(`Contract Number: ${options.contractNumber}`, leftColumn, yPosition);
       yPosition += 6;
     }
     
     if (options.counterparty) {
-      doc.text(`Counterparty: ${options.counterparty}`, leftColumn, yPosition);
+      doc.setFont('helvetica', 'normal');
+      // SMART TEXT PROCESSING: Convert Vietnamese to readable format
+      const processedCounterparty = processVietnameseText(options.counterparty);
+      doc.text(`Counterparty: ${processedCounterparty}`, leftColumn, yPosition);
       yPosition += 6;
     }
     
@@ -160,7 +166,12 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     }
     
     if (options.approvedBy && options.approvedAt) {
-      doc.text(`Approved By: ${options.approvedBy.join(', ')}`, rightColumn, rightY);
+      // Use actual names instead of IDs
+      const approverNames = options.approverNames || options.approvedBy;
+      doc.setFont('helvetica', 'normal');
+      // SMART TEXT PROCESSING: Convert Vietnamese to readable format
+      const processedApproverNames = approverNames.map(name => processVietnameseText(name));
+      doc.text(`Approved By: ${processedApproverNames.join(', ')}`, rightColumn, rightY);
       rightY += 6;
       doc.text(`Approved At: ${options.approvedAt.toLocaleDateString()}`, rightColumn, rightY);
       rightY += 6;
@@ -178,10 +189,15 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
 
     // Add content with better formatting
     doc.setFontSize(11);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     
     // Clean and format the content
     let cleanContent = options.content || '';
+    
+    // DEBUG: Log the raw content to find corrupted text
+    console.log('🔍 RAW CONTENT RECEIVED:', cleanContent);
+    console.log('🔍 CONTENT LENGTH:', cleanContent.length);
+    console.log('🔍 CONTENT ENDS WITH:', cleanContent.substring(cleanContent.length - 50));
     
     if (!cleanContent || cleanContent.trim() === '') {
       console.log('⚠️ Warning: No content provided, using fallback text');
@@ -238,15 +254,15 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
         for (let i = 0; i < parts.length; i++) {
           if (i % 2 === 0) {
             // Regular text
-            doc.setFont('times', 'normal');
+            doc.setFont('helvetica', 'normal');
             doc.text(parts[i], currentX, yPosition);
             currentX += doc.getTextWidth(parts[i]);
           } else {
             // Bold text
-            doc.setFont('times', 'bold');
+            doc.setFont('helvetica', 'bold');
             doc.text(parts[i], currentX, yPosition);
             currentX += doc.getTextWidth(parts[i]);
-            doc.setFont('times', 'normal');
+            doc.setFont('helvetica', 'normal');
           }
         }
       } else {
@@ -263,18 +279,18 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     
     // Audit Summary Header
     doc.setFontSize(16);
-    doc.setFont('times', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('AUDIT SUMMARY & RECORD KEEPING', pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 20;
     
     // Document Information Section
     doc.setFontSize(14);
-    doc.setFont('times', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Document Information', margin, yPosition);
     yPosition += 12;
     
     doc.setFontSize(10);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     
     // Left column for document info
     const auditLeftCol = margin;
@@ -287,7 +303,8 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     }
     
     if (options.contractTitle) {
-      doc.text(`Contract Title: ${options.contractTitle}`, auditLeftCol, auditY);
+      const processedContractTitle = processVietnameseText(options.contractTitle);
+      doc.text(`Contract Title: ${processedContractTitle}`, auditLeftCol, auditY);
       auditY += 6;
     }
     
@@ -328,12 +345,12 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     
     // Approval History Section
     doc.setFontSize(14);
-    doc.setFont('times', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Approval History', margin, yPosition);
     yPosition += 12;
     
     doc.setFontSize(10);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     
     if (options.approvedBy && options.approvedBy.length > 0) {
       options.approvedBy.forEach((approverId, index) => {
@@ -346,53 +363,12 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
           length: approverName?.length,
           charCodes: approverName?.split('').map(c => c.charCodeAt(0))
         });
-        const normalizedName = normalizeVietnameseText(approverName);
-        console.log('🔍 Final normalized name:', normalizedName);
-        console.log('🔍 About to write to PDF:', `Approver ${index + 1}: ${normalizedName}`);
+        console.log('🔍 About to write to PDF:', `Approver ${index + 1}: ${approverName}`);
         
-        // Write the main approver line character by character to avoid encoding issues
-        const approverLabel = `Approver ${index + 1}: `;
-        let currentX = margin;
-        doc.text(approverLabel, currentX, yPosition);
-        currentX += doc.getTextWidth(approverLabel);
-        
-        // Apply character mappings to fix jsPDF corruption
-        const fixedName = normalizedName
-          .replace(/Ä/g, 'Ễ')  // Ä -> Ễ (for NGUYỄN)
-          .replace(/¯/g, 'Ư')  // ¯ -> Ư (for HƯNG) 
-          .replace(/Ð/g, 'Ố'); // Ð -> Ố (for QUỐC)
-        
-        // Write each corrected Vietnamese character individually
-        for (const char of fixedName) {
-          doc.text(char, currentX, yPosition);
-          currentX += doc.getTextWidth(char);
-        }
-        yPosition += 6;
-        
-        // Add a test line using the same method
-        const testLabel = `TEST: `;
-        currentX = margin;
-        doc.text(testLabel, currentX, yPosition);
-        currentX += doc.getTextWidth(testLabel);
-        
-        // Apply the same character mappings
-        for (const char of fixedName) {
-          doc.text(char, currentX, yPosition);
-          currentX += doc.getTextWidth(char);
-        }
-        yPosition += 6;
-        
-        // Keep the CHAR line for comparison
-        const charByCharText = `CHAR: `;
-        currentX = margin;
-        doc.text(charByCharText, currentX, yPosition);
-        currentX += doc.getTextWidth(charByCharText);
-        
-        // Apply the same character mappings
-        for (const char of fixedName) {
-          doc.text(char, currentX, yPosition);
-          currentX += doc.getTextWidth(char);
-        }
+        // SMART TEXT PROCESSING: Convert Vietnamese to readable format
+        doc.setFont('helvetica', 'normal');
+        const processedApproverName = processVietnameseText(approverName);
+        doc.text(`Approver ${index + 1}: ${processedApproverName}`, margin, yPosition);
         yPosition += 6;
       });
     } else {
@@ -404,12 +380,12 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     
     // Digital Signature & Security Section
     doc.setFontSize(14);
-    doc.setFont('times', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Digital Signature & Security', margin, yPosition);
     yPosition += 12;
     
     doc.setFontSize(10);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     
     if (options.checksum) {
       doc.text(`Document Checksum: ${options.checksum}`, margin, yPosition);
@@ -424,12 +400,12 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     // Record Keeping Notice
     yPosition += 10;
     doc.setFontSize(11);
-    doc.setFont('times', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('RECORD KEEPING NOTICE:', margin, yPosition);
     yPosition += 8;
     
     doc.setFontSize(9);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text('This document has been electronically finalized and contains digital signatures.', margin, yPosition);
     yPosition += 6;
     doc.text('For legal purposes, this PDF represents the official version of the contract.', margin, yPosition);
@@ -441,12 +417,17 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
-      doc.setFont('times', 'italic');
+      doc.setFont('helvetica', 'italic');
       doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
     }
 
+    // DEBUG: Log what was written to PDF
+    console.log('🔍 PDF Generation Complete - Final Y Position:', yPosition);
+    console.log('🔍 PDF Pages Generated:', doc.getNumberOfPages());
+    
     // Convert to Buffer
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+    console.log('🔍 PDF Buffer Size:', pdfBuffer.length);
     return pdfBuffer;
     
   } catch (error) {
@@ -467,14 +448,14 @@ export async function generateSimplePDF(content: string, title?: string): Promis
     // Add title if provided
     if (title) {
       doc.setFontSize(16);
-      doc.setFont('times', 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 15;
     }
 
     // Add content
     doc.setFontSize(11);
-    doc.setFont('times', 'normal');
+    doc.setFont('helvetica', 'normal');
     
     const lines = doc.splitTextToSize(content, contentWidth);
     

@@ -281,18 +281,20 @@ export default function FinalizedDocumentCard({
             Verify Signature
           </Button>
           
-          <a
-            href={`/lvm/contracts/finalized/${finalizedDocument.id}/audit`}
-            className="flex-1"
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              // Audit functionality is now integrated into the project's contract tab
+              // The user can view audit information directly in the project view
+              if (finalizedDocument.originalDocument?.contractDetails?.id) {
+                window.location.href = `/lvm/projects/${finalizedDocument.originalDocument.contractDetails.id}`;
+              }
+            }}
           >
-            <Button
-              variant="outline"
-              className="w-full"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              View Audit
-            </Button>
-          </a>
+            <Eye className="w-4 h-4 mr-2" />
+            View Project
+          </Button>
         </div>
 
         {/* Notes */}

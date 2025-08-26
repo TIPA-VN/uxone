@@ -24,6 +24,10 @@ export async function PATCH(
       value,
       currency,
       contractStatus,
+      startDate,
+      effectiveDate,
+      expirationDate,
+      endDate,
     } = body;
 
     // Verify the project exists and user has access
@@ -58,6 +62,10 @@ export async function PATCH(
           value: value ? parseFloat(value.toString()) : undefined,
           currency: currency || undefined,
           contractStatus: contractStatus || undefined,
+          startDate: startDate ? new Date(startDate) : undefined,
+          effectiveDate: effectiveDate ? new Date(effectiveDate) : undefined,
+          expirationDate: expirationDate ? new Date(expirationDate) : undefined,
+          endDate: endDate ? new Date(endDate) : undefined,
           updatedAt: new Date(),
           // Preserve approval levels - don't reset them
           currentApprovalLevel: project.contractDetails.currentApprovalLevel || 1,
@@ -74,6 +82,10 @@ export async function PATCH(
           value: value ? parseFloat(value.toString()) : undefined,
           currency: currency || "THB",
           contractStatus: contractStatus || "DRAFT",
+          startDate: startDate ? new Date(startDate) : undefined,
+          effectiveDate: effectiveDate ? new Date(effectiveDate) : undefined,
+          expirationDate: expirationDate ? new Date(expirationDate) : undefined,
+          endDate: endDate ? new Date(endDate) : undefined,
           currentApproverId: session.user.id,
           totalApprovalLevels: 3,
           currentApprovalLevel: 1,

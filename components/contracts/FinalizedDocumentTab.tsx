@@ -214,13 +214,19 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
               <Download className="w-4 h-4 mr-2" />
               {downloading ? 'Downloading...' : 'Download PDF'}
             </button>
-            <a
-              href={`/lvm/contracts/finalized/${finalizedDocument.id}/audit`}
+            <button
+              onClick={() => {
+                // Audit functionality is now integrated into the project's contract tab
+                // The user can view audit information directly in the project view
+                if (finalizedDocument.originalDocument?.contractDetails?.id) {
+                  window.location.href = `/lvm/projects/${finalizedDocument.originalDocument.contractDetails.id}`;
+                }
+              }}
               className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <Eye className="w-4 h-4 mr-2" />
-              View Audit
-            </a>
+              View Project
+            </button>
           </div>
         </div>
 

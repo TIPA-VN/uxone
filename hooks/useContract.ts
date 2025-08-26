@@ -8,6 +8,10 @@ interface ContractDetails {
   currency?: string;
   contractStatus?: string;
   contractNumber?: string;
+  startDate?: Date;
+  effectiveDate?: Date;
+  expirationDate?: Date;
+  endDate?: Date;
 }
 
 interface UseContractReturn {

@@ -1,119 +1,103 @@
-# UXOne - Unified Experience Platform
+# UXOne - Enterprise Management System
 
-## 📋 Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Department System](#department-system)
-- [Authentication & Authorization](#authentication--authorization)
-- [API Endpoints](#api-endpoints)
-- [Database Schema](#database-schema)
-- [Components](#components)
-- [Deployment](#deployment)
-- [Troubleshooting](#troubleshooting)
+A comprehensive Next.js 15+ enterprise management system designed for manufacturing, procurement, and project management operations.
 
-## 🚀 Overview
+## 🚀 Features
 
-UXOne is a modern enterprise platform designed to provide a unified user experience across multiple departments and business units. The platform integrates various business processes including project management, helpdesk support, procurement, quality control, and more.
+### Core Modules
+- **Project Management** - Full lifecycle project tracking with contract integration
+- **Contract Management** - Comprehensive contract creation, approval, and finalization
+- **Document Management** - Rich text editing, version control, and multi-format export
+- **Demand Management** - Procurement demand tracking and approval workflows
+- **Task Management** - Project task assignment, dependencies, and time tracking
+- **Helpdesk System** - Ticket management with escalation and reporting
+- **User Management** - Role-based access control (RBAC) and department management
+- **Audit & Compliance** - Complete audit trails and document finalization
 
-### Key Benefits
-- **Unified Interface**: Single platform for multiple business functions
-- **Department-Specific Dashboards**: Tailored experiences for different user groups
-- **Role-Based Access Control**: Secure access management
-- **Real-time Notifications**: Server-Sent Events for live updates
-- **Responsive Design**: Modern UI built with Tailwind CSS and Shadcn UI
-
-## ✨ Features
-
-### Core Functionality
-- **Project Management**: Create, track, and manage projects with team collaboration
-- **Helpdesk System**: Department-specific ticket management and support
-- **Task Management**: Assign, track, and manage tasks with dependencies
-- **Document Management**: Upload, version, and manage documents
-- **Procurement**: Purchase order management and inventory tracking
-- **Quality Control**: Quality assurance workflows and processes
-- **User Management**: Role-based access control and user administration
-
-### Advanced Features
-- **Real-time Notifications**: Live updates using Server-Sent Events
-- **Department Mapping**: Legacy system integration with modern department codes
-- **Audit Logging**: Comprehensive tracking of all system changes
-- **API Integration**: External system connectivity and webhooks
-- **Search & Filtering**: Advanced data filtering and search capabilities
-- **Mobile Responsive**: Optimized for all device types
+### Contract System Features
+- **Rich Text Editor** - Quill.js based content creation with Vietnamese language support
+- **Multi-Format Export** - PDF, HTML, TXT, MD, JSON formats
+- **Approval Workflows** - Multi-level approval system with digital signatures
+- **Date Management** - Start, effective, expiration, and end date tracking
+- **Audit Reports** - Professional print layouts with complete contract history
 
 ## 🏗️ Architecture
 
 ### Technology Stack
-- **Frontend**: Next.js 15.3.3, React 18, TypeScript
-- **Styling**: Tailwind CSS, Shadcn UI Components
-- **Backend**: Next.js API Routes, Prisma ORM
+- **Frontend**: Next.js 15.3.3 with App Router
+- **Backend**: Next.js API Routes with Prisma ORM
 - **Database**: PostgreSQL with Prisma migrations
-- **Authentication**: NextAuth.js with custom credentials provider
-- **State Management**: React Hooks, Context API
-- **Real-time**: Server-Sent Events (SSE)
+- **Authentication**: NextAuth.js with role-based access control
+- **PDF Generation**: Puppeteer for HTML-to-PDF conversion
+- **Rich Text**: Quill.js editor with custom font support
+- **Styling**: Tailwind CSS with shadcn/ui components
 
 ### Project Structure
 ```
 uxone/
-├── app/                    # Next.js app directory
-│   ├── (tipa)/           # Protected route group
-│   │   ├── lvm/          # Main application routes
-│   │   │   ├── admin/    # Administrative functions
-│   │   │   ├── helpdesk/ # Helpdesk system
-│   │   │   ├── projects/ # Project management
-│   │   │   ├── tasks/    # Task management
-│   │   │   └── ...       # Other modules
-│   │   └── ...
-│   ├── api/              # API endpoints
-│   └── auth/             # Authentication routes
-├── components/            # Reusable UI components
-├── lib/                  # Utility libraries
-├── prisma/               # Database schema and migrations
-├── config/               # Application configuration
-└── types/                # TypeScript type definitions
+├── app/                          # Next.js App Router
+│   ├── (tipa)/                  # Main application routes
+│   │   └── lvm/                 # LVM business unit
+│   │       ├── projects/        # Project management
+│   │       ├── contracts/       # Contract management (integrated)
+│   │       ├── demands/         # Procurement demands
+│   │       ├── tasks/           # Task management
+│   │       ├── helpdesk/        # Helpdesk system
+│   │       └── admin/           # Administrative functions
+│   ├── api/                     # API endpoints
+│   └── auth/                    # Authentication pages
+├── components/                   # Reusable UI components
+│   ├── contracts/               # Contract-specific components
+│   ├── ui/                      # Base UI components (shadcn/ui)
+│   └── [module]/                # Module-specific components
+├── lib/                         # Utility libraries
+│   ├── auth.ts                  # Authentication utilities
+│   ├── prisma.ts                # Database connection
+│   ├── puppeteer-generator.ts   # PDF generation
+│   └── logging/                 # Logging system
+├── prisma/                      # Database schema and migrations
+├── hooks/                       # Custom React hooks
+└── types/                       # TypeScript type definitions
 ```
 
-## 🚦 Getting Started
+## 📋 Prerequisites
 
-### Prerequisites
 - Node.js 18+ 
-- PostgreSQL 12+
+- PostgreSQL database
 - npm or yarn package manager
 
-### Installation
+## 🛠️ Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone [repository-url]
    cd uxone
    ```
 
 2. **Install dependencies**
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
-3. **Environment Setup**
+3. **Environment setup**
    ```bash
    cp .env.example .env.local
    # Configure your environment variables
    ```
 
-4. **Database Setup**
+4. **Database setup**
    ```bash
-   # Run database migrations
-   npx prisma migrate dev
-   
-   # Seed initial data
-   npm run seed
+   npx prisma generate
+   npx prisma db push
+   npx prisma db seed
    ```
 
-5. **Start Development Server**
+5. **Start development server**
    ```bash
    npm run dev
    ```
+
+## 🔧 Configuration
 
 ### Environment Variables
 ```env
@@ -122,198 +106,123 @@ DATABASE_URL="postgresql://user:password@localhost:5432/uxone"
 
 # Authentication
 NEXTAUTH_SECRET="your-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="http://localhost:8090"
 
-# Central API (optional)
-CENTRAL_API_URL="http://your-api-url"
-
-# Admin Fallback
-ADMIN_FALLBACK_HASHED_PASSWORD="hashed-password"
+# Email (optional)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-password"
 ```
 
-## 🏢 Department System
+### Database Schema
+The application uses Prisma ORM with the following key models:
 
-### Department Categories
-The application supports four main department categories:
+- **Project** - Core project entity with contract integration
+- **ContractDetails** - Contract metadata and approval workflows
+- **Document** - Rich text content with version control
+- **User** - User accounts with role-based permissions
+- **Department** - Organizational structure
+- **Task** - Project task management
+- **Demand** - Procurement demand tracking
 
-1. **Core Departments**
-   - Information Systems (IS)
-   - Human Resources (HR)
-   - Finance (FIN)
-   - Administration (ADMIN)
+## 📖 Usage Guide
 
-2. **Production Departments**
-   - Manufacturing (MFG)
-   - Production Engineering (DES)
-   - Quality Assurance (QA)
-   - Logistics (LOG)
+### Creating a Contract
 
-3. **Support Departments**
-   - Customer Service (CS)
-   - Helpdesk (HD)
-   - Maintenance (MAINT)
-   - Security (SEC)
+1. **Navigate to Projects**
+   ```
+   /lvm/projects
+   ```
 
-4. **Manufacturing Departments**
-   - Manufacturing Engineering (ME)
-   - Product Engineering (DES)
-   - Assembly (ASSY)
-   - Testing (TEST)
+2. **Create New Project**
+   - Click "Create New Project"
+   - Select "CONTRACT" as project type
+   - Fill in basic project details
 
-### Department Mapping
-The system includes comprehensive mapping from legacy department names to modern UXOne codes:
+3. **Configure Contract**
+   - Go to Contract tab
+   - Click "Edit" button
+   - Set contract details:
+     - Contract Type (Purchase, Service, etc.)
+     - Counterparty
+     - Contract Value & Currency
+     - **Start Date** - Contract commencement
+     - **Effective Date** - Legal effectiveness
+     - **Expiration Date** - Contract expiry
+     - **End Date** - Alternative end date
+     - Contract Status
 
-```typescript
-export interface DepartmentMapping {
-  legacyName: string;
-  uxoneCode: string;
-  category: 'core' | 'production' | 'support' | 'manufacturing';
-  description: string;
-  isActive: boolean;
-  homePage?: string;
-  aliases?: string[];
-}
-```
+4. **Add Content**
+   - Switch to Document tab
+   - Use rich text editor for contract content
+   - Support for Vietnamese characters with Noto Sans font
 
-### Home Page Routing
-Each department has a designated home page:
-- **IS**: `/lvm/admin` (Administrative access)
-- **PROC**: `/lvm/procurement` (Procurement dashboard)
-- **CS**: `/lvm/customer-service` (Customer service dashboard)
-- **QA**: `/lvm/quality-control` (Quality control dashboard)
+5. **Save & Approve**
+   - Save contract details
+   - Submit for approval workflow
+   - Track approval progress
+
+### Contract Workflow
+
+1. **Draft** → Initial contract creation
+2. **Review** → Submitted for stakeholder review
+3. **Approved** → Contract approved by all parties
+4. **Signed** → Contract legally executed
+5. **Executing** → Contract in active performance
+6. **Completed** → Contract fulfilled
+
+### Downloading Contracts
+
+- **PDF Format** - Professional layout with audit information
+- **HTML Format** - Web-viewable version
+- **Plain Text** - Simple text extraction
+- **Markdown** - Structured text format
+- **JSON** - Complete metadata and content
 
 ## 🔐 Authentication & Authorization
 
-### Authentication Methods
-1. **Central API Integration**: Primary authentication via external system
-2. **Local Admin Accounts**: Fallback authentication for administrators
-3. **Test Accounts**: Development and testing accounts
-
 ### User Roles
-- **ADMIN**: Full system access
-- **GENERAL_DIRECTOR**: Executive level access
-- **GENERAL_MANAGER**: Senior management access
-- **ASSISTANT_GENERAL_MANAGER**: Assistant management access
-- **SENIOR_MANAGER**: Department management access
-- **MANAGER**: Team management access
-- **STAFF**: Basic user access
+- **USER** - Basic access to assigned projects
+- **MANAGER** - Department-level management
+- **SENIOR_MANAGER** - Cross-department oversight
+- **GENERAL_MANAGER** - Business unit management
+- **ADMIN** - Full system access
 
-### Access Control
-- **Route Protection**: Middleware-based route protection
-- **Role-Based Access**: Functionality based on user role
-- **Department-Based Access**: Data access based on user department
-- **Admin Override**: Special access for administrative users
+### Permission System
+- **Project-based permissions** - Users can only access assigned projects
+- **Department restrictions** - Access limited to user's department
+- **Owner privileges** - Project creators have full control
+- **Approval workflows** - Role-based approval requirements
 
-## 🌐 API Endpoints
+## 📊 API Endpoints
 
-### Core APIs
-- **Authentication**: `/api/auth/*`
-- **Users**: `/api/users/*`
-- **Projects**: `/api/projects/*`
-- **Tasks**: `/api/tasks/*`
-- **Tickets**: `/api/tickets/*`
-- **Documents**: `/api/documents/*`
+### Core Endpoints
+- `POST /api/projects` - Create new project
+- `PATCH /api/projects/[id]/contract` - Update contract details
+- `GET /api/contracts/[id]/finalized/download` - Download finalized contract
+- `POST /api/demands` - Create procurement demand
+- `GET /api/tasks` - Retrieve project tasks
 
-### Administrative APIs
-- **User Management**: `/api/admin/users`
-- **Project Management**: `/api/admin/projects`
-- **System Settings**: `/api/admin/settings`
-- **RBAC Management**: `/api/admin/rbac`
+### Contract Endpoints
+- `PATCH /api/contracts/[id]/approve` - Approve contract
+- `POST /api/contracts/[id]/finalized` - Finalize contract
+- `GET /api/contracts/[id]/workflow` - Get approval workflow
 
-### Integration APIs
-- **Notifications**: `/api/notifications/*`
-- **Webhooks**: `/api/service/webhooks/*`
-- **External Sync**: `/api/integration/*`
+## 🎨 UI Components
 
-### API Features
-- **Department Filtering**: Automatic data filtering by user department
-- **Real-time Updates**: SSE endpoints for live data
-- **Audit Logging**: Automatic tracking of all changes
-- **Error Handling**: Comprehensive error responses
-- **Rate Limiting**: Built-in request throttling
+### Design System
+- **shadcn/ui** - Base component library
+- **Tailwind CSS** - Utility-first styling
+- **Lucide Icons** - Consistent iconography
+- **Responsive Design** - Mobile-first approach
 
-## 🗄️ Database Schema
-
-### Core Models
-
-#### User Model
-```prisma
-model User {
-  id                 String    @id @default(cuid())
-  username          String    @unique
-  name              String?
-  email             String?   @unique
-  department        String?   // UXOne department code
-  centralDepartment String?   // Legacy department name
-  departmentName    String?   // Display name
-  role              String?
-  isActive          Boolean   @default(true)
-  emp_code          String?   @unique
-  // ... relationships and audit fields
-}
-```
-
-#### Project Model
-```prisma
-model Project {
-  id                String    @id @default(cuid())
-  title             String
-  description       String?
-  status            ProjectStatus
-  priority          ProjectPriority
-  startDate         DateTime?
-  dueDate           DateTime?
-  createdById       String
-  // ... relationships and audit fields
-}
-```
-
-#### Ticket Model
-```prisma
-model Ticket {
-  id                String    @id @default(cuid())
-  ticketNumber      String    @unique
-  title             String
-  description       String
-  status            TicketStatus
-  priority          TicketPriority
-  category          TicketCategory
-  createdById       String
-  assignedToId      String?
-  // ... relationships and audit fields
-}
-```
-
-### Audit System
-All models include audit fields:
-- `lastUpdatedBy`: User who last modified the record
-- `lastUpdatedById`: ID of the user who last modified
-- `createdAt`: Record creation timestamp
-- `updatedAt`: Last modification timestamp
-
-## 🧩 Components
-
-### Core Components
-- **AdminNavigation**: Administrative sidebar navigation
-- **DataTable**: Reusable data table with sorting and filtering
-- **StatusBadge**: Status indicators for various entities
-- **PriorityBadge**: Priority level indicators
-- **AuditInfo**: Audit information display
-
-### UI Components
-Built with Shadcn UI:
-- **Cards**: Information containers
-- **Buttons**: Action buttons with variants
-- **Forms**: Form inputs and validation
-- **Modals**: Dialog and modal components
-- **Tables**: Data display tables
-- **Badges**: Status and category indicators
-
-### Custom Hooks
-- **useNotifications**: Real-time notification management
-- **useActivities**: Activity tracking and logging
-- **useBacklogHooks**: Backlog management utilities
-- **useClickOutside**: Click outside detection
+### Key Components
+- **ContractTab** - Contract details editing
+- **EnhancedContractTab** - Main contract interface
+- **DocumentEditor** - Rich text content creation
+- **WorkflowProgressBar** - Approval status visualization
+- **AuditInfo** - Contract audit information display
 
 ## 🚀 Deployment
 
@@ -323,97 +232,70 @@ npm run build
 npm start
 ```
 
-### Environment Configuration
-- Set production environment variables
-- Configure database connection
-- Set up external API endpoints
-- Configure authentication secrets
+### Docker (Optional)
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
 
-### Performance Optimization
-- **Code Splitting**: Automatic route-based code splitting
-- **Image Optimization**: Next.js built-in image optimization
-- **Caching**: Strategic caching for API responses
-- **Compression**: Gzip compression for text-based resources
+## 🧪 Testing
 
-## 🐛 Troubleshooting
+### Development Testing
+```bash
+# Type checking
+npm run tsc
 
-### Common Issues
+# Linting
+npm run lint
 
-#### 1. Authentication Errors
-**Problem**: Users unable to log in
-**Solution**: 
-- Check environment variables
-- Verify database connectivity
-- Check central API availability
+# Build testing
+npm run build
+```
 
-#### 2. Department Access Issues
-**Problem**: Users seeing wrong department data
-**Solution**:
-- Verify user department assignment
-- Check department mapping configuration
-- Review middleware access controls
+### API Testing
+- Use the built-in API routes for testing
+- Test endpoints with tools like Postman or Insomnia
+- Monitor console logs for debugging information
 
-#### 3. API Errors
-**Problem**: 500 Internal Server Errors
-**Solution**:
-- Check server logs for detailed errors
-- Verify database schema consistency
-- Check API endpoint configurations
+## 📝 Development Notes
 
-#### 4. Build Errors
-**Problem**: Compilation failures
-**Solution**:
-- Clear build cache: `rm -rf .next`
-- Reinstall dependencies: `npm install`
-- Check TypeScript errors: `npm run type-check`
+### Key Features
+- **Vietnamese Language Support** - Full Unicode support with proper font handling
+- **PDF Generation** - Puppeteer-based HTML-to-PDF with professional layouts
+- **Real-time Updates** - WebSocket integration for live notifications
+- **Audit Trails** - Complete change tracking and compliance reporting
 
-### Debug Features
-The application includes extensive debugging:
-- **Console Logging**: Detailed API call logging
-- **Error Boundaries**: Graceful error handling
-- **Debug Endpoints**: Development-only debugging APIs
-- **Audit Trails**: Complete change tracking
+### Performance Optimizations
+- **Server Components** - Reduced client-side JavaScript
+- **Dynamic Imports** - Code splitting for better performance
+- **Database Indexing** - Optimized queries with Prisma
+- **Caching** - Strategic caching for frequently accessed data
 
-### Performance Monitoring
-- **Build Metrics**: Bundle size analysis
-- **API Response Times**: Performance tracking
-- **Database Queries**: Query optimization insights
-- **User Experience**: Loading state management
+## 🤝 Contributing
 
-## 📚 Additional Resources
-
-### Documentation
-- **API Documentation**: Comprehensive API reference
-- **Component Library**: UI component documentation
-- **Database Schema**: Complete database documentation
-- **Deployment Guide**: Production deployment instructions
-
-### Development
-- **Contributing Guidelines**: Development contribution rules
-- **Code Standards**: Coding conventions and standards
-- **Testing Strategy**: Testing approach and tools
-- **Release Process**: Version management and releases
-
-### Support
-- **Issue Tracking**: GitHub issues for bug reports
-- **Feature Requests**: Enhancement proposal system
-- **Community**: Developer community and discussions
-- **Updates**: Regular platform updates and improvements
-
----
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## 📄 License
 
-This project is proprietary software. All rights reserved.
+[Your License Here]
 
-## 👥 Team
+## 🆘 Support
 
-- **Development Team**: UXOne Development Team
-- **Architecture**: Enterprise Solutions Architecture
-- **Design**: User Experience Design Team
-- **Quality Assurance**: QA and Testing Team
+For support and questions:
+- Create an issue in the repository
+- Contact the development team
+- Check the documentation
 
 ---
 
-*Last Updated: January 2025*
-*Version: 1.0.0*
+**UXOne** - Streamlining enterprise operations through intelligent contract and project management.
