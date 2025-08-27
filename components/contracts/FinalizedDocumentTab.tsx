@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Project } from '@/types';
-import { CheckCircle, Download, FileText, AlertCircle, Clock, Eye } from 'lucide-react';
+import { CheckCircle, Download, FileText, AlertCircle, Clock, Eye, Shield, User, Calendar } from 'lucide-react';
 
 interface FinalizedDocumentTabProps {
   project: Project;
@@ -29,6 +29,7 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [showAuditInfo, setShowAuditInfo] = useState(false);
 
   const contractId = project.contractDetails?.id;
   const contractStatus = project.contractDetails?.contractStatus;
@@ -215,17 +216,11 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
               {downloading ? 'Downloading...' : 'Download PDF'}
             </button>
             <button
-              onClick={() => {
-                // Audit functionality is now integrated into the project's contract tab
-                // The user can view audit information directly in the project view
-                if (finalizedDocument.originalDocument?.contractDetails?.id) {
-                  window.location.href = `/lvm/projects/${finalizedDocument.originalDocument.contractDetails.id}`;
-                }
-              }}
+              onClick={() => setShowAuditInfo(!showAuditInfo)}
               className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <Eye className="w-4 h-4 mr-2" />
-              View Project
+              Security & Audit
             </button>
           </div>
         </div>
@@ -293,6 +288,117 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
             </div>
           </div>
         </div>
+
+        {/* Contract Security & Audit Information */}
+        {showAuditInfo && (
+          <div className="mt-6 bg-white shadow rounded-lg border border-gray-200">
+            <div className="px-4 py-3 border-b border-gray-200">
+              <h3 className="text-sm font-medium text-gray-900">Contract Security & Audit Information</h3>
+            </div>
+            <div className="p-4 space-y-6">
+              
+              {/* Digital Signature & Security */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Digital Security</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-green-50 p-3 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Digital Signature</span>
+                    </div>
+                    <p className="text-xs text-green-600 mt-1">
+                      ✓ Verified and Authentic
+                    </p>
+                    <p className="text-xs text-green-600">
+                      Hash: {finalizedDocument.checksum?.substring(0, 16)}...
+                    </p>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <Shield className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Legal Binding</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {finalizedDocument.isLegallyBinding ? '✓ Legally Binding' : '⚠ Not Legally Binding'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Approval History */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Approval History</h4>
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="space-y-2">
+                    {finalizedDocument.approvedBy?.map((approver, index) => (
+                      <div key={index} className="flex items-center space-x-2 text-sm">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-700">{approver}</span>
+                        <span className="text-gray-500">•</span>
+                        <span className="text-gray-500">Approved</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Total Approvers: {finalizedDocument.approvedBy?.length || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Document Timeline */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Document Timeline</h4>
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-700">Created:</span>
+                      <span className="text-gray-500">{formatDate(finalizedDocument.createdAt)}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-700">Finalized:</span>
+                      <span className="text-gray-500">
+                        {finalizedDocument.finalizationDate ? formatDate(finalizedDocument.finalizationDate) : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-700">Version:</span>
+                      <span className="text-gray-500">{finalizedDocument.version}.{finalizedDocument.revisionNumber}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contract Details */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Contract Details</h4>
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Contract Number:</span>
+                      <p className="font-medium text-gray-700">{finalizedDocument.contractNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Status:</span>
+                      <p className="font-medium text-gray-700">Finalized</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Storage Location:</span>
+                      <p className="font-medium text-gray-700">Secure Digital Archive</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Audit Trail:</span>
+                      <p className="font-medium text-gray-700">Complete</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

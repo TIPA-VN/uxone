@@ -127,30 +127,8 @@ export async function PATCH(
         });
       }
 
-      // Get current revision count
-      const existingRevisions = await prisma.contractRevision.findMany({
-        where: { contractId: id },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      // Create revision record
-      await prisma.contractRevision.create({
-        data: {
-          contractId: id,
-          version: 1,
-          revisionNumber: existingRevisions.length + 1,
-          content,
-          changes: {
-            action: 'SAVE_DOCUMENT',
-            timestamp: new Date().toISOString(),
-            performedBy: session.user.id
-          },
-          changeSummary: 'Document content saved',
-          changeCount: 1,
-          requiresApproval: false,
-          createdBy: session.user.id
-        }
-      });
+      // NOTE: Version creation is now handled by the dedicated versions API
+      // This prevents double version creation when saveContent calls both APIs
     } else {
       // Update contract details
       const updateData: any = {

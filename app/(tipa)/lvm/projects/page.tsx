@@ -170,7 +170,7 @@ export default function ProjectsPage() {
               {project.projectType === "CONTRACT" && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                   <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mr-1"></span>
-                  CONTRACT
+                  {project.contractDetails?.isAddendum ? 'ADDENDUM' : 'CONTRACT'}
                 </span>
               )}
             </div>
@@ -179,19 +179,30 @@ export default function ProjectsPage() {
                 {project.description}
               </p>
             )}
+            {project.contractDetails?.isAddendum && project.contractDetails?.parentContract && (
+              <div className="flex items-center mt-1">
+                <span className="text-xs text-gray-500 mr-1">Parent:</span>
+                <Link 
+                  href={`/lvm/projects/${project.contractDetails.parentContract.project?.id}?tab=contract`}
+                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  {project.contractDetails.parentContract.contractNumber}
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )
     },
     {
-      key: "documentNumber",
-      header: "Document #",
+      key: "projectNumber",
+      header: "Project #",
       sortable: true,
       sortKey: "documentNumber",
       render: (project: Project) => (
         <div className="text-sm">
           {project.documentNumber ? (
-            <span className="font-mono text-gray-700 bg-gray-100 px-2 py-1 rounded text-xs">
+            <span className="font-mono text-gray-700 bg-blue-100 px-2 py-1 rounded text-xs">
               {project.documentNumber}
             </span>
           ) : (
@@ -201,53 +212,17 @@ export default function ProjectsPage() {
       )
     },
     {
-      key: "documentTemplate",
-      header: "Template",
-      sortable: true,
-      sortKey: "documentTemplate",
-      render: (project: Project) => (
-        <div className="text-sm">
-          {project.documentTemplate ? (
-            <span className="text-gray-700 bg-blue-100 px-2 py-1 rounded text-xs">
-              {documentTemplates.find(t => t.id === project.documentTemplate)?.templateName || 'Unknown'}
-            </span>
-          ) : (
-            <span className="text-gray-400 text-xs">None</span>
-          )}
-        </div>
-      )
-    },
-    {
-      key: "contractInfo",
-      header: "Contract",
+      key: "contractNumber",
+      header: "Contract #",
       sortable: false,
       render: (project: Project) => (
         <div className="text-sm">
-          {project.projectType === "CONTRACT" ? (
-            <div className="flex flex-col gap-1">
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                <span className="w-2 h-2 bg-purple-400 rounded-full mr-1"></span>
-                Contract
-              </span>
-              {project.contractDetails && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-gray-600">
-                    {project.contractDetails.contractType || 'Unknown Type'}
-                  </span>
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                    project.contractDetails.contractStatus === 'DRAFT' ? 'bg-yellow-100 text-yellow-800' :
-                    project.contractDetails.contractStatus === 'REVIEW' ? 'bg-blue-100 text-blue-800' :
-                    project.contractDetails.contractStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                    project.contractDetails.contractStatus === 'SIGNED' ? 'bg-indigo-100 text-indigo-800' :
-                    project.contractDetails.contractStatus === 'EXECUTING' ? 'bg-purple-100 text-purple-800' :
-                    project.contractDetails.contractStatus === 'COMPLETED' ? 'bg-gray-100 text-gray-800' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {project.contractDetails.contractStatus || 'DRAFT'}
-                  </span>
-                </div>
-              )}
-            </div>
+          {project.projectType === "CONTRACT" && project.contractDetails?.contractNumber ? (
+            <span className="font-mono text-gray-700 bg-purple-100 px-2 py-1 rounded text-xs">
+              {project.contractDetails.contractNumber}
+            </span>
+          ) : project.projectType === "CONTRACT" ? (
+            <span className="text-gray-400 text-xs">Draft</span>
           ) : (
             <span className="text-gray-400 text-xs">-</span>
           )}

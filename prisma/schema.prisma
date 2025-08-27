@@ -235,6 +235,13 @@ model ContractDetails {
   approvalHistory      ContractApproval[]
   document             Document?          @relation(fields: [documentId], references: [id], onDelete: Cascade)
   revisions            ContractRevision[]
+  
+  // NEW: Addendum support
+  parentContractId     String?            // For addendums - points to original contract
+  parentContract       ContractDetails?   @relation("ContractAddendums", fields: [parentContractId], references: [id])
+  addendums            ContractDetails[]  @relation("ContractAddendums")
+  addendumNumber       Int?               // Addendum sequence number (1, 2, 3, etc.)
+  isAddendum           Boolean            @default(false)
 
   @@map("contract_details")
 }

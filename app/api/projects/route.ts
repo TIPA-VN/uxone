@@ -106,7 +106,20 @@ export async function GET(request: NextRequest) {
           members: true,
         },
       },
-      contractDetails: true,
+      contractDetails: {
+        include: {
+          parentContract: {
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          }
+        }
+      },
     };
 
     // Include tasks if requested

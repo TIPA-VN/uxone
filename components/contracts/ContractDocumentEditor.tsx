@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Project } from '@/types';
+import { useSession } from 'next-auth/react';
 import { 
   FileText, 
   Save, 
@@ -26,7 +27,8 @@ import {
   Image,
   Upload,
   IndentIncrease,
-  IndentDecrease
+  IndentDecrease,
+  AlertCircle
 } from 'lucide-react';
 
 interface ContractDocumentEditorProps {
@@ -47,12 +49,25 @@ export default function ContractDocumentEditor({
   project, 
   onShare 
 }: ContractDocumentEditorProps) {
+  const { data: session } = useSession();
+  const currentUser = session?.user;
+  
   const [content, setContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [showVersions, setShowVersions] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // NEW: Version conflict detection
+  const [editingStartedAt, setEditingStartedAt] = useState<Date | null>(null);
+  const [startingVersionId, setStartingVersionId] = useState<string | null>(null);
+  const [conflictDetected, setConflictDetected] = useState(false);
+  const [conflictInfo, setConflictInfo] = useState<{
+    conflictingUser: string;
+    conflictingVersion: string;
+    conflictTime: string;
+  } | null>(null);
   
   // Upload-related state
   const [isUploading, setIsUploading] = useState(false);
@@ -65,6 +80,20 @@ export default function ContractDocumentEditor({
   
   // Flag to prevent localStorage restoration after upload
   const [hasNewlyUploadedContent, setHasNewlyUploadedContent] = useState(false);
+  
+  // NEW: Auto-save warning when navigating away
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
   
   // Debug modal visibility
   useEffect(() => {
@@ -156,6 +185,36 @@ export default function ContractDocumentEditor({
 
 
 
+  // NEW: Check for version conflicts before saving
+  const checkForConflicts = useCallback(async (): Promise<boolean> => {
+    if (!startingVersionId || !project.contractDetails?.id) {
+      return false; // No conflict if we don't have a starting version
+    }
+
+    try {
+      const response = await fetch(`/api/contracts/${project.contractDetails.id}/versions`);
+      if (response.ok) {
+        const data = await response.json();
+        const latestVersion = data.versions?.[0]; // Most recent version
+        
+        if (latestVersion && latestVersion.id !== startingVersionId) {
+          // Conflict detected - someone else has saved since we started editing
+          setConflictDetected(true);
+          setConflictInfo({
+            conflictingUser: latestVersion.createdBy,
+            conflictingVersion: `v${latestVersion.version}.${latestVersion.revisionNumber}`,
+            conflictTime: new Date(latestVersion.createdAt).toLocaleString()
+          });
+          return true;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to check for conflicts:', error);
+    }
+    
+    return false;
+  }, [startingVersionId, project.contractDetails?.id]);
+
   // Save content to the contract via API
   const saveContent = useCallback(async (newContent: string) => {
     try {
@@ -163,6 +222,13 @@ export default function ContractDocumentEditor({
       // console.log('Input content:', newContent);
       // console.log('Input content length:', newContent.length);
       // console.log('Contract ID:', project.contractDetails?.id);
+      
+      // NEW: Check for conflicts before saving
+      const hasConflict = await checkForConflicts();
+      if (hasConflict) {
+        setSaveMessage('❌ Cannot save: Document has been modified by another user. Please refresh and try again.');
+        return false;
+      }
       
       // Clean and normalize the HTML content before saving
       const cleanContent = newContent
@@ -173,6 +239,44 @@ export default function ContractDocumentEditor({
       if (!project.contractDetails?.id) {
         // console.error('No contract ID available');
         return false;
+      }
+      
+      // NEW: Create a version record when saving
+      let versionCreated = false;
+      try {
+        // Calculate change summary based on what was modified
+        const changeSummary = startingVersionId 
+          ? `Document updated by ${currentUser?.name || currentUser?.username || 'Unknown User'}`
+          : 'Initial document creation';
+        
+        const versionResponse = await fetch(`/api/contracts/${project.contractDetails.id}/versions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: cleanContent,
+            changeSummary,
+            changeCount: 1, // Indicates a content change
+            requiresApproval: false,
+            // NEW: Include user information for attribution
+            createdBy: currentUser?.id || 'unknown',
+            userDisplayName: currentUser?.name || currentUser?.username || 'Unknown User'
+          })
+        });
+        
+        if (versionResponse.ok) {
+          versionCreated = true;
+          console.log('✅ Version created successfully');
+          
+          // Reset conflict tracking after successful save
+          setConflictDetected(false);
+          setConflictInfo(null);
+          setStartingVersionId(null);
+          setEditingStartedAt(null);
+        } else {
+          console.warn('⚠️ Failed to create version, but document will still be saved');
+        }
+      } catch (versionError) {
+        console.warn('⚠️ Version creation failed, but document will still be saved:', versionError);
       }
       
       // Save to contract system
@@ -189,9 +293,18 @@ export default function ContractDocumentEditor({
         // console.log('Contract content saved successfully');
         // Save updated state to localStorage
         saveStateToStorage(project.contractDetails.id, cleanContent);
-        // Reload versions after save
+        
+        // Reload versions after save (including the new version if created)
         const updatedVersions = await loadVersionsForContract(project.contractDetails.id);
         setVersions(updatedVersions);
+        
+        // Show version creation status
+        if (versionCreated) {
+          setSaveMessage('✅ Document saved and version created successfully!');
+        } else {
+          setSaveMessage('✅ Document saved successfully! (Version creation failed)');
+        }
+        
         return true;
       } else {
         // console.error('Failed to save contract content:', response.status, await response.text());
@@ -844,6 +957,15 @@ export default function ContractDocumentEditor({
                 onClick={() => {
                   setIsEditing(true);
                   setHasUnsavedChanges(false);
+                  setConflictDetected(false);
+                  setConflictInfo(null);
+                  
+                  // NEW: Track when editing starts and what version we're editing from
+                  setEditingStartedAt(new Date());
+                  if (versions.length > 0) {
+                    setStartingVersionId(versions[0].id);
+                  }
+                  
                   // Ensure editor content is displayed when starting to edit
                   // Use the latest version content if available, otherwise use stored content
                   const contentToDisplay = versions.length > 0 
@@ -902,15 +1024,78 @@ export default function ContractDocumentEditor({
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`px-3 py-2 border rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  hasUnsavedChanges 
+                    ? 'border-orange-300 bg-orange-600 hover:bg-orange-700 text-white' 
+                    : 'border-transparent bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                title={hasUnsavedChanges ? 'You have unsaved changes - click to save and create a new version' : 'Save document and create a new version'}
               >
                 <Save className="w-4 h-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save Document'}
+                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes*' : 'Save Document'}
               </button>
             </>
           )}
         </div>
       </div>
+
+      {/* NEW: Versioning Information */}
+      {isEditing && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-3">
+              <History className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-blue-900 mb-1">Version Control</h4>
+                <div className="text-sm text-blue-700 space-y-1">
+                  <p>• <strong>Changes are cached locally</strong> until you explicitly save</p>
+                  <p>• <strong>Each save creates a new version</strong> in the version history</p>
+                  <p>• <strong>No data loss</strong> - your work is preserved until you save</p>
+                  <p>• <strong>Version history</strong> tracks all document changes over time</p>
+                  {editingStartedAt && (
+                    <p>• <strong>Editing started at:</strong> {editingStartedAt.toLocaleString()}</p>
+                  )}
+                  {startingVersionId && (
+                    <p>• <strong>Based on version:</strong> {startingVersionId}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* NEW: Conflict resolution button */}
+            {conflictDetected && (
+              <button
+                onClick={async () => {
+                  // Refresh versions and content
+                  if (project.contractDetails?.id) {
+                    const updatedVersions = await loadVersionsForContract(project.contractDetails.id);
+                    setVersions(updatedVersions);
+                    
+                    if (updatedVersions.length > 0) {
+                      const latestContent = updatedVersions[0].content;
+                      setContent(latestContent);
+                      if (editorRef.current) {
+                        editorRef.current.innerHTML = latestContent;
+                      }
+                      setStartingVersionId(updatedVersions[0].id);
+                      setEditingStartedAt(new Date());
+                    }
+                  }
+                  
+                  setConflictDetected(false);
+                  setConflictInfo(null);
+                  setHasUnsavedChanges(false);
+                  setSaveMessage('✅ Document refreshed with latest version. You can now continue editing.');
+                  setTimeout(() => setSaveMessage(''), 3000);
+                }}
+                className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                Refresh & Continue
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Save Message */}
       {saveMessage && (
@@ -1149,9 +1334,30 @@ export default function ContractDocumentEditor({
 
               {/* Rich Text Editor */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contract Content
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Contract Content
+                  </label>
+                  {/* NEW: Unsaved changes indicator */}
+                  {hasUnsavedChanges && (
+                    <div className="flex items-center space-x-2 px-3 py-1 bg-orange-50 border border-orange-200 rounded-md">
+                      <Clock className="w-4 h-4 text-orange-600" />
+                      <span className="text-xs text-orange-700 font-medium">
+                        Unsaved changes - Click Save to create a new version
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* NEW: Conflict warning indicator */}
+                  {conflictDetected && conflictInfo && (
+                    <div className="flex items-center space-x-2 px-3 py-1 bg-red-50 border border-red-200 rounded-md">
+                      <AlertCircle className="w-4 h-4 text-red-600" />
+                      <span className="text-xs text-red-700 font-medium">
+                        ⚠️ Conflict: {conflictInfo.conflictingUser} saved version {conflictInfo.conflictingVersion} at {conflictInfo.conflictTime}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div
                   ref={editorRef}
                   id="rich-text-editor"

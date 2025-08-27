@@ -190,10 +190,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   if (ganttItems.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5" />
-          Project Timeline
-        </h3>
         <div className="text-gray-500 text-center py-8">
           No due dates set for this project
         </div>
@@ -203,10 +199,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="font-semibold text-base mb-2 flex items-center gap-2">
-        <Calendar className="w-4 h-4" />
-        Project Timeline ({timelineUnit.unit})
-      </h3>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 mb-3 text-xs">

@@ -150,12 +150,15 @@ export const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ project, app
 
       {/* Due Date Analytics - Gantt Chart */}
       {(requestDate || Object.keys(departmentDueDates).length > 0) && (
-        <GanttChart
-          requestDate={requestDate}
-          departmentDueDates={departmentDueDates}
-          approvalState={approvalState}
-          projectStartDate={project?.createdAt}
-        />
+        <div className="bg-white rounded-lg shadow p-2">
+          <h3 className="font-semibold text-base mb-2 text-gray-800">Due Date Analytics</h3>
+          <GanttChart
+            requestDate={requestDate}
+            departmentDueDates={departmentDueDates}
+            approvalState={approvalState}
+            projectStartDate={project?.createdAt}
+          />
+        </div>
       )}
 
       {/* Metrics Dashboard */}

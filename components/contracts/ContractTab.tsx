@@ -11,9 +11,9 @@ import {
   Clock, 
   AlertCircle,
   Edit3,
-  Download,
-  Share2
+  Plus
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface ContractTabProps {
   project: Project;
@@ -22,7 +22,6 @@ interface ContractTabProps {
     counterparty: string;
     value: number | null;
     currency: string;
-    contractStatus: string;
   }>) => void;
 }
 
@@ -33,7 +32,6 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
     counterparty: project.contractDetails?.counterparty || '',
     value: project.contractDetails?.value?.toString() || '',
     currency: project.contractDetails?.currency || 'THB',
-    contractStatus: project.contractDetails?.contractStatus || 'DRAFT',
     startDate: project.contractDetails?.startDate ? new Date(project.contractDetails.startDate).toISOString().split('T')[0] : '',
     effectiveDate: project.contractDetails?.effectiveDate ? new Date(project.contractDetails.effectiveDate).toISOString().split('T')[0] : '',
     expirationDate: project.contractDetails?.expirationDate ? new Date(project.contractDetails.expirationDate).toISOString().split('T')[0] : '',
@@ -52,14 +50,13 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
         counterparty: project.contractDetails.counterparty || '',
         value: project.contractDetails.value?.toString() || '',
         currency: project.contractDetails.currency || 'THB',
-        contractStatus: project.contractDetails.contractStatus || 'DRAFT',
         startDate: project.contractDetails.startDate ? new Date(project.contractDetails.startDate).toISOString().split('T')[0] : '',
         effectiveDate: project.contractDetails.effectiveDate ? new Date(project.contractDetails.effectiveDate).toISOString().split('T')[0] : '',
         expirationDate: project.contractDetails.expirationDate ? new Date(project.contractDetails.expirationDate).toISOString().split('T')[0] : '',
         endDate: project.contractDetails.endDate ? new Date(project.contractDetails.endDate).toISOString().split('T')[0] : ''
       });
     }
-  }, [project.contractDetails?.contractType, project.contractDetails?.counterparty, project.contractDetails?.value, project.contractDetails?.currency, project.contractDetails?.contractStatus, project.contractDetails?.startDate, project.contractDetails?.effectiveDate, project.contractDetails?.expirationDate, project.contractDetails?.endDate]);
+  }, [project.contractDetails?.contractType, project.contractDetails?.counterparty, project.contractDetails?.value, project.contractDetails?.currency, project.contractDetails?.startDate, project.contractDetails?.effectiveDate, project.contractDetails?.expirationDate, project.contractDetails?.endDate]);
 
   if (!project.contractDetails) {
     return (
@@ -99,6 +96,34 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
     }
   };
 
+  // NEW: Function to determine if contract can be edited
+  const canEditContract = (status: string): boolean => {
+    switch (status) {
+      case 'DRAFT': return true;        // Fully editable
+      case 'REVIEW': return true;       // Can be edited during review
+      case 'APPROVED': return true;     // Can be reopened for changes
+      case 'SIGNED': return false;      // Customer has signed - NO EDITING
+      case 'EXECUTING': return false;   // In execution - NO EDITING
+      case 'COMPLETED': return false;   // Completed - NO EDITING
+      case 'TERMINATED': return false;  // Terminated - NO EDITING
+      default: return false;
+    }
+  };
+
+  // NEW: Function to get edit button tooltip
+  const getEditButtonTooltip = (status: string): string => {
+    switch (status) {
+      case 'DRAFT': return 'Contract is in draft mode and can be edited';
+      case 'REVIEW': return 'Contract is under review but can still be edited';
+      case 'APPROVED': return 'Contract is approved but can be reopened for changes';
+      case 'SIGNED': return 'Contract has been signed by customer - no more changes allowed';
+      case 'EXECUTING': return 'Contract is being executed - no changes allowed';
+      case 'COMPLETED': return 'Contract is completed - no changes allowed';
+      case 'TERMINATED': return 'Contract is terminated - no changes allowed';
+      default: return 'Contract status unknown';
+    }
+  };
+
   const handleSave = async () => {
     const updates = {
       ...editForm,
@@ -126,41 +151,44 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
       counterparty: contract.counterparty || '',
       value: contract.value?.toString() || '',
       currency: contract.currency || 'THB',
-      contractStatus: contract.contractStatus || 'DRAFT'
+      startDate: contract.startDate ? new Date(contract.startDate).toISOString().split('T')[0] : '',
+      effectiveDate: contract.effectiveDate ? new Date(contract.effectiveDate).toISOString().split('T')[0] : '',
+      expirationDate: contract.expirationDate ? new Date(contract.expirationDate).toISOString().split('T')[0] : '',
+      endDate: contract.endDate ? new Date(contract.endDate).toISOString().split('T')[0] : ''
     });
     setIsEditing(false);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Contract Management</h2>
-          <p className="text-sm text-gray-600">
-            Manage contract details and workflow for {project.name}
-          </p>
-        </div>
+      {/* Action Buttons */}
+      <div className="flex justify-end">
         <div className="flex space-x-3">
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            disabled={loading}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          {/* Addendum Management Link */}
+          <Link
+            href={`/lvm/projects/addendums/${project.id}`}
+            className="inline-flex items-center px-3 py-2 border border-purple-300 shadow-sm text-sm leading-4 font-medium rounded-md text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
           >
-            <Edit3 className="w-4 h-4 mr-2" />
-            {isEditing ? 'Cancel' : 'Edit'}
-          </button>
-          {!isEditing && (
-            <>
-              <button className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </button>
-              <button className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </button>
-            </>
+            <Plus className="w-4 h-4 mr-2" />
+            Manage Addendums
+          </Link>
+          
+          {/* Edit Button */}
+          {canEditContract(contract.contractStatus || 'DRAFT') ? (
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              disabled={loading}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={getEditButtonTooltip(contract.contractStatus || 'DRAFT')}
+            >
+              <Edit3 className="w-4 h-4 mr-2" />
+              {isEditing ? 'Cancel' : 'Edit'}
+            </button>
+          ) : (
+            <div className="flex items-center px-3 py-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-md">
+              <AlertCircle className="w-4 h-4 mr-2" />
+              <span className="text-sm">Editing Locked</span>
+            </div>
           )}
         </div>
       </div>
@@ -178,25 +206,7 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
         </div>
       )}
 
-      {/* Contract Status Banner */}
-      <div className={`rounded-lg border p-4 ${getStatusColor(contract.contractStatus || 'DRAFT')}`}>
-        <div className="flex items-center">
-          {getStatusIcon(contract.contractStatus || 'DRAFT')}
-          <div className="ml-3">
-            <h3 className="text-sm font-medium">
-              Contract Status: {contract.contractStatus || 'DRAFT'}
-            </h3>
-            <p className="text-sm opacity-90">
-              {contract.contractStatus === 'DRAFT' && 'Contract is in draft mode and can be edited'}
-              {contract.contractStatus === 'REVIEW' && 'Contract is under review by stakeholders'}
-              {contract.contractStatus === 'APPROVED' && 'Contract has been approved and is ready for execution'}
-              {contract.contractStatus === 'SIGNED' && 'Contract has been signed by all parties'}
-              {contract.contractStatus === 'EXECUTING' && 'Contract is currently being executed'}
-              {contract.contractStatus === 'COMPLETED' && 'Contract has been completed successfully'}
-            </p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Contract Details */}
       <div className="bg-white shadow rounded-lg">
@@ -204,6 +214,19 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
             Contract Details
           </h3>
+          
+          {/* NEW: Show lock indicator when editing is not allowed */}
+          {!canEditContract(contract.contractStatus || 'DRAFT') && (
+            <div className="flex items-center mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <AlertCircle className="w-5 h-5 text-red-600 mr-3" />
+              <div>
+                <span className="text-sm font-medium text-red-800">Contract Locked</span>
+                <p className="text-sm text-red-700 mt-1">
+                  This contract cannot be edited in its current status: <strong>{contract.contractStatus}</strong>
+                </p>
+              </div>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Contract Type */}
@@ -225,14 +248,29 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
                   <option value="EMPLOYMENT_CONTRACT">Employment Contract</option>
                   <option value="LEASE_AGREEMENT">Lease Agreement</option>
                 </select>
-              ) : (
-                <div className="flex items-center p-3 bg-gray-50 rounded-md">
-                  <FileText className="w-5 h-5 text-gray-400 mr-3" />
-                  <span className="text-sm text-gray-900">
-                    {contract.contractType || 'Not specified'}
-                  </span>
-                </div>
-              )}
+                              ) : (
+                  <div className={`flex items-center p-3 rounded-md ${
+                    canEditContract(contract.contractStatus || 'DRAFT') 
+                      ? 'bg-gray-50' 
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
+                    <FileText className={`w-5 h-5 mr-3 ${
+                      canEditContract(contract.contractStatus || 'DRAFT') 
+                        ? 'text-gray-400' 
+                        : 'text-red-500'
+                    }`} />
+                    <span className={`text-sm ${
+                      canEditContract(contract.contractStatus || 'DRAFT') 
+                        ? 'text-gray-900' 
+                        : 'text-red-800'
+                    }`}>
+                      {contract.contractType || 'Not specified'}
+                    </span>
+                    {!canEditContract(contract.contractStatus || 'DRAFT') && (
+                      <AlertCircle className="w-4 h-4 ml-2 text-red-500" />
+                    )}
+                  </div>
+                )}
             </div>
 
             {/* Counterparty */}
@@ -385,34 +423,7 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
               </div>
             </div>
 
-            {/* Contract Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Contract Status
-              </label>
-              {isEditing ? (
-                <select
-                  value={editForm.contractStatus}
-                  onChange={(e) => setEditForm({ ...editForm, contractStatus: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="DRAFT">Draft</option>
-                  <option value="REVIEW">Review</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="SIGNED">Signed</option>
-                  <option value="EXECUTING">Executing</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="TERMINATED">Terminated</option>
-                </select>
-              ) : (
-                <div className="flex items-center p-3 bg-gray-50 rounded-md">
-                  {getStatusIcon(contract.contractStatus || 'DRAFT')}
-                  <span className="text-sm text-gray-900 ml-3">
-                    {contract.contractStatus || 'Draft'}
-                  </span>
-                </div>
-              )}
-            </div>
+
           </div>
 
           {/* Contract Number */}
