@@ -19,6 +19,7 @@ import { ProjectOverview } from "./components/ProjectOverview";
 import { DepartmentTab } from "./components/DepartmentTab";
 import { ProductionTab } from "./components/ProductionTab";
 import EnhancedContractTab from "@/components/contracts/EnhancedContractTab";
+import AddendumLayout from "./addendum-layout";
 
 // Types
 import { Project } from '@/types';
@@ -38,7 +39,7 @@ export default function ProjectDetailsPage() {
 
 
   // Custom hooks
-  const { project, loading, error, updateProject } = useProject(projectId);
+  const { project, loading, error, updateProject, refetchProject } = useProject(projectId);
   const documentsHook = useDocuments(projectId, activeTab);
   const tasksHook = useTasks(projectId);
   const commentsHook = useComments(projectId);
@@ -54,7 +55,8 @@ export default function ProjectDetailsPage() {
         'kpi': 'ANALYTICS',
         'production': 'PRODUCTION',
         'main': 'MAIN',
-        'tasks': 'tasks'
+        'tasks': 'tasks',
+        'contract': 'CONTRACT'
       };
       
       const mappedTab = tabMapping[tabParam.toLowerCase()];
@@ -158,6 +160,11 @@ export default function ProjectDetailsPage() {
     );
   }
 
+  // Check if this is an addendum project - if so, use dedicated addendum layout
+  if (project.contractDetails?.isAddendum) {
+    return <AddendumLayout project={project} />;
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       {/* Project Header */}
@@ -174,6 +181,7 @@ export default function ProjectDetailsPage() {
         onTabChange={setActiveTab}
         user={user}
         projectOwnerId={project.ownerId || ''}
+        project={project}
       />
 
       {/* Tab Content */}
@@ -330,15 +338,23 @@ export default function ProjectDetailsPage() {
         {/* CONTRACT Tab */}
         {activeTab === "CONTRACT" && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            {(project.projectType === "CONTRACT" || project.contractDetails) ? (
-              <EnhancedContractTab
-                project={project}
-                onUpdateContract={async (contractData: any) => {
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading contract details...</p>
+                </div>
+              </div>
+            ) : (project.projectType === "CONTRACT" || project.contractDetails) ? (
+              <>
+
+                <EnhancedContractTab
+                  project={project}
+                onUpdateContract={async (contractData: Partial<Project['contractDetails']>) => {
                   try {
-                    console.log('🔄 Parent: Received contract update:', contractData);
-                    console.log('🔄 Parent: Current project state:', project);
-                    console.log('🔄 Parent: Old contract details:', project.contractDetails);
-                    console.log('🔄 Parent: New contract details:', contractData);
+
+
                     
                     // Update the project state with the new contract data
                     const updatedProject = {
@@ -346,17 +362,25 @@ export default function ProjectDetailsPage() {
                       contractDetails: contractData as Project['contractDetails']
                     };
                     
-                    console.log('🔄 Parent: Updated project state:', updatedProject);
-                    console.log('🔄 Parent: Updated contract details:', updatedProject.contractDetails);
+
                     updateProject(updatedProject);
+                    
+                    // Refetch project data from server to ensure we have the latest status
+                    
+                    // Add small delay to ensure database transaction is fully committed
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    await refetchProject();
+                    
                     setActionStatus("Contract updated successfully!");
                     setTimeout(() => setActionStatus(null), 3000);
                   } catch (error) {
-                    console.error('❌ Parent: Error updating contract:', error);
+                    console.error('Error updating contract:', error);
                     setActionStatus("Error updating contract.");
                   }
                 }}
               />
+              </>
             ) : (
               <div className="text-center py-8">
                 <div className="text-gray-400 mb-4">

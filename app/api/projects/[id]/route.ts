@@ -83,7 +83,15 @@ export async function GET(
             members: true,
           },
         },
-        contractDetails: true,
+        contractDetails: {
+          include: {
+            parentContract: {
+              include: {
+                project: true
+              }
+            }
+          }
+        },
       },
     });
 

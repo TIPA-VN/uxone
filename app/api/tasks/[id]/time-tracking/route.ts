@@ -103,7 +103,7 @@ export async function POST({ params, request }: { params: Promise<{ id: string }
       );
     }
 
-    let updateData: any = {};
+    const updateData: any = {};
 
     if (action === "update_estimate" && typeof hours === "number") {
       updateData.estimatedHours = hours;

@@ -275,8 +275,8 @@ function wrapListItems(html: string): string {
   if (!listItems) return html
   
   let result = html
-  let listStack: Array<{level: number, type: 'ul' | 'ol'}> = []
-  let currentHtml = ''
+  const listStack: Array<{level: number, type: 'ul' | 'ol'}> = []
+  const currentHtml = ''
   
   // Simple approach: wrap consecutive list items in ul tags
   result = result.replace(/(<li[^>]*data-level="[^"]*">.*?<\/li>)+/g, (match) => {

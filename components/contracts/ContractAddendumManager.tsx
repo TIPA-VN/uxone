@@ -62,9 +62,15 @@ export default function ContractAddendumManager({ project }: ContractAddendumMan
   const fetchAddendums = async () => {
     if (!project.contractDetails?.id) return;
 
+    // If this is an addendum, get addendums for the parent contract
+    // If this is a parent contract, get addendums for this contract
+    const contractId = project.contractDetails.isAddendum && project.contractDetails.parentContract?.id
+      ? project.contractDetails.parentContract.id
+      : project.contractDetails.id;
+
     try {
       setLoading(true);
-      const response = await fetch(`/api/contracts/${project.contractDetails.id}/addendums`);
+      const response = await fetch(`/api/contracts/${contractId}/addendums`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch addendums');
@@ -136,21 +142,29 @@ export default function ContractAddendumManager({ project }: ContractAddendumMan
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link 
-                href={`/lvm/projects/${project.id}?tab=contract`}
+                href={`/lvm/projects/${
+                  project.contractDetails?.isAddendum && project.contractDetails?.parentContract?.project?.id
+                    ? project.contractDetails.parentContract.project.id
+                    : project.id
+                }?tab=contract`}
                 className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
-                Back to Contract
+                Back to {project.contractDetails?.isAddendum ? 'Parent Contract' : 'Contract'}
               </Link>
               <div className="h-4 w-px bg-gray-300"></div>
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-purple-600" />
-                </div>
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-amber-600" />
+            </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Contract Addendums</h3>
                   <p className="text-sm text-gray-600">
-                    {addendums.length} addendum{addendums.length !== 1 ? 's' : ''} for {project.contractDetails?.contractNumber}
+                    {addendums.length} addendum{addendums.length !== 1 ? 's' : ''} for {
+                      project.contractDetails?.isAddendum && project.contractDetails?.parentContract?.contractNumber
+                        ? project.contractDetails.parentContract.contractNumber
+                        : project.contractDetails?.contractNumber
+                    }
                   </p>
                 </div>
               </div>
@@ -158,7 +172,7 @@ export default function ContractAddendumManager({ project }: ContractAddendumMan
             
             <button
               onClick={() => setShowAddendumCreator(true)}
-              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              className="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Addendum
@@ -280,13 +294,13 @@ export default function ContractAddendumManager({ project }: ContractAddendumMan
                     </div>
 
                     <div className="flex items-center space-x-2 ml-4">
-                      <Link
-                        href={`/lvm/projects/${addendum.project.id}?tab=contract`}
-                        className="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-1" />
-                        View Project
-                      </Link>
+                                          <Link
+                      href={`/lvm/projects/${addendum.project.id}?tab=contract`}
+                      className="inline-flex items-center px-3 py-2 bg-amber-100 text-amber-700 text-sm font-medium rounded-lg hover:bg-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View Addendum
+                    </Link>
                     </div>
                   </div>
                 </div>

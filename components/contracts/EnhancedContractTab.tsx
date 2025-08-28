@@ -10,7 +10,7 @@ import FinalizedDocumentTab from './FinalizedDocumentTab';
 import WorkflowProgressBar from './WorkflowProgressBar';
 import DocumentVersionTimeline from './DocumentVersionTimeline';
 import ContractVersionHistory from './ContractVersionHistory';
-// Removed addendum imports - addendums will be managed separately
+
 import { 
   FileText, 
   Edit3, 
@@ -18,21 +18,23 @@ import {
   CheckCircle,
   History,
   Lock,
-  // Plus - removed as addendums are now separate
 } from 'lucide-react';
 
 interface EnhancedContractTabProps {
   project: Project;
   onUpdateContract?: (updates: Partial<Project['contractDetails']>) => void;
+  hideHeader?: boolean; // Add option to hide the header for addendum layout
 }
 
 type TabType = 'details' | 'document' | 'workflow' | 'finalized' | 'versions';
 
-export default function EnhancedContractTab({ project, onUpdateContract }: EnhancedContractTabProps) {
+export default function EnhancedContractTab({ project, onUpdateContract, hideHeader = false }: EnhancedContractTabProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [workflowRefreshKey, setWorkflowRefreshKey] = useState(0);
   // Removed addendum creator state - addendums managed separately
   const { updateContract } = useContract();
+
+
 
   const handleContractUpdate = async (updates: Partial<Project['contractDetails']>) => {
     const updatedContract = await updateContract(project.id, updates as Parameters<typeof updateContract>[1]);
@@ -153,6 +155,14 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
           const currentApprovalLevel = result.currentApprovalLevel || updatedContractData.currentApprovalLevel;
           const totalApprovalLevels = result.totalApprovalLevels || updatedContractData.totalApprovalLevels;
           
+          console.log('🔍 Raw API response data:', {
+            resultContractStatus: result.contractStatus,
+            contractDataStatus: updatedContractData.contractStatus,
+            finalContractStatus: contractStatus,
+            action: action,
+            newStatus: newStatus
+          });
+          
           console.log('🔍 Extracted fields:', {
             contractStatus,
             currentApprovalLevel,
@@ -192,7 +202,9 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
           } else if (result.success && result.contract) {
             // For all other successful workflow actions, use the returned contract status
             console.log('✅ Workflow action successful, updating status');
+            console.log('🔍 Contract object from API:', result.contract);
             contractStatus = result.contract.contractStatus || contractStatus;
+            console.log('🔍 Updated contractStatus to:', contractStatus);
           } else if (!contractStatus && newStatus) {
             // Fallback: if no status in response, use the status we were trying to set
             console.log('⚠️ No status in response, using target status:', newStatus);
@@ -203,6 +215,15 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
           if (!contractStatus) {
             console.log('🔄 No status from backend, using target status as fallback:', newStatus);
             contractStatus = newStatus;
+          }
+          
+          // Special handling for SIGN action - ensure we get SIGNED status
+          if (action === 'SIGN' && result.success) {
+            console.log('🖋️ SIGN action detected, ensuring SIGNED status');
+            if (contractStatus !== 'SIGNED') {
+              console.log('⚠️ API returned wrong status for SIGN, forcing to SIGNED');
+              contractStatus = 'SIGNED';
+            }
           }
           
           console.log('🔄 Updating contract state:', {
@@ -317,104 +338,87 @@ export default function EnhancedContractTab({ project, onUpdateContract }: Enhan
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Contract Management</h2>
-          <p className="text-sm text-gray-600">
-            Comprehensive contract management for {project.name}
-          </p>
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Contract Management</h2>
+            <p className="text-sm text-gray-600">
+              Comprehensive contract management for {project.name}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                disabled={tab.disabled}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-purple-500 text-purple-600'
+                    : tab.disabled
+                      ? 'border-transparent text-gray-400 cursor-not-allowed'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                title={tab.disabled ? 'Document editing is locked for this contract status' : tab.description}
+              >
+                <div className="flex items-center space-x-2">
+                  <tab.icon className={`w-4 h-4 ${tab.disabled ? 'text-gray-400' : ''}`} />
+                  <span>{tab.label}</span>
+                  {tab.disabled && (
+                    <Lock className="w-3 h-3 text-gray-400" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </nav>
         </div>
 
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => !tab.disabled && setActiveTab(tab.id)}
-              disabled={tab.disabled}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-purple-500 text-purple-600'
-                  : tab.disabled
-                    ? 'border-transparent text-gray-400 cursor-not-allowed'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-              title={tab.disabled ? 'Document editing is locked for this contract status' : tab.description}
-            >
-              <div className="flex items-center space-x-2">
-                <tab.icon className={`w-4 h-4 ${tab.disabled ? 'text-gray-400' : ''}`} />
-                <span>{tab.label}</span>
-                {tab.disabled && (
-                  <Lock className="w-3 h-3 text-gray-400" />
-                )}
-              </div>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      <div className="min-h-[600px]">
-        {activeTab === 'details' && (
-          <ContractTab 
-            project={project}
-            onUpdateContract={handleContractTabUpdate}
-          />
-        )}
-        
-        {activeTab === 'document' && (
-          !canEditDocument(project.contractDetails?.contractStatus || 'DRAFT') ? (
-            <div className="text-center py-12">
-              <Lock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Document Editing Locked</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                This contract cannot be edited in its current status: <strong>{project.contractDetails?.contractStatus}</strong>
-              </p>
-              <p className="text-xs text-gray-400">
-                Document editing is only available for DRAFT, REVIEW, and APPROVED contracts.
-              </p>
-            </div>
-          ) : (
-            <ContractDocumentEditor
+        {/* Tab Content */}
+        <div className="min-h-[600px]">
+          {activeTab === 'details' && (
+            <ContractTab 
               project={project}
+              onUpdateContract={handleContractTabUpdate}
+              editButtonPlacement={project.contractDetails?.isAddendum ? 'inside-card' : 'default'}
             />
-          )
-        )}
-        
-        {activeTab === 'workflow' && (
-          <ContractWorkflowActions
-            key={`workflow-${project.contractDetails?.contractStatus}-${project.contractDetails?.currentApprovalLevel}-${project.contractDetails?.totalApprovalLevels}-${workflowRefreshKey}`}
-            project={project}
-            onStatusChange={handleStatusChange}
-          />
-        )}
-        
-        {activeTab === 'finalized' && (
-          <FinalizedDocumentTab 
-            project={project}
-            onRefresh={() => setWorkflowRefreshKey(prev => prev + 1)}
-          />
-        )}
-        
-        {activeTab === 'versions' && (
-          <ContractVersionHistory 
-            project={project}
-            onRefresh={() => setWorkflowRefreshKey(prev => prev + 1)}
-          />
-        )}
+          )}
+          {activeTab === 'document' && (
+            <ContractDocumentEditor 
+              project={project}
+              onUpdateContract={handleContractUpdate}
+            />
+          )}
+          {activeTab === 'workflow' && (
+            <ContractWorkflowActions
+              key={workflowRefreshKey}
+              project={project}
+              onStatusChange={handleStatusChange}
+              onRefresh={() => setWorkflowRefreshKey(prev => prev + 1)}
+            />
+          )}
+          {activeTab === 'finalized' && (
+            <FinalizedDocumentTab project={project} />
+          )}
+          {activeTab === 'versions' && (
+            <ContractVersionHistory
+              project={project}
+              onRefresh={() => setWorkflowRefreshKey(prev => prev + 1)}
+            />
+          )}
+        </div>
 
-        {/* Removed addendums tab content - addendums managed as separate projects */}
-      </div>
-
-      {/* Quick Actions Footer */}
-      <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-center">
-          <div className="text-sm text-gray-600">
-            <span className="font-medium">Current Status:</span> {project.contractDetails?.contractStatus || 'DRAFT'}
+        {/* Quick Actions Footer */}
+        <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 rounded-lg">
+          <div className="flex items-center justify-center">
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Current Status:</span> {project.contractDetails?.contractStatus || 'DRAFT'}
+            </div>
           </div>
         </div>
       </div>

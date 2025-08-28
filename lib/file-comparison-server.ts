@@ -188,7 +188,7 @@ async function compareBinaryFiles(content1: Buffer, content2: Buffer): Promise<n
   // Byte-by-byte comparison with tolerance
   const minLength = Math.min(content1.length, content2.length);
   let matchingBytes = 0;
-  let totalBytes = minLength;
+  const totalBytes = minLength;
   
   // Sample bytes for performance (compare every 100th byte for large files)
   const sampleRate = Math.max(1, Math.floor(minLength / 10000));

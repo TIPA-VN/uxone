@@ -59,7 +59,7 @@ export const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ project, app
   const departmentDueDates = project?.departmentDueDates || {};
   
   // Timeline Events
-  let timeline: Array<any> = [];
+  const timeline: Array<any> = [];
   departments.forEach((dept: string) => {
     const logs = approvalState[dept];
     if (Array.isArray(logs)) {

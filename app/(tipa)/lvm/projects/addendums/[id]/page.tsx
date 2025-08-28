@@ -4,9 +4,9 @@ import { prisma } from '@/lib/prisma';
 import ContractAddendumManager from '@/components/contracts/ContractAddendumManager';
 
 interface AddendumPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function AddendumPage({ params }: AddendumPageProps) {
@@ -16,7 +16,7 @@ export default async function AddendumPage({ params }: AddendumPageProps) {
     notFound();
   }
 
-  const projectId = params.id;
+  const { id: projectId } = await params;
   
   if (!projectId) {
     notFound();
@@ -28,6 +28,16 @@ export default async function AddendumPage({ params }: AddendumPageProps) {
     include: {
       contractDetails: {
         include: {
+          parentContract: {
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
           currentApprover: true,
           approvalHistory: {
             include: {
@@ -37,12 +47,7 @@ export default async function AddendumPage({ params }: AddendumPageProps) {
           }
         }
       },
-      creator: true,
-      team: {
-        include: {
-          user: true
-        }
-      }
+      owner: true
     }
   });
 
@@ -55,10 +60,23 @@ export default async function AddendumPage({ params }: AddendumPageProps) {
     notFound();
   }
 
+  // Serialize the project data for client component
+  const serializedProject = {
+    ...project,
+    contractDetails: project.contractDetails ? {
+      ...project.contractDetails,
+      value: project.contractDetails.value ? Number(project.contractDetails.value) : null,
+      parentContract: project.contractDetails.parentContract ? {
+        ...project.contractDetails.parentContract,
+        value: project.contractDetails.parentContract.value ? Number(project.contractDetails.parentContract.value) : null,
+      } : null
+    } : null
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ContractAddendumManager project={project} />
+        <ContractAddendumManager project={serializedProject} />
       </div>
     </div>
   );

@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
         let version = 1;
         let shouldCreateVersion = true;
         let versionReason = 'New split page';
-        let identicalFileInfo = null; // Declare at higher scope
+        const identicalFileInfo = null; // Declare at higher scope
         
         if (docType && projectId && department) {
           try {

@@ -167,10 +167,25 @@ export default function ProjectsPage() {
               >
                 {project.name}
               </Link>
+              {/* Project type badges with color coding */}
               {project.projectType === "CONTRACT" && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mr-1"></span>
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                  project.contractDetails?.isAddendum 
+                    ? 'bg-amber-100 text-amber-800' 
+                    : 'bg-purple-100 text-purple-800'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full mr-1 ${
+                    project.contractDetails?.isAddendum 
+                      ? 'bg-amber-400' 
+                      : 'bg-purple-400'
+                  }`}></span>
                   {project.contractDetails?.isAddendum ? 'ADDENDUM' : 'CONTRACT'}
+                </span>
+              )}
+              {project.projectType === "GENERAL" && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-1"></span>
+                  PROJECT
                 </span>
               )}
             </div>

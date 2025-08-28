@@ -14,7 +14,7 @@ export async function GET(
 
     const { id } = await params;
 
-    console.log('🔍 Looking for finalized document for contract ID:', id);
+
 
     // First, get the contract details to get the proper identifiers
     const contractDetails = await prisma.contractDetails.findUnique({
@@ -30,11 +30,7 @@ export async function GET(
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    console.log('📄 Contract found:', {
-      contractId: contractDetails.id,
-      contractNumber: contractDetails.contractNumber,
-      documentId: contractDetails.documentId
-    });
+
 
     // Get the finalized document using the contract's identifiers
     const finalizedDoc = await prisma.finalizedDocument.findFirst({
@@ -46,34 +42,20 @@ export async function GET(
       }
     });
 
-    console.log('📄 Finalized document search result:', {
-      found: !!finalizedDoc,
-      finalizedDocId: finalizedDoc?.id,
-      searchCriteria: {
-        contractNumber: contractDetails.contractNumber,
-        originalDocumentId: contractDetails.documentId
-      }
-    });
+
 
     if (!finalizedDoc) {
       return NextResponse.json({ error: 'Finalized document not found' }, { status: 404 });
     }
 
-    console.log('📄 Found finalized document:', finalizedDoc.id);
-    console.log('📄 Finalized document details:', {
-      title: finalizedDoc.title,
-      finalizedContentLength: finalizedDoc.finalizedContent?.length || 0,
-      finalizedContentPreview: finalizedDoc.finalizedContent?.substring(0, 500),
-      hasFinalizedContent: !!finalizedDoc.finalizedContent,
-      hasFinalizedHtml: !!finalizedDoc.finalizedHtml
-    });
+
 
     // Generate the PDF on-demand if it doesn't exist
     let pdfBuffer: Buffer;
     
     // FORCE REGENERATION: Always generate new PDF when content is available
     if (finalizedDoc.finalizedContent || contractDetails.document?.content) {
-      console.log('📄 Content available, forcing PDF regeneration...');
+
       
       // Generate PDF from finalized document content or fallback to original content
       const { PuppeteerGenerator } = await import('@/lib/puppeteer-generator');
@@ -84,7 +66,7 @@ export async function GET(
         content = 'Contract content not available. Please check the database.';
       }
       
-      console.log('📄 Generating PDF with content length:', content.length);
+
       
       // Fetch user information for approvers to display names in PDF
       const approverUsers = await prisma.user.findMany({
@@ -116,31 +98,11 @@ export async function GET(
           // Remove any potential encoding artifacts
           approverName = approverName.replace(/[^\x00-\x7F\u00A0-\uFFFF]/g, '');
         }
-        console.log('🔍 API Route - Approver data (DIRECT DB):', { 
-          approverId, 
-          userName: user?.name, 
-          username: user?.username, 
-          finalName: approverName,
-          nameType: typeof user?.name,
-          usernameType: typeof user?.username,
-          source: 'database'
-        });
+
         return approverName;
       });
 
-      console.log('🔍 About to call Puppeteer PDF generation with approverNames:', approverNames);
-      console.log('🔍 Contract date fields:', {
-        startDate: contractDetails.startDate,
-        effectiveDate: contractDetails.effectiveDate,
-        expirationDate: contractDetails.expirationDate,
-        endDate: contractDetails.endDate,
-        source: 'ContractDetails model'
-      });
-      console.log('🔍 Data source verification:', {
-        approverNamesFromDB: approverNames,
-        approvedByFromDoc: finalizedDoc.approvedBy,
-        source: 'API Route - FORCED CLEAN Database Query'
-      });
+
       
       // Create Puppeteer generator instance
       const pdfGenerator = new PuppeteerGenerator();
@@ -167,7 +129,7 @@ export async function GET(
       // Clean up browser instance
       await pdfGenerator.closeBrowser();
       
-      console.log('📄 PDF generated successfully, size:', pdfBuffer.length);
+
       
       // Update the finalized document with the generated PDF
       await prisma.finalizedDocument.update({
@@ -178,7 +140,7 @@ export async function GET(
       });
     } else if (finalizedDoc.finalizedPdf) {
       // Only use stored PDF if no content is available (fallback)
-      console.log('📄 No content available, using stored PDF as fallback, length:', finalizedDoc.finalizedPdf.length);
+
       
       try {
         // Remove data URL prefix if present
@@ -187,12 +149,12 @@ export async function GET(
           const base64Index = base64Data.indexOf('base64,');
           if (base64Index !== -1) {
             base64Data = base64Data.substring(base64Index + 7); // Remove "base64," prefix
-            console.log('📄 Stripped data URL prefix, new length:', base64Data.length);
+
           }
         }
         
         pdfBuffer = Buffer.from(base64Data, 'base64');
-        console.log('📄 PDF buffer created, size:', pdfBuffer.length);
+
       } catch (decodeError) {
         console.error('❌ Error decoding PDF from base64:', decodeError);
         pdfBuffer = null;

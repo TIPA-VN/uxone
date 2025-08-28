@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import { CheckCircle, Download, FileText, AlertCircle, Clock, Eye, Shield, User, Calendar } from 'lucide-react';
+import ContractExportDialog from './ContractExportDialog';
 
 interface FinalizedDocumentTabProps {
   project: Project;
@@ -28,8 +29,8 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
   const [finalizedDocument, setFinalizedDocument] = useState<FinalizedDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const [showAuditInfo, setShowAuditInfo] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   const contractId = project.contractDetails?.id;
   const contractStatus = project.contractDetails?.contractStatus;
@@ -67,26 +68,7 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
     }
   };
 
-  const handleDownload = async () => {
-    if (!finalizedDocument || !contractId) return;
-    
-    try {
-      setDownloading(true);
-      
-      // Create a temporary link to download the file
-      const link = document.createElement('a');
-      link.href = `/api/contracts/${contractId}/finalized/download`;
-      link.download = finalizedDocument.title + '.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-    } catch (err) {
-      setError('Failed to download document');
-    } finally {
-      setDownloading(false);
-    }
-  };
+
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -208,12 +190,11 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
           
           <div className="flex space-x-2">
             <button
-              onClick={handleDownload}
-              disabled={downloading}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setShowExportDialog(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <Download className="w-4 h-4 mr-2" />
-              {downloading ? 'Downloading...' : 'Download PDF'}
+              Export Contract
             </button>
             <button
               onClick={() => setShowAuditInfo(!showAuditInfo)}
@@ -400,6 +381,13 @@ export default function FinalizedDocumentTab({ project, onRefresh }: FinalizedDo
           </div>
         )}
       </div>
+      
+      {/* Export Dialog */}
+      <ContractExportDialog 
+        project={project}
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+      />
     </div>
   );
 }

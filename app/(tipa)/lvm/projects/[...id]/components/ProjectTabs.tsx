@@ -11,9 +11,13 @@ interface ProjectTabsProps {
     department?: string;
   } | undefined;
   projectOwnerId: string;
+  project: {
+    projectType?: string;
+    contractDetails?: any;
+  };
 }
 
-export function ProjectTabs({ departments, activeTab, onTabChange, user, projectOwnerId }: ProjectTabsProps) {
+export function ProjectTabs({ departments, activeTab, onTabChange, user, projectOwnerId, project }: ProjectTabsProps) {
   const getTabColor = (dept: string, active: boolean) => {
     switch(dept) {
       case 'logistics': return active
@@ -82,22 +86,24 @@ export function ProjectTabs({ departments, activeTab, onTabChange, user, project
 
   return (
     <div className="flex flex-wrap gap-0.5 border-b mb-3" role="tablist" aria-label="Project Tabs">
-      {/* Contract Tab - Show for all projects */}
-      <button
-        role="tab"
-        aria-selected={activeTab === "CONTRACT"}
-        aria-controls="contract-pane"
-        id="contract-tab"
-        tabIndex={activeTab === "CONTRACT" ? 0 : -1}
-        onClick={() => onTabChange("CONTRACT")}
-        className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
-          activeTab === "CONTRACT"
-            ? 'bg-purple-500 text-white border-purple-600'
-            : 'border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100'
-        }`}
-      >
-        📄 Contract
-      </button>
+      {/* Contract Tab - Show only for contract projects */}
+      {(project.projectType === "CONTRACT" || project.contractDetails) && (
+        <button
+          role="tab"
+          aria-selected={activeTab === "CONTRACT"}
+          aria-controls="contract-pane"
+          id="contract-tab"
+          tabIndex={activeTab === "CONTRACT" ? 0 : -1}
+          onClick={() => onTabChange("CONTRACT")}
+          className={`px-2 py-1 text-xs font-medium border-b-2 rounded-t transition-colors duration-150 focus:outline-none ${
+            activeTab === "CONTRACT"
+              ? 'bg-purple-500 text-white border-purple-600'
+              : 'border-purple-500 text-purple-600 bg-purple-50 hover:bg-purple-100'
+          }`}
+        >
+          📄 Contract
+        </button>
+      )}
 
 
 

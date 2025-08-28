@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Project } from '@/types';
 import { 
   FileText, 
@@ -10,12 +10,9 @@ import {
   Building,
   ExternalLink,
   Plus,
-  AlertCircle,
-  CheckCircle,
-  Clock
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 
 interface AddendumListProps {
   project: Project;
@@ -52,11 +49,7 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchAddendums();
-  }, [project.contractDetails?.id]);
-
-  const fetchAddendums = async () => {
+  const fetchAddendums = useCallback(async () => {
     if (!project.contractDetails?.id) return;
 
     try {
@@ -75,7 +68,11 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [project.contractDetails?.id]);
+
+  useEffect(() => {
+    fetchAddendums();
+  }, [fetchAddendums]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -128,11 +125,11 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
   return (
     <div className="bg-white rounded-lg border border-gray-200">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-gray-200">
+      <div className="px-6 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-4 h-4 text-purple-600" />
+            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-amber-600" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Contract Addendums</h3>
@@ -145,7 +142,7 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
           {onAddAddendum && (
             <button
               onClick={onAddAddendum}
-              className="inline-flex items-center px-3 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              className="inline-flex items-center px-3 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Addendum
@@ -158,8 +155,8 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
       <div className="p-6">
         {addendums.length === 0 ? (
           <div className="text-center py-8">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <FileText className="w-6 h-6 text-purple-400" />
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <FileText className="w-6 h-6 text-amber-400" />
             </div>
             <h4 className="text-sm font-medium text-gray-900 mb-1">No addendums yet</h4>
             <p className="text-xs text-gray-600 mb-4">
@@ -168,7 +165,7 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
             {onAddAddendum && (
               <button
                 onClick={onAddAddendum}
-                className="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                className="inline-flex items-center px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 <Plus className="w-3 h-3 mr-1" />
                 Create First Addendum
@@ -186,7 +183,7 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <div className="flex items-center space-x-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                           Addendum {addendum.addendumNumber}
                         </span>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(addendum.contractStatus)}`}>
@@ -252,10 +249,10 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
                   <div className="flex items-center space-x-2 ml-4">
                     <Link
                       href={`/lvm/projects/${addendum.project.id}?tab=contract`}
-                      className="inline-flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-lg hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                      className="inline-flex items-center px-3 py-1.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-lg hover:bg-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
                     >
                       <ExternalLink className="w-3 h-3 mr-1" />
-                      View
+                      View Addendum
                     </Link>
                   </div>
                 </div>

@@ -25,6 +25,13 @@ export type Project = {
     contractNumber?: string;
     currentApprovalLevel?: number;
     totalApprovalLevels?: number;
+    isAddendum?: boolean;
+    addendumNumber?: number;
+    parentContractId?: string;
+    startDate?: Date | string;
+    effectiveDate?: Date | string;
+    expirationDate?: Date | string;
+    endDate?: Date | string;
   };
   createdAt: string;
   updatedAt: string;

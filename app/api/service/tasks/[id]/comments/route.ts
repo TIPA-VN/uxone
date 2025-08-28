@@ -120,7 +120,7 @@ export async function POST(
     }
 
     // Validate author exists if provided
-    let finalAuthorId = authorId;
+    const finalAuthorId = authorId;
     if (authorId) {
       const author = await prisma.user.findUnique({
         where: { id: authorId },

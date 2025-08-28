@@ -960,7 +960,7 @@ export class JDEService {
       
       let query: string;
       let bindVars: any[] = [];
-      let offset = (page - 1) * pageSize;
+      const offset = (page - 1) * pageSize;
       
       if (itemNumber) {
         // Query specific item with real inventory data

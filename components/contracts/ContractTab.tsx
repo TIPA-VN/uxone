@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import { useContract } from '@/hooks/useContract';
+import AddendumListCard from './AddendumListCard';
 import { 
   FileText, 
   User, 
@@ -10,10 +11,8 @@ import {
   CheckCircle, 
   Clock, 
   AlertCircle,
-  Edit3,
-  Plus
+  Edit3
 } from 'lucide-react';
-import Link from 'next/link';
 
 interface ContractTabProps {
   project: Project;
@@ -23,9 +22,10 @@ interface ContractTabProps {
     value: number | null;
     currency: string;
   }>) => void;
+  editButtonPlacement?: 'default' | 'hidden' | 'header' | 'inside-card'; // Control where edit button appears
 }
 
-export default function ContractTab({ project, onUpdateContract }: ContractTabProps) {
+export default function ContractTab({ project, onUpdateContract, editButtonPlacement = 'default' }: ContractTabProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     contractType: project.contractDetails?.contractType || '',
@@ -56,7 +56,9 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
         endDate: project.contractDetails.endDate ? new Date(project.contractDetails.endDate).toISOString().split('T')[0] : ''
       });
     }
-  }, [project.contractDetails?.contractType, project.contractDetails?.counterparty, project.contractDetails?.value, project.contractDetails?.currency, project.contractDetails?.startDate, project.contractDetails?.effectiveDate, project.contractDetails?.expirationDate, project.contractDetails?.endDate]);
+  }, [project.contractDetails]);
+
+
 
   if (!project.contractDetails) {
     return (
@@ -64,37 +66,14 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
         <FileText className="mx-auto h-12 w-12 text-gray-400" />
         <h3 className="mt-2 text-sm font-medium text-gray-900">No Contract Details</h3>
         <p className="mt-1 text-sm text-gray-500">
-          This project doesn't have contract details yet.
+          This project doesnt have contract details yet.
         </p>
+
       </div>
     );
   }
 
   const contract = project.contractDetails;
-  
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'REVIEW': return <AlertCircle className="w-4 h-4 text-blue-500" />;
-      case 'APPROVED': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'SIGNED': return <CheckCircle className="w-4 h-4 text-indigo-500" />;
-      case 'EXECUTING': return <Clock className="w-4 h-4 text-purple-500" />;
-      case 'COMPLETED': return <CheckCircle className="w-4 h-4 text-gray-500" />;
-      default: return <Clock className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'REVIEW': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'APPROVED': return 'bg-green-100 text-green-800 border-green-200';
-      case 'SIGNED': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'EXECUTING': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'COMPLETED': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
 
   // NEW: Function to determine if contract can be edited
   const canEditContract = (status: string): boolean => {
@@ -161,37 +140,32 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
 
   return (
     <div className="space-y-6">
-      {/* Action Buttons */}
-      <div className="flex justify-end">
-        <div className="flex space-x-3">
-          {/* Addendum Management Link */}
-          <Link
-            href={`/lvm/projects/addendums/${project.id}`}
-            className="inline-flex items-center px-3 py-2 border border-purple-300 shadow-sm text-sm leading-4 font-medium rounded-md text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Manage Addendums
-          </Link>
-          
-          {/* Edit Button */}
-          {canEditContract(contract.contractStatus || 'DRAFT') ? (
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              disabled={loading}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={getEditButtonTooltip(contract.contractStatus || 'DRAFT')}
-            >
-              <Edit3 className="w-4 h-4 mr-2" />
-              {isEditing ? 'Cancel' : 'Edit'}
-            </button>
-          ) : (
-            <div className="flex items-center px-3 py-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-md">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              <span className="text-sm">Editing Locked</span>
-            </div>
-          )}
+      {/* Action Buttons - hidden when editButtonPlacement is 'hidden', 'header', or 'inside-card' */}
+      {editButtonPlacement === 'default' && (
+        <div className="flex justify-end">
+          <div className="flex space-x-3">
+
+            
+            {/* Edit Button */}
+            {canEditContract(contract.contractStatus || 'DRAFT') ? (
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                disabled={loading}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={getEditButtonTooltip(contract.contractStatus || 'DRAFT')}
+              >
+                <Edit3 className="w-4 h-4 mr-2" />
+                {isEditing ? 'Cancel' : 'Edit'}
+              </button>
+            ) : (
+              <div className="flex items-center px-3 py-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-md">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                <span className="text-sm">Editing Locked</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -208,12 +182,40 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
 
 
 
-      {/* Contract Details */}
+      {/* Contract Details and Addendums - Combined in horizontal layout */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Contract Details
-          </h3>
+          {/* Header for the combined card */}
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Contract Details {!project.contractDetails?.isAddendum && '& Addendums'}
+            </h3>
+            
+            {/* Edit Button - inside card for addendums */}
+            {editButtonPlacement === 'inside-card' && (
+              canEditContract(contract.contractStatus || 'DRAFT') ? (
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  disabled={loading}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={getEditButtonTooltip(contract.contractStatus || 'DRAFT')}
+                >
+                  <Edit3 className="w-4 h-4 mr-2" />
+                  {isEditing ? 'Cancel' : 'Edit'}
+                </button>
+              ) : (
+                <div className="flex items-center px-3 py-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-md">
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  <span className="text-sm">Editing Locked</span>
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Horizontal layout: Contract Details + Addendums */}
+          <div className={`grid gap-6 ${!project.contractDetails?.isAddendum ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
+            {/* Contract Details Section */}
+            <div className={!project.contractDetails?.isAddendum ? 'lg:col-span-2' : 'col-span-1'}>
           
           {/* NEW: Show lock indicator when editing is not allowed */}
           {!canEditContract(contract.contractStatus || 'DRAFT') && (
@@ -458,6 +460,16 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
               </button>
             </div>
           )}
+
+            </div>
+
+            {/* Contract Addendums Section - Right side for parent contracts */}
+            {!project.contractDetails?.isAddendum && (
+              <div className="lg:col-span-1">
+                <AddendumListCard parentProject={project} embedded={true} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -596,6 +608,8 @@ export default function ContractTab({ project, onUpdateContract }: ContractTabPr
           </div>
         </div>
       </div>
+
+
     </div>
   );
 }

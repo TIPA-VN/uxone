@@ -6,41 +6,39 @@ export function useProject(projectId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchProject = async () => {
     if (!projectId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`/api/projects/${projectId}`);
+      if (!res.ok) throw new Error('Failed to fetch project');
+      
+      const project = await res.json();
+      setProject(project);
+      return project;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetchProject = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch(`/api/projects?id=${projectId}`);
-        if (!res.ok) throw new Error('Failed to fetch project');
-        
-        const data = await res.json();
-        const proj = Array.isArray(data)
-          ? data.find((p: { id: string | number }) => String(p.id) === String(projectId))
-          : data;
-        
-        setProject(proj);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchProject();
   }, [projectId]);
 
   const updateProject = (updates: Partial<Project>) => {
-    console.log('🔄 useProject: Updating project with:', updates);
     setProject(prev => {
       if (!prev) return null;
-      const updated = { ...prev, ...updates };
-      console.log('🔄 useProject: Previous state:', prev);
-      console.log('🔄 useProject: New state:', updated);
-      return updated;
+      return { ...prev, ...updates };
     });
+  };
+
+  const refetchProject = async () => {
+    return await fetchProject();
   };
 
   return {
@@ -48,5 +46,6 @@ export function useProject(projectId: string) {
     loading,
     error,
     updateProject,
+    refetchProject,
   };
 } 
