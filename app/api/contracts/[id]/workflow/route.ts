@@ -16,14 +16,7 @@ export async function POST(
     const requestBody = await request.json();
     const { action, comment } = requestBody;
 
-    console.log('🚀 Simple Workflow Request:', {
-      contractId: id,
-      action,
-      comment,
-      userId: session.user.id
-    });
-
-    // Get the contract details
+        // Get the contract details
     const contractDetails = await prisma.contractDetails.findUnique({
       where: { id },
       include: {
@@ -42,14 +35,7 @@ export async function POST(
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    console.log('📊 Contract State:', {
-      id: contractDetails.id,
-      currentLevel: contractDetails.currentApprovalLevel,
-      totalLevels: contractDetails.totalApprovalLevels,
-      currentStatus: contractDetails.contractStatus
-    });
-
-    // Handle different actions
+        // Handle different actions
     switch (action) {
       case 'SEND_REVIEW':
         const reviewContract = await prisma.contractDetails.update({
@@ -72,12 +58,9 @@ export async function POST(
 
       case 'APPROVE':
       case 'APPROVED':
-        console.log('🚀 Processing APPROVE action...');
-        
-        // Check if already fully approved
+                // Check if already fully approved
         if (contractDetails.contractStatus === 'APPROVED') {
-          console.log('✅ Contract is already fully approved');
-          return NextResponse.json({
+                    return NextResponse.json({
             success: true,
             message: 'Contract is already approved',
             contract: contractDetails,
@@ -92,16 +75,8 @@ export async function POST(
         const nextLevel = currentLevel + 1;
         const isComplete = nextLevel > contractDetails.totalApprovalLevels;
 
-        console.log('✅ Approval Logic:', {
-          currentLevel,
-          nextLevel,
-          totalLevels: contractDetails.totalApprovalLevels,
-          isComplete
-        });
-
-        // Create approval record (ignore duplicates)
-        console.log('📝 Creating approval record...');
-        try {
+                // Create approval record (ignore duplicates)
+                try {
           const approvalRecord = await prisma.contractApproval.create({
             data: {
               contractId: id,
@@ -112,11 +87,9 @@ export async function POST(
               approvedAt: new Date()
             }
           });
-          console.log(`✅ Approval record created for level ${currentLevel}:`, approvalRecord.id);
-        } catch (error: any) {
+                  } catch (error: any) {
           if (error.code === 'P2002') {
-            console.log(`⚠️ Approval already exists for level ${currentLevel}, continuing...`);
-          } else {
+                      } else {
             console.error('❌ Error creating approval record:', error);
             throw error;
           }
@@ -126,17 +99,7 @@ export async function POST(
         const newStatus = isComplete ? 'APPROVED' : 'REVIEW';
         const newLevel = isComplete ? contractDetails.totalApprovalLevels : nextLevel;
 
-        console.log('🔄 Updating contract with:', {
-          newStatus,
-          newLevel,
-          contractId: id,
-          isComplete,
-          currentLevel,
-          nextLevel,
-          totalLevels: contractDetails.totalApprovalLevels
-        });
-
-        let approvedContract;
+                let approvedContract;
         try {
           approvedContract = await prisma.contractDetails.update({
             where: { id },
@@ -147,22 +110,12 @@ export async function POST(
             }
           });
           
-          console.log('✅ Contract update successful:', {
-            id: approvedContract.id,
-            newLevel: approvedContract.currentApprovalLevel,
-            newStatus: approvedContract.contractStatus
-          });
-        } catch (updateError) {
+                  } catch (updateError) {
           console.error('❌ Error updating contract:', updateError);
           throw updateError;
         }
 
-        console.log('✅ Contract updated:', {
-          newLevel: approvedContract.currentApprovalLevel,
-          newStatus: approvedContract.contractStatus
-        });
-
-        return NextResponse.json({
+                return NextResponse.json({
           success: true,
           message: newStatus === 'APPROVED' ? 'Contract fully approved' : `Approved level ${currentLevel} of ${contractDetails.totalApprovalLevels}`,
           contract: approvedContract,
@@ -251,9 +204,7 @@ export async function POST(
 
         // Generate finalized document when contract is completed
         try {
-          console.log('📄 Generating finalized document for completed contract...');
-          
-          // Get the contract document content
+                    // Get the contract document content
           const contractWithDocument = await prisma.contractDetails.findUnique({
             where: { id },
             include: {
@@ -262,16 +213,7 @@ export async function POST(
             }
           });
 
-          console.log('🔍 Contract document check:', {
-            hasContract: !!contractWithDocument,
-            hasDocument: !!contractWithDocument?.document,
-            hasContent: !!contractWithDocument?.document?.content,
-            contentLength: contractWithDocument?.document?.content?.length || 0,
-            documentId: contractWithDocument?.documentId,
-            contractStatus: contractWithDocument?.contractStatus
-          });
-
-          if (contractWithDocument?.document?.content) {
+                    if (contractWithDocument?.document?.content) {
             // Generate PDF from document content
             const { generateContractPDF } = await import('@/lib/pdf-generator');
             const pdfBuffer = await generateContractPDF({
@@ -312,15 +254,8 @@ export async function POST(
               }
             });
             
-            console.log('✅ Finalized document created:', finalizedDoc.id);
-          } else {
-            console.log('⚠️ No document content found for finalized document generation');
-            console.log('🔍 Document details:', {
-              documentId: contractWithDocument?.documentId,
-              document: contractWithDocument?.document,
-              content: contractWithDocument?.document?.content
-            });
-          }
+                      } else {
+                                  }
         } catch (finalizeError) {
           console.error('❌ Error generating finalized document:', finalizeError);
           // Don't fail the workflow if finalized document generation fails

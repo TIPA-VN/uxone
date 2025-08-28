@@ -37,6 +37,7 @@ interface Addendum {
   project: {
     id: string;
     name: string;
+    documentNumber?: string;
   };
   currentApprover: {
     name: string;
@@ -196,9 +197,16 @@ export default function AddendumList({ project, onAddAddendum }: AddendumListPro
                       {addendum.contractTitle}
                     </h4>
                     
-                    <p className="text-xs text-gray-600 mb-3">
-                      Contract: <span className="font-mono">{addendum.contractNumber}</span>
-                    </p>
+                    <div className="text-xs text-gray-600 mb-3 space-y-1">
+                      <p>
+                        Contract: <span className="font-mono">{addendum.contractNumber}</span>
+                      </p>
+                      {addendum.project?.documentNumber && (
+                        <p>
+                          Project: <span className="font-mono text-blue-600">{addendum.project.documentNumber}</span>
+                        </p>
+                      )}
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                       <div className="flex items-center space-x-2">

@@ -229,8 +229,7 @@ export async function POST(request: Request) {
             });
             
             if (existingDocs.length > 0) {
-      
-              
+
               // First, save the uploaded file temporarily to compare with existing files
               const tempFilePath = path.join(UPLOAD_DIR, `temp_${Date.now()}_${fileName}`);
               await writeFile(tempFilePath, Buffer.from(arrayBuffer));
@@ -341,8 +340,7 @@ export async function POST(request: Request) {
         // Create new document with new version
         // First, save the file to disk
         await writeFile(filePath, Buffer.from(arrayBuffer));
-        
-        
+
         doc = await prisma.document.create({
           data: {
             fileName: file.name,
@@ -357,8 +355,7 @@ export async function POST(request: Request) {
             projectId: projectId
           }
         });
-        
-        
+
       } else {
         // File is identical or very similar, return existing document info
         // NO FILE UPLOAD NEEDED - we're reusing the existing file
@@ -367,11 +364,9 @@ export async function POST(request: Request) {
           
           if (identicalFileInfo.decision.similarity === 1.0) {
 
-            console.log(`📁 File upload skipped - identical file already exists`);
-          } else {
+                      } else {
 
-            console.log(`📁 File upload skipped - similar file already exists`);
-          }
+                      }
         } else {
           // Fallback: create new document if existing one not found
           
@@ -379,9 +374,7 @@ export async function POST(request: Request) {
           
           // Fallback: upload the file and create document
           await writeFile(filePath, Buffer.from(arrayBuffer));
-          console.log(`⚠️ Fallback: File uploaded due to error: ${filePath}`);
-          
-          doc = await prisma.document.create({
+                    doc = await prisma.document.create({
             data: {
               fileName: file.name,
               filePath: `/uploads/projects/${fileName}`,
@@ -395,8 +388,7 @@ export async function POST(request: Request) {
               projectId: projectId
             }
           });
-          console.log(`⚠️ Fallback: new document created: ${doc.id}`);
-        }
+                  }
       }
       
       return NextResponse.json({

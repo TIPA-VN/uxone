@@ -15,36 +15,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`🔄 Syncing user ${emp_code} from TIPA Mobile to UXOne...`)
-
-    // Sync user from TIPA Mobile to UXOne
-    const syncedUser = await syncUserFromTIPA(emp_code)
-
-    if (!syncedUser) {
-      return NextResponse.json(
-        { error: 'User not found in TIPA Mobile database' },
-        { status: 404 }
-      )
+    // Sync user from TIPA Mobile
+    const user = await syncUserFromTIPA(emp_code)
+    
+    let notificationResult = null
+    if (shouldSyncNotifications && user) {
+      notificationResult = await syncNotifications(user.id)
     }
-
-    // Optionally sync notifications
-    if (shouldSyncNotifications) {
-      await syncNotifications(syncedUser.id)
-    }
-
-      
 
     return NextResponse.json({
       success: true,
-      message: 'User synced successfully',
-      user: {
-        id: syncedUser.id,
-        username: syncedUser.username,
-        name: syncedUser.name,
-        email: syncedUser.email,
-        department: syncedUser.department,
-        role: syncedUser.role
-      }
+      user,
+      notifications: notificationResult,
+      message: 'User synced successfully'
     })
 
   } catch (error) {

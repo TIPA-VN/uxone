@@ -34,8 +34,6 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
   // Removed addendum creator state - addendums managed separately
   const { updateContract } = useContract();
 
-
-
   const handleContractUpdate = async (updates: Partial<Project['contractDetails']>) => {
     const updatedContract = await updateContract(project.id, updates as Parameters<typeof updateContract>[1]);
     if (updatedContract && onUpdateContract) {
@@ -61,17 +59,8 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
     handleContractUpdate(contractUpdates);
   };
 
-
-
   const handleStatusChange = async (newStatus: string, comment?: string): Promise<boolean> => {
-    console.log('🔍 FRONTEND: handleStatusChange called with:', { 
-      newStatus, 
-      comment, 
-      contractId: project.contractDetails?.id,
-      contractStatus: project.contractDetails?.contractStatus 
-    });
-    
-    if (!project.contractDetails?.id) {
+        if (!project.contractDetails?.id) {
       console.error('❌ FRONTEND: No contract ID found!', project.contractDetails);
       return false;
     }
@@ -105,21 +94,13 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
           action = newStatus;
       }
       
-      console.log('🚀 FRONTEND: Sending workflow action:', { action, newStatus, comment, contractId: project.contractDetails.id });
-      
-      const requestBody = {
+            const requestBody = {
         action,
         comment
       };
       const requestUrl = `/api/contracts/${project.contractDetails.id}/workflow`;
       
-      console.log('🚀 FRONTEND: Request details:', {
-        url: requestUrl,
-        method: 'POST',
-        body: requestBody
-      });
-      
-      let res;
+            let res;
       try {
         res = await fetch(requestUrl, {
           method: 'POST',
@@ -127,26 +108,14 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
           body: JSON.stringify(requestBody),
         });
         
-        console.log('🚀 FRONTEND: Response status:', res.status, res.statusText);
-      } catch (fetchError: any) {
+              } catch (fetchError: any) {
         console.error('🚨 FRONTEND: Fetch error:', fetchError);
         throw new Error(`Network request failed: ${fetchError?.message || 'Unknown error'}`);
       }
       
               if (res.ok) {
           const result = await res.json();
-          console.log('Workflow API response:', result);
-          console.log('🔍 Response analysis:', {
-            success: result.success,
-            hasContract: !!result.contract,
-            contractStatus: result.contract?.contractStatus,
-            resultStatus: result.contractStatus,
-            message: result.message,
-            targetStatus: newStatus,
-            fullResponse: result
-          });
-        
-        // Handle both success field and direct contract response
+                            // Handle both success field and direct contract response
         if ((result.success || result.contract) && onUpdateContract) {
           const updatedContractData = result.contract || {};
           
@@ -155,31 +124,7 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
           const currentApprovalLevel = result.currentApprovalLevel || updatedContractData.currentApprovalLevel;
           const totalApprovalLevels = result.totalApprovalLevels || updatedContractData.totalApprovalLevels;
           
-          console.log('🔍 Raw API response data:', {
-            resultContractStatus: result.contractStatus,
-            contractDataStatus: updatedContractData.contractStatus,
-            finalContractStatus: contractStatus,
-            action: action,
-            newStatus: newStatus
-          });
-          
-          console.log('🔍 Extracted fields:', {
-            contractStatus,
-            currentApprovalLevel,
-            totalApprovalLevels,
-            fromResult: {
-              contractStatus: result.contractStatus,
-              currentApprovalLevel: result.currentApprovalLevel,
-              totalApprovalLevels: result.totalApprovalLevels
-            },
-            fromContract: {
-              contractStatus: updatedContractData.contractStatus,
-              currentApprovalLevel: updatedContractData.currentApprovalLevel,
-              totalApprovalLevels: updatedContractData.totalApprovalLevels
-            }
-          });
-          
-          // Special handling for different workflow messages
+                              // Special handling for different workflow messages
           if (result.message === 'Already approved this level') {
             // When backend says "Already approved this level", we should fetch the latest status
             // to see if the contract is actually approved now
@@ -189,56 +134,35 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
                 const statusData = await statusRes.json();
                 if (statusData.contract) {
                   contractStatus = statusData.contract.contractStatus || contractStatus;
-                  console.log('🔄 Fetched latest contract status:', contractStatus);
-                }
+                                  }
               }
             } catch (fetchError) {
               console.warn('Could not fetch latest contract status:', fetchError);
             }
           } else if (result.message === 'Contract fully approved') {
             // When backend says "Contract fully approved", use the returned contract data
-            console.log('🎉 Contract fully approved! Using returned contract data');
-            contractStatus = updatedContractData.contractStatus || 'APPROVED';
+                        contractStatus = updatedContractData.contractStatus || 'APPROVED';
           } else if (result.success && result.contract) {
             // For all other successful workflow actions, use the returned contract status
-            console.log('✅ Workflow action successful, updating status');
-            console.log('🔍 Contract object from API:', result.contract);
-            contractStatus = result.contract.contractStatus || contractStatus;
-            console.log('🔍 Updated contractStatus to:', contractStatus);
-          } else if (!contractStatus && newStatus) {
+                                    contractStatus = result.contract.contractStatus || contractStatus;
+                      } else if (!contractStatus && newStatus) {
             // Fallback: if no status in response, use the status we were trying to set
-            console.log('⚠️ No status in response, using target status:', newStatus);
-            contractStatus = newStatus;
+                        contractStatus = newStatus;
           }
           
           // Only use fallback if we truly have no status from the backend
           if (!contractStatus) {
-            console.log('🔄 No status from backend, using target status as fallback:', newStatus);
-            contractStatus = newStatus;
+                        contractStatus = newStatus;
           }
           
           // Special handling for SIGN action - ensure we get SIGNED status
           if (action === 'SIGN' && result.success) {
-            console.log('🖋️ SIGN action detected, ensuring SIGNED status');
-            if (contractStatus !== 'SIGNED') {
-              console.log('⚠️ API returned wrong status for SIGN, forcing to SIGNED');
-              contractStatus = 'SIGNED';
+                        if (contractStatus !== 'SIGNED') {
+                            contractStatus = 'SIGNED';
             }
           }
           
-          console.log('🔄 Updating contract state:', {
-            contractStatus,
-            currentApprovalLevel,
-            totalApprovalLevels,
-            message: result.message
-          });
-          
-          console.log('🔍 Preserving existing contract details:', {
-            id: project.contractDetails?.id,
-            existingFields: Object.keys(project.contractDetails || {})
-          });
-          
-          // Update the parent component's state with the correct type
+                              // Update the parent component's state with the correct type
           // CRITICAL: Always preserve the existing contractDetails and merge updates
           const updates: Partial<Project['contractDetails']> = {
             ...project.contractDetails, // Preserve ALL existing fields including id
@@ -247,13 +171,7 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
             totalApprovalLevels
           };
           
-          console.log('🔍 Final updates object:', {
-            id: updates.id,
-            contractStatus: updates.contractStatus,
-            currentApprovalLevel: updates.currentApprovalLevel
-          });
-          
-          // Override with any new data from the backend response
+                    // Override with any new data from the backend response
           if (updatedContractData.contractType) updates.contractType = updatedContractData.contractType;
           if (updatedContractData.counterparty) updates.counterparty = updatedContractData.counterparty;
           if (updatedContractData.value !== undefined) updates.value = updatedContractData.value;
@@ -263,11 +181,9 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
           onUpdateContract(updates);
           
           // Force re-render of workflow component
-          console.log('🔄 Force re-rendering workflow component with new key');
-          setWorkflowRefreshKey(prev => {
+                    setWorkflowRefreshKey(prev => {
             const newKey = prev + 1;
-            console.log('🔄 New workflow refresh key:', newKey);
-            return newKey;
+                        return newKey;
           });
         }
         
@@ -282,10 +198,6 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
       return false;
     }
   };
-
-
-
-
 
   // NEW: Function to determine if document editing is allowed
   const canEditDocument = (status: string): boolean => {

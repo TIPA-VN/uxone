@@ -244,7 +244,6 @@ export default function ContractExportDialog({ project, isOpen, onClose }: Contr
             </div>
           </div>
 
-
         </div>
 
         {/* Footer */}

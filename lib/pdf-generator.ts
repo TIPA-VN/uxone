@@ -73,15 +73,7 @@ function processVietnameseText(text: string): string {
 
 export async function generateContractPDF(options: PDFGenerationOptions): Promise<Buffer> {
   try {
-    console.log('🔍 PDF Generator received options:', {
-      title: options.title,
-      contentLength: options.content?.length || 0,
-      contentPreview: options.content?.substring(0, 200) + '...',
-      contractNumber: options.contractNumber,
-      counterparty: options.counterparty
-    });
-    
-    const doc = new jsPDF('p', 'mm', 'a4');
+        const doc = new jsPDF('p', 'mm', 'a4');
     
     // ENHANCED SOLUTION: Try to load Noto Sans font, fallback to helvetica
     let fontLoaded = false;
@@ -95,10 +87,8 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
       doc.addFont(fontUrl, 'NotoSans', 'bold');
       doc.setFont('NotoSans', 'normal');
       fontLoaded = true;
-      console.log('🔍 Noto Sans font loaded successfully for Vietnamese support');
-    } catch (error) {
-      console.log('⚠️ Noto Sans font failed, using helvetica with enhanced text processing');
-      doc.setFont('helvetica', 'normal');
+          } catch (error) {
+            doc.setFont('helvetica', 'normal');
     }
     
     // Store font status for later use
@@ -194,14 +184,8 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     // Clean and format the content
     let cleanContent = options.content || '';
     
-    // DEBUG: Log the raw content to find corrupted text
-    console.log('🔍 RAW CONTENT RECEIVED:', cleanContent);
-    console.log('🔍 CONTENT LENGTH:', cleanContent.length);
-    console.log('🔍 CONTENT ENDS WITH:', cleanContent.substring(cleanContent.length - 50));
-    
-    if (!cleanContent || cleanContent.trim() === '') {
-      console.log('⚠️ Warning: No content provided, using fallback text');
-      cleanContent = 'No contract content available. Please check the document content.';
+                    if (!cleanContent || cleanContent.trim() === '') {
+            cleanContent = 'No contract content available. Please check the document content.';
     }
     
     // Better HTML processing - preserve structure while removing tags
@@ -355,17 +339,7 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     if (options.approvedBy && options.approvedBy.length > 0) {
       options.approvedBy.forEach((approverId, index) => {
         const approverName = options.approverNames?.[index] || approverId;
-        console.log('🔍 Processing approver:', { 
-          index, 
-          approverId, 
-          approverName, 
-          type: typeof approverName,
-          length: approverName?.length,
-          charCodes: approverName?.split('').map(c => c.charCodeAt(0))
-        });
-        console.log('🔍 About to write to PDF:', `Approver ${index + 1}: ${approverName}`);
-        
-        // SMART TEXT PROCESSING: Convert Vietnamese to readable format
+                        // SMART TEXT PROCESSING: Convert Vietnamese to readable format
         doc.setFont('helvetica', 'normal');
         const processedApproverName = processVietnameseText(approverName);
         doc.text(`Approver ${index + 1}: ${processedApproverName}`, margin, yPosition);
@@ -421,14 +395,9 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
       doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
     }
 
-    // DEBUG: Log what was written to PDF
-    console.log('🔍 PDF Generation Complete - Final Y Position:', yPosition);
-    console.log('🔍 PDF Pages Generated:', doc.getNumberOfPages());
-    
-    // Convert to Buffer
+                // Convert to Buffer
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
-    console.log('🔍 PDF Buffer Size:', pdfBuffer.length);
-    return pdfBuffer;
+        return pdfBuffer;
     
   } catch (error) {
     console.error('Error generating PDF:', error);

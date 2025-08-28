@@ -14,30 +14,17 @@ export async function GET(
 
     const { id } = await params;
 
-    console.log('🔍 Fetching finalized document for contract:', id);
-
-    // Get contract details
+        // Get contract details
     const contractDetails = await prisma.contractDetails.findUnique({
       where: { id },
       include: { project: true, document: true }
     });
 
     if (!contractDetails) {
-      console.log('❌ Contract not found:', id);
-      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
+            return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    console.log('📄 Contract details:', {
-      id: contractDetails.id,
-      contractNumber: contractDetails.contractNumber,
-      documentId: contractDetails.documentId,
-      contractStatus: contractDetails.contractStatus,
-      hasDocument: !!contractDetails.document,
-      hasContent: !!contractDetails.document?.content,
-      contentLength: contractDetails.document?.content?.length || 0
-    });
-
-    // Check if finalized document exists
+        // Check if finalized document exists
     let finalizedDocument = null;
     let allFinalizedDocs = [];
     
@@ -55,9 +42,7 @@ export async function GET(
       
       // Only query if we have at least one condition
       if (whereCondition.OR.length > 0) {
-        console.log('🔍 Querying finalized documents with condition:', whereCondition);
-        
-        finalizedDocument = await prisma.finalizedDocument.findFirst({
+                finalizedDocument = await prisma.finalizedDocument.findFirst({
           where: whereCondition
         });
 
@@ -65,14 +50,8 @@ export async function GET(
           where: whereCondition
         });
         
-        console.log('📄 Finalized document query results:', {
-          found: !!finalizedDocument,
-          totalFound: allFinalizedDocs.length,
-          finalizedDocId: finalizedDocument?.id
-        });
-      } else {
-        console.log('⚠️ No query conditions available - missing contractNumber and documentId');
-      }
+              } else {
+              }
     } catch (queryError) {
       console.error('❌ Error querying finalized documents:', queryError);
       // Continue without finalized document data

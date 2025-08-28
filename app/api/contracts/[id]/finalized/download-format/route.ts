@@ -21,18 +21,14 @@ export async function GET(
       return NextResponse.json({ error: 'Contract ID is required' }, { status: 400 });
     }
 
-    console.log('🔍 Looking for finalized document for contract ID:', contractId);
-    console.log('📄 Requested format:', format);
-
-    // Get contract details to find the finalized document
+            // Get contract details to find the finalized document
     const contractDetails = await prisma.contractDetails.findUnique({
       where: { id: contractId },
       include: { document: true }
     });
 
     if (!contractDetails) {
-      console.log('❌ Contract not found:', contractId);
-      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
+            return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
     // Get the finalized document
@@ -46,21 +42,10 @@ export async function GET(
     });
 
     if (!finalizedDoc) {
-      console.log('❌ Finalized document not found for contract:', contractId);
-      return NextResponse.json({ error: 'Finalized document not found' }, { status: 404 });
+            return NextResponse.json({ error: 'Finalized document not found' }, { status: 404 });
     }
 
-    console.log('📄 Found finalized document:', finalizedDoc.id);
-    console.log('📄 Format endpoint - Document details:', {
-      title: finalizedDoc.title,
-      finalizedContentLength: finalizedDoc.finalizedContent?.length || 0,
-      finalizedHtmlLength: finalizedDoc.finalizedHtml?.length || 0,
-      hasFinalizedContent: !!finalizedDoc.finalizedContent,
-      hasFinalizedHtml: !!finalizedDoc.finalizedHtml,
-      requestedFormat: format
-    });
-
-    let content: string;
+            let content: string;
     let contentType: string;
     let filename: string;
     let extension: string;
@@ -125,22 +110,13 @@ export async function GET(
         return NextResponse.json({ error: 'Unsupported format. Use: html, txt, json, or md' }, { status: 400 });
     }
 
-    console.log('📄 Format endpoint - Content processed:', {
-      format: format,
-      contentLength: content?.length || 0,
-      contentPreview: content?.substring(0, 200) + '...',
-      contentType: contentType
-    });
-
-    if (!content) {
+        if (!content) {
       return NextResponse.json({ error: 'Content not available in requested format' }, { status: 404 });
     }
 
     filename = `${finalizedDoc.title || 'contract'}.${extension}`;
 
-    console.log('📄 Returning document in format:', format, 'Content length:', content.length);
-
-    // Return the content in the requested format
+        // Return the content in the requested format
     return new NextResponse(content, {
       headers: {
         'Content-Type': contentType,

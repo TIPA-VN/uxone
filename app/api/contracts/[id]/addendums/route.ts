@@ -115,6 +115,9 @@ export async function POST(
       ? `${parentContract.contractNumber}-${nextAddendumNumber.toString().padStart(3, '0')}`
       : `ADD-${Date.now()}-${nextAddendumNumber.toString().padStart(3, '0')}`;
 
+    // Addendum should inherit the same document number as the parent contract
+    const documentNumber = parentContract.project?.documentNumber || null;
+
     // Create the addendum project
     const addendumProject = await prisma.project.create({
       data: {
@@ -124,7 +127,8 @@ export async function POST(
         status: 'ACTIVE',
         ownerId: session.user.id,
         departments: parentContract.project?.departments || [],
-        documentTemplateId: parentContract.project?.documentTemplateId
+        documentTemplateId: parentContract.project?.documentTemplateId,
+        documentNumber
       }
     });
 
@@ -175,6 +179,8 @@ export async function POST(
         }
       }
     });
+
+    // Note: Addendum inherits parent's document number, no new document number record needed
 
     return NextResponse.json({
       success: true,

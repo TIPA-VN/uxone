@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Project } from '@/types';
-import { FileText, Plus, Calendar, Hash, CheckCircle, Clock, AlertTriangle, Ban } from 'lucide-react';
+import { FileText, Calendar, CheckCircle, Clock, AlertTriangle, Ban } from 'lucide-react';
 import Link from 'next/link';
 
 interface AddendumListCardProps {
@@ -21,6 +21,7 @@ interface AddendumData {
   project?: {
     id: string;
     name: string;
+    documentNumber?: string; // Add document number for project number
   };
 }
 
@@ -151,14 +152,24 @@ export default function AddendumListCard({ parentProject, embedded = false }: Ad
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-1">
-                    <Hash className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                    <FileText className="w-3 h-3 text-gray-400 flex-shrink-0" />
                     <span className="text-sm font-medium text-gray-900 truncate">
                       {addendum.contractNumber}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-500">
-                    <Calendar className="w-3 h-3 flex-shrink-0" />
-                    <span>{formatDate(addendum.createdAt)}</span>
+                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="w-3 h-3 flex-shrink-0" />
+                      <span>{formatDate(addendum.createdAt)}</span>
+                    </div>
+                    {addendum.project?.documentNumber && (
+                      <div className="flex items-center space-x-1">
+                        <span className="text-gray-400">•</span>
+                        <span className="font-medium text-blue-600">
+                          Project: {addendum.project.documentNumber}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 

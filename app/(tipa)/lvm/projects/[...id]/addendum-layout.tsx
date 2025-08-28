@@ -30,9 +30,7 @@ export default function AddendumLayout({ project: initialProject }: AddendumLayo
   
   // Use current project data from hook, fallback to initial project
   const project = currentProject || initialProject;
-  
 
-  
   const parentContractId = project.contractDetails?.parentContract?.project?.id;
   const parentContractNumber = project.contractDetails?.parentContract?.contractNumber;
 

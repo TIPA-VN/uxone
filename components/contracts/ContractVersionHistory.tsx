@@ -64,8 +64,7 @@ export default function ContractVersionHistory({ project, onRefresh }: ContractV
   };
 
   const handleVersionSelect = (version: DocumentVersion) => {
-    console.log('Selected version:', version);
-    // You can implement version preview functionality here
+        // You can implement version preview functionality here
   };
 
   const handleVersionRestore = async (version: DocumentVersion) => {
@@ -105,8 +104,7 @@ export default function ContractVersionHistory({ project, onRefresh }: ContractV
   };
 
   const handleVersionCompare = (version1: DocumentVersion, version2: DocumentVersion) => {
-    console.log('Comparing versions:', version1, version2);
-    // You can implement version comparison functionality here
+        // You can implement version comparison functionality here
     alert(`Version comparison between v${version1.version}.${version1.revisionNumber} and v${version2.version}.${version2.revisionNumber} - Feature coming soon!`);
   };
 

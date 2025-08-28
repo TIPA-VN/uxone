@@ -35,6 +35,11 @@ export default function ProjectsPage() {
 
   // NEW: Project type filter for the projects list
   const [projectTypeFilter, setProjectTypeFilter] = useState<string>("ALL");
+  
+  // NEW: Search and display limit states
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showAllProjects, setShowAllProjects] = useState<boolean>(false);
+  const RECENT_PROJECTS_LIMIT = 5;
 
   const { 
     projects, 
@@ -51,13 +56,10 @@ export default function ProjectsPage() {
   // Fetch document templates from database
   const fetchTemplates = useCallback(async () => {
     try {
-      console.log('Fetching document templates...');
-      const response = await fetch('/api/document-templates');
-      console.log('Response status:', response.status);
-      if (response.ok) {
+            const response = await fetch('/api/document-templates');
+            if (response.ok) {
         const data = await response.json();
-        console.log('Document templates received:', data);
-        setDocumentTemplates(data);
+                setDocumentTemplates(data);
       } else {
         console.error('Failed to fetch templates, status:', response.status);
         const errorData = await response.json();
@@ -136,13 +138,47 @@ export default function ProjectsPage() {
     p.departments?.some(dept => dept.toLowerCase() === user?.department?.toLowerCase())
   );
 
-  // NEW: Apply project type filter
-  const filteredMyProjects = myProjects.filter(project => 
+  // Search function
+  const searchProjects = (projectList: Project[], query: string) => {
+    if (!query.trim()) return projectList;
+    
+    const lowerQuery = query.toLowerCase().trim();
+    return projectList.filter(project => 
+      project.name.toLowerCase().includes(lowerQuery) ||
+      project.description?.toLowerCase().includes(lowerQuery) ||
+      project.documentNumber?.toLowerCase().includes(lowerQuery) ||
+      project.contractDetails?.contractNumber?.toLowerCase().includes(lowerQuery) ||
+      project.status?.toLowerCase().includes(lowerQuery) ||
+      project.owner?.name?.toLowerCase().includes(lowerQuery) ||
+      project.owner?.username?.toLowerCase().includes(lowerQuery)
+    );
+  };
+
+  // Apply project type filter
+  const typeFilteredMyProjects = myProjects.filter(project => 
     projectTypeFilter === "ALL" || project.projectType === projectTypeFilter
   );
-  const filteredProjectsIBelongTo = projectsIBelongTo.filter(project => 
+  const typeFilteredProjectsIBelongTo = projectsIBelongTo.filter(project => 
     projectTypeFilter === "ALL" || project.projectType === projectTypeFilter
   );
+
+  // Apply search and limit logic
+  const getDisplayProjects = (projectList: Project[]) => {
+    const searchResults = searchProjects(projectList, searchQuery);
+    
+    // If searching or showing all, return all results
+    if (searchQuery.trim() || showAllProjects) {
+      return searchResults.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    }
+    
+    // Otherwise, show only recent projects
+    return searchResults
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, RECENT_PROJECTS_LIMIT);
+  };
+
+  const filteredMyProjects = getDisplayProjects(typeFilteredMyProjects);
+  const filteredProjectsIBelongTo = getDisplayProjects(typeFilteredProjectsIBelongTo);
 
   const projectColumns = [
     {
@@ -413,8 +449,9 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* Project Type Filter */}
-        <div className="mb-6">
+        {/* Project Type Filter and Search */}
+        <div className="mb-6 space-y-4">
+          {/* Project Type Filter */}
           <div className="flex items-center space-x-4">
             <span className="text-sm font-medium text-gray-700">Filter by type:</span>
             <div className="flex space-x-2">
@@ -449,6 +486,38 @@ export default function ProjectsPage() {
                 Contracts
               </button>
             </div>
+          </div>
+
+          {/* Search Input */}
+          <div className="flex items-center space-x-4">
+            <div className="flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search by project name, contract number, document number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+              />
+            </div>
+            {!searchQuery.trim() && !showAllProjects && (
+              <button
+                onClick={() => setShowAllProjects(true)}
+                className="px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                Show All Projects
+              </button>
+            )}
+            {(searchQuery.trim() || showAllProjects) && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setShowAllProjects(false);
+                }}
+                className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Show Recent Only
+              </button>
+            )}
           </div>
         </div>
 
@@ -678,10 +747,22 @@ export default function ProjectsPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Projects I Own</h2>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Projects I Own</h2>
+                  {!searchQuery.trim() && !showAllProjects && typeFilteredMyProjects.length > RECENT_PROJECTS_LIMIT && (
+                    <p className="text-sm text-blue-600 mt-1">
+                      Showing {RECENT_PROJECTS_LIMIT} most recent projects • {typeFilteredMyProjects.length - RECENT_PROJECTS_LIMIT} more available
+                    </p>
+                  )}
+                </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Users className="w-4 h-4" />
-                  <span>{myProjects.length} project{myProjects.length !== 1 ? 's' : ''}</span>
+                  <span>
+                    {searchQuery.trim() || showAllProjects ? 
+                      `${filteredMyProjects.length} of ${typeFilteredMyProjects.length}` : 
+                      `${Math.min(typeFilteredMyProjects.length, RECENT_PROJECTS_LIMIT)} of ${typeFilteredMyProjects.length}`
+                    } project{typeFilteredMyProjects.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </div>
             </div>
@@ -707,10 +788,8 @@ export default function ProjectsPage() {
                   data={filteredMyProjects}
                   columns={projectColumns}
                   loading={loading}
-                  emptyMessage="No owned projects"
-                  searchable={true}
-                  searchPlaceholder="Search owned projects by name, description, document number, status, or owner..."
-                  searchKeys={['name', 'description', 'documentNumber', 'status', 'owner.name', 'owner.username', 'owner.department']}
+                  emptyMessage={searchQuery.trim() ? "No projects found matching your search" : "No owned projects"}
+                  searchable={false}
                 />
               )}
             </div>
@@ -720,10 +799,22 @@ export default function ProjectsPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Projects I Belong To</h2>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Projects I Belong To</h2>
+                  {!searchQuery.trim() && !showAllProjects && typeFilteredProjectsIBelongTo.length > RECENT_PROJECTS_LIMIT && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Showing {RECENT_PROJECTS_LIMIT} most recent projects • {typeFilteredProjectsIBelongTo.length - RECENT_PROJECTS_LIMIT} more available
+                    </p>
+                  )}
+                </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Users className="w-4 h-4" />
-                  <span>{projectsIBelongTo.length} project{projectsIBelongTo.length !== 1 ? 's' : ''}</span>
+                  <span>
+                    {searchQuery.trim() || showAllProjects ? 
+                      `${filteredProjectsIBelongTo.length} of ${typeFilteredProjectsIBelongTo.length}` : 
+                      `${Math.min(typeFilteredProjectsIBelongTo.length, RECENT_PROJECTS_LIMIT)} of ${typeFilteredProjectsIBelongTo.length}`
+                    } project{typeFilteredProjectsIBelongTo.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </div>
             </div>
@@ -742,10 +833,8 @@ export default function ProjectsPage() {
                   data={filteredProjectsIBelongTo}
                   columns={projectColumns}
                   loading={loading}
-                  emptyMessage="No projects to review"
-                  searchable={true}
-                  searchPlaceholder="Search projects by name, description, document number, status, or owner..."
-                  searchKeys={['name', 'description', 'documentNumber', 'status', 'owner.name', 'owner.username', 'owner.department']}
+                  emptyMessage={searchQuery.trim() ? "No projects found matching your search" : "No projects to review"}
+                  searchable={false}
                 />
               )}
             </div>

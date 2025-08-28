@@ -90,34 +90,19 @@ export default function ContractWorkflowActions({
   
   // Force re-render when contract status changes
   useEffect(() => {
-    console.log('🔄 ContractWorkflowActions: Contract status changed to:', contract.contractStatus);
-    console.log('🔄 ContractWorkflowActions: Current approval level:', contract.currentApprovalLevel);
-    console.log('🔄 ContractWorkflowActions: Total approval levels:', contract.totalApprovalLevels);
-  }, [contract.contractStatus, contract.currentApprovalLevel, contract.totalApprovalLevels]);
+              }, [contract.contractStatus, contract.currentApprovalLevel, contract.totalApprovalLevels]);
   const currentStatus = contract.contractStatus || 'DRAFT';
   
   // Debug logging for contract status
-  console.log('🔍 ContractWorkflowActions: Received project data:', {
-    projectId: project.id,
-    contractDetails: contract,
-    currentStatus,
-    currentApprovalLevel: contract?.currentApprovalLevel,
-    totalApprovalLevels: contract?.totalApprovalLevels
-  });
-
-  const handleAction = async (action: string) => {
-    console.log('🔘 ContractWorkflowActions: Button clicked for action:', action);
-    setActionType(action);
+    const handleAction = async (action: string) => {
+        setActionType(action);
     setComment('');
     setShowCommentModal(true);
-    console.log('🔘 ContractWorkflowActions: Comment modal should be showing');
-  };
+      };
 
   const handleConfirmAction = async () => {
-    console.log('🔘 ContractWorkflowActions: Confirm button clicked for action:', actionType);
-    if (!onStatusChange) {
-      console.log('❌ ContractWorkflowActions: No onStatusChange function provided');
-      return;
+        if (!onStatusChange) {
+            return;
     }
     
     setIsProcessing(true);
@@ -150,10 +135,8 @@ export default function ContractWorkflowActions({
           break;
       }
       
-      console.log('🔘 ContractWorkflowActions: Calling onStatusChange with:', { newStatus, comment });
-      const success = await onStatusChange(newStatus, comment);
-      console.log('🔘 ContractWorkflowActions: onStatusChange returned:', success);
-      if (success) {
+            const success = await onStatusChange(newStatus, comment);
+            if (success) {
         setMessage(`Contract ${actionType.toLowerCase()}d successfully!`);
         setShowCommentModal(false);
         
@@ -175,8 +158,6 @@ export default function ContractWorkflowActions({
       setIsProcessing(false);
     }
   };
-
-
 
   const getAvailableActions = () => {
     const actions = [];

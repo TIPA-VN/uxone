@@ -47,10 +47,8 @@ export class PDFKitGenerator {
       // Use built-in Helvetica font which has good Unicode support
       this.doc.font('Helvetica');
       this.fontLoaded = true;
-      console.log('🔍 Using built-in Helvetica font with Unicode support');
-    } catch (error) {
-      console.log('⚠️ Font initialization failed, using default font');
-      // PDFKit will use default font if Helvetica fails
+          } catch (error) {
+            // PDFKit will use default font if Helvetica fails
     }
   }
 
@@ -286,9 +284,7 @@ export class PDFKitGenerator {
 
         this.doc.on('end', () => {
           const buffer = Buffer.concat(chunks);
-          console.log('🔍 PDFKit PDF Generation Complete');
-          console.log('🔍 PDF Buffer Size:', buffer.length);
-          resolve(buffer);
+                              resolve(buffer);
         });
 
         this.doc.on('error', (error) => {

@@ -37,7 +37,6 @@ export default function ProjectDetailsPage() {
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [showDueDateEditor, setShowDueDateEditor] = useState(false);
 
-
   // Custom hooks
   const { project, loading, error, updateProject, refetchProject } = useProject(projectId);
   const documentsHook = useDocuments(projectId, activeTab);
@@ -133,11 +132,6 @@ export default function ProjectDetailsPage() {
   };
 
   // Handle document actions
-
-
-
-
-
 
   if (loading) {
     return (
@@ -354,14 +348,11 @@ export default function ProjectDetailsPage() {
                 onUpdateContract={async (contractData: Partial<Project['contractDetails']>) => {
                   try {
 
-
-                    
                     // Update the project state with the new contract data
                     const updatedProject = {
                       ...project,
                       contractDetails: contractData as Project['contractDetails']
                     };
-                    
 
                     updateProject(updatedProject);
                     
@@ -430,10 +421,7 @@ export default function ProjectDetailsPage() {
           </div>
         )}
 
-
       </div>
-
-
 
       {/* Due Date Editor Modal */}
       {showDueDateEditor && (

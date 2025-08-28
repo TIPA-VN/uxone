@@ -260,9 +260,7 @@ export class PuppeteerGenerator {
    */
   async generateContractPDF(options: PuppeteerGenerationOptions): Promise<Buffer> {
     try {
-      console.log('🔍 Puppeteer PDF Generation Started');
-      
-      const browser = await this.initializeBrowser();
+            const browser = await this.initializeBrowser();
       const page = await browser.newPage();
       
       // Generate HTML content
@@ -274,9 +272,7 @@ export class PuppeteerGenerator {
       // Wait for fonts to be ready
       await page.evaluateHandle('document.fonts.ready');
       
-      console.log('🔍 HTML content loaded, generating PDF...');
-      
-      // Generate PDF
+            // Generate PDF
       const pdfBuffer = await page.pdf({
         format: 'A4',
         margin: {
@@ -289,10 +285,7 @@ export class PuppeteerGenerator {
         preferCSSPageSize: true
       });
       
-      console.log('🔍 Puppeteer PDF Generation Complete');
-      console.log('🔍 PDF Buffer Size:', pdfBuffer.length);
-      
-      // Close the page but keep browser for reuse
+                  // Close the page but keep browser for reuse
       await page.close();
       
       return pdfBuffer;

@@ -14,8 +14,6 @@ export async function GET(
 
     const { id } = await params;
 
-
-
     // First, get the contract details to get the proper identifiers
     const contractDetails = await prisma.contractDetails.findUnique({
       where: { id },
@@ -26,11 +24,8 @@ export async function GET(
     });
 
     if (!contractDetails) {
-      console.log('❌ Contract not found:', id);
-      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
+            return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
-
-
 
     // Get the finalized document using the contract's identifiers
     const finalizedDoc = await prisma.finalizedDocument.findFirst({
@@ -42,13 +37,9 @@ export async function GET(
       }
     });
 
-
-
     if (!finalizedDoc) {
       return NextResponse.json({ error: 'Finalized document not found' }, { status: 404 });
     }
-
-
 
     // Generate the PDF on-demand if it doesn't exist
     let pdfBuffer: Buffer;
@@ -56,7 +47,6 @@ export async function GET(
     // FORCE REGENERATION: Always generate new PDF when content is available
     if (finalizedDoc.finalizedContent || contractDetails.document?.content) {
 
-      
       // Generate PDF from finalized document content or fallback to original content
       const { PuppeteerGenerator } = await import('@/lib/puppeteer-generator');
       let content = finalizedDoc.finalizedContent || contractDetails.document?.content || '';
@@ -65,9 +55,7 @@ export async function GET(
       if (!content || content.trim().length === 0) {
         content = 'Contract content not available. Please check the database.';
       }
-      
 
-      
       // Fetch user information for approvers to display names in PDF
       const approverUsers = await prisma.user.findMany({
         where: {
@@ -102,8 +90,6 @@ export async function GET(
         return approverName;
       });
 
-
-      
       // Create Puppeteer generator instance
       const pdfGenerator = new PuppeteerGenerator();
       
@@ -128,9 +114,7 @@ export async function GET(
       
       // Clean up browser instance
       await pdfGenerator.closeBrowser();
-      
 
-      
       // Update the finalized document with the generated PDF
       await prisma.finalizedDocument.update({
         where: { id: finalizedDoc.id },
@@ -141,7 +125,6 @@ export async function GET(
     } else if (finalizedDoc.finalizedPdf) {
       // Only use stored PDF if no content is available (fallback)
 
-      
       try {
         // Remove data URL prefix if present
         let base64Data = finalizedDoc.finalizedPdf;

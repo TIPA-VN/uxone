@@ -40,8 +40,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-
-
     let notifications: Array<Record<string, unknown> & { source: string }> = []
 
     if (source === 'uxone' || source === 'auto') {
@@ -69,7 +67,6 @@ export async function GET(request: NextRequest) {
           source: 'uxone'
         }))]
 
-  
       } catch (error) {
         console.error('Error fetching UXOne notifications:', error)
         if (source === 'uxone') {
@@ -106,7 +103,6 @@ export async function GET(request: NextRequest) {
           source: 'tipa'
         }))]
 
-
       } catch (error) {
         console.error('Error fetching TIPA notifications:', error)
         if (source === 'tipa') {
@@ -127,8 +123,6 @@ export async function GET(request: NextRequest) {
 
     // Apply limit to final result
     const limitedNotifications = notifications.slice(0, limit)
-
-    
 
     return NextResponse.json({
       success: true,
@@ -176,141 +170,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`📝 Creating notification for user ${authenticatedUserId} in ${targetSystem}`)
-
-    const notificationData = {
-      userId: authenticatedUserId,
-      title,
-      message,
-      type: type || 'notification',
-      link,
-      read: false,
-      hidden: false
-    }
-
-    const results: Record<string, unknown> = {}
-
-    if (targetSystem === 'uxone' || targetSystem === 'both') {
-      try {
-        const uxonePrisma = await getUXOnePrisma()
-        const uxoneNotification = await uxonePrisma.notification.create({
-          data: notificationData
-        })
-        results.uxone = uxoneNotification
-
-      } catch (error) {
-        console.error('Error creating UXOne notification:', error)
-        results.uxoneError = error
+    // Create notification in UXOne
+    const notification = await prisma.notification.create({
+      data: {
+        title,
+        message,
+        userId: authenticatedUserId,
+        type: type || 'info',
+        link: link || null,
+        isRead: false
       }
-    }
-
-    if (targetSystem === 'tipa' || targetSystem === 'both') {
-      try {
-        const tipaPrisma = await getTIPAPrisma()
-        const tipaNotification = await tipaPrisma.notification.create({
-          data: notificationData
-        })
-        results.tipa = tipaNotification
-
-      } catch (error) {
-        console.error('Error creating TIPA notification:', error)
-        results.tipaError = error
-      }
-    }
+    })
 
     return NextResponse.json({
       success: true,
-      message: 'Notification created',
-      results
+      notification,
+      message: 'Notification created successfully'
     })
 
   } catch (error) {
-    console.error('Error creating cross-system notification:', error)
+    console.error('Error creating notification:', error)
     return NextResponse.json(
       { error: 'Failed to create notification' },
-      { status: 500 }
-    )
-  }
-}
-
-// PATCH /api/integration/notifications - Update notification in both systems
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { userId, empCode: emp_code, notificationId, read, hidden, targetSystem = 'both' } = body
-
-    // Handle authentication
-    let authenticatedUserId = userId
-    if (emp_code && !userId) {
-      const password = request.headers.get('x-password')
-      if (password) {
-        const user = await authenticateUser(emp_code, password)
-        if (user) {
-          authenticatedUserId = user.id
-        } else {
-          return NextResponse.json(
-            { error: 'Authentication failed' },
-            { status: 401 }
-          )
-        }
-      }
-    }
-
-    if (!authenticatedUserId || !notificationId) {
-      return NextResponse.json(
-        { error: 'userId (or empCode) and notificationId are required' },
-        { status: 400 }
-      )
-    }
-
-    console.log(`🔄 Updating notification ${notificationId} for user ${authenticatedUserId} in ${targetSystem}`)
-
-    const updateData: Record<string, unknown> = {}
-    if (read !== undefined) updateData.read = read
-    if (hidden !== undefined) updateData.hidden = hidden
-
-    const results: Record<string, unknown> = {}
-
-    if (targetSystem === 'uxone' || targetSystem === 'both') {
-      try {
-        const uxonePrisma = await getUXOnePrisma()
-        const uxoneNotification = await uxonePrisma.notification.update({
-          where: { id: notificationId },
-          data: updateData
-        })
-        results.uxone = uxoneNotification
-
-      } catch (error) {
-        console.error('Error updating UXOne notification:', error)
-        results.uxoneError = error
-      }
-    }
-
-    if (targetSystem === 'tipa' || targetSystem === 'both') {
-      try {
-        const tipaPrisma = await getTIPAPrisma()
-        const tipaNotification = await tipaPrisma.notification.update({
-          where: { id: notificationId },
-          data: updateData
-        })
-        results.tipa = tipaNotification
-
-      } catch (error) {
-        console.error('Error updating TIPA notification:', error)
-        results.tipaError = error
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Notification updated',
-      results
-    })
-
-  } catch (error) {
-    console.error('Error updating cross-system notification:', error)
-    return NextResponse.json(
-      { error: 'Failed to update notification' },
       { status: 500 }
     )
   }
