@@ -70,6 +70,17 @@ export function DepartmentTab({
     project?.ownerId || ''
   );
 
+  // Debug logging for permission checks
+  console.log('DepartmentTab permission check:', {
+    userId: user?.id,
+    userRole: user?.role,
+    userDepartment: user?.department,
+    targetDepartment: department,
+    projectOwnerId: project?.ownerId,
+    canUpload,
+    canApprove
+  });
+
   // Check if this department has already been approved
   const getDepartmentApprovalStatus = () => {
     if (!project?.approvalState || typeof project.approvalState !== 'object') {

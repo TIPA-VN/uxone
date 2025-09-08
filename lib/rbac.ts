@@ -109,15 +109,30 @@ export const getUserPermissions = (userRole: string) => {
 };
 
 export const isUserAdmin = (userRole: string) => {
-  return userRole === 'ADMIN';
+  const normalizedRole = userRole?.toUpperCase().trim();
+  return normalizedRole === 'ADMIN';
 };
 
 export const isUserManager = (userRole: string) => {
-  return ['ADMIN', 'SENIOR_MANAGER', 'MANAGER'].includes(userRole);
+  const normalizedRole = userRole?.toUpperCase().trim();
+  return [
+    'ADMIN', 
+    'GENERAL_DIRECTOR', 'GENERAL DIRECTOR',
+    'GENERAL_MANAGER', 'GENERAL MANAGER',
+    'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT GENERAL MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'ASSISTANT GENERAL MANAGER 2',
+    'SENIOR_MANAGER', 'SENIOR MANAGER', 'SENIOR_MANAGER_2', 'SENIOR MANAGER 2', 'ASSISTANT_SENIOR_MANAGER', 'ASSISTANT SENIOR MANAGER',
+    'MANAGER', 'MANAGER_2', 'MANAGER 2', 'ASSISTANT_MANAGER', 'ASSISTANT MANAGER', 'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2'
+  ].includes(normalizedRole);
 };
 
 export const isUserSupervisor = (userRole: string) => {
-  return ['ADMIN', 'SENIOR_MANAGER', 'MANAGER', 'SUPERVISOR'].includes(userRole);
+  const normalizedRole = userRole?.toUpperCase().trim();
+  return [
+    'ADMIN', 
+    'SENIOR_MANAGER', 'SENIOR MANAGER', 'SENIOR_MANAGER_2', 'SENIOR MANAGER 2',
+    'MANAGER', 'MANAGER_2', 'MANAGER 2', 'ASSISTANT_MANAGER', 'ASSISTANT MANAGER', 'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2',
+    'SUPERVISOR', 'SUPERVISOR_2', 'SUPERVISOR 2'
+  ].includes(normalizedRole);
 };
 
 // Department-based access control
