@@ -45,23 +45,93 @@ export async function POST(
     }
 
     // Helper function to check if user can approve at current level
-    const canUserApproveAtLevel = (userRole: string, level: number): boolean => {
+    const canUserApproveAtLevel = (userRole: string, level: number, userDepartment?: string, contractDepartment?: string): boolean => {
+      const normalizedRole = userRole?.toUpperCase().trim();
+      
+      // Admin can approve at any level
+      if (normalizedRole === 'ADMIN') {
+        return true;
+      }
+      
+      // Get contract department for department-specific rules
+      const contractDept = contractDepartment || contractDetails?.project?.departments?.[0] || '';
+      
+      // LEGAL department specific approval hierarchy
+      if (contractDept.toUpperCase() === 'LEGAL') {
+        const legalApprovalLevels: { [key: string]: number } = {
+          'GENERAL_DIRECTOR': 3,
+          'GENERAL DIRECTOR': 3,
+          'VICE_GENERAL_DIRECTOR': 3,
+          'VICE GENERAL DIRECTOR': 3,
+          'CHIEF_SPECIALIST': 2,
+          'CHIEF SPECIALIST': 2
+        };
+        
+        // For LEGAL department, check if user is in LEGAL department and has appropriate role
+        if (userDepartment?.toUpperCase() === 'LEGAL') {
+          const userMaxLevel = legalApprovalLevels[normalizedRole] || 0;
+          return userMaxLevel >= level;
+        }
+        
+        // General Director and Vice General Director can approve LEGAL contracts at level 3
+        if (normalizedRole === 'GENERAL_DIRECTOR' || normalizedRole === 'GENERAL DIRECTOR' ||
+            normalizedRole === 'VICE_GENERAL_DIRECTOR' || normalizedRole === 'VICE GENERAL DIRECTOR') {
+          return level <= 3;
+        }
+      }
+      
+      // Level 1 approval requires Purchasing Department Management or GM/AGM
+      if (level === 1) {
+        // Check if user is in Purchasing Department with management role
+        const isPurchasingDept = userDepartment?.toUpperCase() === 'LVM-PUR' || 
+                                userDepartment?.toUpperCase() === 'PROC' || 
+                                userDepartment?.toUpperCase() === 'PR';
+        
+        const isManagementRole = [
+          'GENERAL_MANAGER', 'GENERAL MANAGER',
+          'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT GENERAL MANAGER',
+          'ASSISTANT_GENERAL_MANAGER_2', 'ASSISTANT GENERAL MANAGER 2',
+          'SENIOR_MANAGER', 'SENIOR MANAGER',
+          'SENIOR_MANAGER_2', 'SENIOR MANAGER 2',
+          'ASSISTANT_SENIOR_MANAGER', 'ASSISTANT SENIOR MANAGER',
+          'MANAGER', 'MANAGER 2', 'MANAGER_2',
+          'ASSISTANT_MANAGER', 'ASSISTANT MANAGER',
+          'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2'
+        ].includes(normalizedRole);
+        
+        // Level 1: Purchasing Department Management OR any GM/AGM
+        return (isPurchasingDept && isManagementRole) || 
+               (normalizedRole === 'GENERAL_MANAGER' || normalizedRole === 'GENERAL MANAGER' ||
+                normalizedRole === 'ASSISTANT_GENERAL_MANAGER' || normalizedRole === 'ASSISTANT GENERAL MANAGER' ||
+                normalizedRole === 'ASSISTANT_GENERAL_MANAGER_2' || normalizedRole === 'ASSISTANT GENERAL MANAGER 2');
+      }
+      
+      // Default approval levels for other levels (2-4)
       const approvalLevels: { [key: string]: number } = {
-        'ADMIN': 4,
         'GENERAL_DIRECTOR': 4,
+        'GENERAL DIRECTOR': 4,
         'GENERAL_MANAGER': 3,
+        'GENERAL MANAGER': 3,
         'ASSISTANT_GENERAL_MANAGER': 3,
+        'ASSISTANT GENERAL MANAGER': 3,
         'ASSISTANT_GENERAL_MANAGER_2': 3,
+        'ASSISTANT GENERAL MANAGER 2': 3,
         'SENIOR_MANAGER': 2,
+        'SENIOR MANAGER': 2,
         'SENIOR_MANAGER_2': 2,
+        'SENIOR MANAGER 2': 2,
         'ASSISTANT_SENIOR_MANAGER': 2,
+        'ASSISTANT SENIOR MANAGER': 2,
         'MANAGER': 1,
+        'MANAGER 2': 1,
         'MANAGER_2': 1,
         'ASSISTANT_MANAGER': 1,
-        'ASSISTANT_MANAGER_2': 1
+        'ASSISTANT MANAGER': 1,
+        'ASSISTANT_MANAGER_2': 1,
+        'ASSISTANT MANAGER 2': 1
       };
       
-      const userMaxLevel = approvalLevels[userRole] || 0;
+      const userMaxLevel = approvalLevels[normalizedRole] || 0;
       return userMaxLevel >= level;
     };
 
@@ -102,7 +172,8 @@ export async function POST(
 
         // Check if user has permission to approve at current level
         const currentLevel = contractDetails.currentApprovalLevel;
-        if (!canUserApproveAtLevel(currentUser.role || 'STAFF', currentLevel)) {
+        
+        if (!canUserApproveAtLevel(currentUser.role || 'STAFF', currentLevel, currentUser.department || '', contractDetails.project?.departments?.[0] || '')) {
           return NextResponse.json({
             success: false,
             error: 'Insufficient permissions',
@@ -168,7 +239,8 @@ export async function POST(
       case 'REJECTED':
         // Check if user has permission to reject at current level
         const rejectLevel = contractDetails.currentApprovalLevel;
-        if (!canUserApproveAtLevel(currentUser.role || 'STAFF', rejectLevel)) {
+        
+        if (!canUserApproveAtLevel(currentUser.role || 'STAFF', rejectLevel, currentUser.department || '', contractDetails.project?.departments?.[0] || '')) {
           return NextResponse.json({
             success: false,
             error: 'Insufficient permissions',

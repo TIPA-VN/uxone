@@ -549,8 +549,43 @@ export const canUploadToDepartment = (
     return true;
   }
 
+  // Normalize department names for comparison
+  const normalizeDepartment = (dept: string) => {
+    if (!dept) return '';
+    const normalized = dept.toLowerCase().trim();
+    
+    // Handle common department name variations
+    const departmentMappings: { [key: string]: string[] } = {
+      'is': ['information systems', 'information technology', 'it'],
+      'information systems': ['is', 'information technology', 'it'],
+      'information technology': ['is', 'information systems', 'it'],
+      'it': ['is', 'information systems', 'information technology'],
+      'legal': ['leg'],
+      'leg': ['legal'],
+      'procurement': ['proc', 'pr', 'lvm-pur'],
+      'proc': ['procurement', 'pr', 'lvm-pur'],
+      'pr': ['procurement', 'proc', 'lvm-pur'],
+      'lvm-pur': ['procurement', 'proc', 'pr']
+    };
+    
+    // Check if departments match directly or through mappings
+    if (normalized === targetDepartment.toLowerCase()) {
+      return true;
+    }
+    
+    // Check through mappings
+    const userDeptVariations = departmentMappings[normalized] || [];
+    const targetDeptVariations = departmentMappings[targetDepartment.toLowerCase()] || [];
+    
+    return userDeptVariations.includes(targetDepartment.toLowerCase()) ||
+           targetDeptVariations.includes(normalized) ||
+           userDeptVariations.some(variation => 
+             targetDeptVariations.includes(variation)
+           );
+  };
+
   // Managers can upload to their own department
-  if (isUserManager(userRole) && userDepartment.toLowerCase() === targetDepartment.toLowerCase()) {
+  if (isUserManager(userRole) && normalizeDepartment(userDepartment)) {
     return true;
   }
 
@@ -574,8 +609,43 @@ export const canApproveDepartment = (
     return true;
   }
 
+  // Normalize department names for comparison
+  const normalizeDepartment = (dept: string) => {
+    if (!dept) return '';
+    const normalized = dept.toLowerCase().trim();
+    
+    // Handle common department name variations
+    const departmentMappings: { [key: string]: string[] } = {
+      'is': ['information systems', 'information technology', 'it'],
+      'information systems': ['is', 'information technology', 'it'],
+      'information technology': ['is', 'information systems', 'it'],
+      'it': ['is', 'information systems', 'information technology'],
+      'legal': ['leg'],
+      'leg': ['legal'],
+      'procurement': ['proc', 'pr', 'lvm-pur'],
+      'proc': ['procurement', 'pr', 'lvm-pur'],
+      'pr': ['procurement', 'proc', 'lvm-pur'],
+      'lvm-pur': ['procurement', 'proc', 'pr']
+    };
+    
+    // Check if departments match directly or through mappings
+    if (normalized === targetDepartment.toLowerCase()) {
+      return true;
+    }
+    
+    // Check through mappings
+    const userDeptVariations = departmentMappings[normalized] || [];
+    const targetDeptVariations = departmentMappings[targetDepartment.toLowerCase()] || [];
+    
+    return userDeptVariations.includes(targetDepartment.toLowerCase()) ||
+           targetDeptVariations.includes(normalized) ||
+           userDeptVariations.some(variation => 
+             targetDeptVariations.includes(variation)
+           );
+  };
+
   // Senior managers can approve their own department
-  if (isUserSupervisor(userRole) && userDepartment.toLowerCase() === targetDepartment.toLowerCase()) {
+  if (isUserSupervisor(userRole) && normalizeDepartment(userDepartment)) {
     return true;
   }
 

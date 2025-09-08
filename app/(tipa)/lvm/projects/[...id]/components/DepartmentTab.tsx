@@ -5,7 +5,7 @@ import { PDFTools } from "@/components/PDFTools";
 import { SimpleDocumentViewer } from "@/components/SimpleDocumentViewer";
 import { Document, DOCUMENT_TYPES } from "../types/project";
 import { isRestrictedDocumentType } from "@/lib/documentAccess";
-import { canUploadToDepartment, canApproveDepartment } from "@/lib/rbac";
+import { canUploadToDepartment, canApproveDepartment, isUserSupervisor } from "@/lib/rbac";
 
 interface DepartmentTabProps {
   projectId: string;
@@ -70,16 +70,6 @@ export function DepartmentTab({
     project?.ownerId || ''
   );
 
-  // Debug logging for permission checks
-  console.log('DepartmentTab permission check:', {
-    userId: user?.id,
-    userRole: user?.role,
-    userDepartment: user?.department,
-    targetDepartment: department,
-    projectOwnerId: project?.ownerId,
-    canUpload,
-    canApprove
-  });
 
   // Check if this department has already been approved
   const getDepartmentApprovalStatus = () => {

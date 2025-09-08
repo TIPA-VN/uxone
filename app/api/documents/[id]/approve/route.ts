@@ -36,46 +36,39 @@ export async function PATCH(
     // Check if user has approval permissions based on role level
     const userRole = session.user.role?.toUpperCase() || 'STAFF';
     
-    // Debug logging
-    console.log('Document approval attempt:', {
-      userId: session.user.id,
-      userRole: userRole,
-      originalRole: session.user.role,
-      documentId: id
-    });
     
     // Define roles that can approve documents (Level 4 and above - Manager level and above)
     const canApproveRoles = [
       'ADMIN',
-      'GENERAL DIRECTOR', 'GENERAL MANAGER',
-      'ASSISTANT GENERAL MANAGER', 'ASSISTANT GENERAL MANAGER 2',
-      'SENIOR MANAGER', 'SENIOR MANAGER 2', 'ASSISTANT SENIOR MANAGER',
-      'MANAGER', 'MANAGER 2', 'ASSISTANT MANAGER', 'ASSISTANT MANAGER 2'
+      'GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 
+      'GENERAL_MANAGER', 'GENERAL MANAGER',
+      'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT GENERAL MANAGER', 
+      'ASSISTANT_GENERAL_MANAGER_2', 'ASSISTANT GENERAL MANAGER 2',
+      'SENIOR_MANAGER', 'SENIOR MANAGER', 
+      'SENIOR_MANAGER_2', 'SENIOR MANAGER 2', 
+      'ASSISTANT_SENIOR_MANAGER', 'ASSISTANT SENIOR MANAGER',
+      'MANAGER', 'MANAGER_2', 'MANAGER 2', 
+      'ASSISTANT_MANAGER', 'ASSISTANT MANAGER', 
+      'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2'
     ];
     
     const canApprove = canApproveRoles.includes(userRole);
     
-    console.log('Approval check:', {
-      userRole,
-      canApprove,
-      canApproveRoles
-    });
-    
     if (!canApprove) {
       return NextResponse.json({ 
         error: "Insufficient permissions to approve documents",
-        message: `Your role (${userRole}) does not have document approval permissions. Required: Manager level or above (Level 4+). Supervisor level roles can only read documents.`,
-        userRole: userRole,
-        debug: {
-          originalRole: session.user.role,
-          normalizedRole: userRole,
-          canApproveRoles: canApproveRoles
-        }
+        message: `Your role (${userRole}) does not have document approval permissions. Required: Manager level or above (Level 4+). Supervisor level roles can only read documents.`
       }, { status: 403 });
     }
 
     // For non-executive users, check if they are authorized for this document's department
-    const isExecutive = ['ADMIN', 'GENERAL DIRECTOR', 'GENERAL MANAGER', 'ASSISTANT GENERAL MANAGER', 'ASSISTANT GENERAL MANAGER 2'].includes(userRole);
+    const isExecutive = [
+      'ADMIN', 
+      'GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 
+      'GENERAL_MANAGER', 'GENERAL MANAGER', 
+      'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT GENERAL MANAGER', 
+      'ASSISTANT_GENERAL_MANAGER_2', 'ASSISTANT GENERAL MANAGER 2'
+    ].includes(userRole);
     const userDept = (session.user.department || '').toUpperCase();
     const docDept = (document.department || '').toUpperCase();
     
@@ -83,9 +76,7 @@ export async function PATCH(
     if (!isExecutive && userDept !== docDept) {
       return NextResponse.json({ 
         error: "Not authorized for this department",
-        message: `You can only approve documents from your department (${userDept}). This document belongs to ${docDept}.`,
-        userDepartment: userDept,
-        documentDepartment: docDept
+        message: `You can only approve documents from your department (${userDept}). This document belongs to ${docDept}.`
       }, { status: 403 });
     }
 
