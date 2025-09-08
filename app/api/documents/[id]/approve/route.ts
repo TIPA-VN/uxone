@@ -33,21 +33,41 @@ export async function PATCH(
 
 
 
-    // Check if user has approval permissions (SENIOR MANAGER or ADMIN)
-    const isAdmin = session.user.role?.toUpperCase() === "ADMIN";
-    const isSeniorManager = session.user.role?.toUpperCase() === "SENIOR MANAGER" || 
-                           session.user.role?.toUpperCase() === "SENIOR_MANAGER";
+    // Check if user has approval permissions based on role level
+    const userRole = session.user.role?.toUpperCase() || 'STAFF';
     
-    if (!isAdmin && !isSeniorManager) {
-      return NextResponse.json({ error: "Insufficient permissions to approve documents" }, { status: 403 });
+    // Define roles that can approve documents (Level 4 and above - Manager level and above)
+    const canApproveRoles = [
+      'ADMIN',
+      'GENERAL_DIRECTOR', 'GENERAL_MANAGER',
+      'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2',
+      'SENIOR_MANAGER', 'SENIOR_MANAGER_2', 'ASSISTANT_SENIOR_MANAGER',
+      'MANAGER', 'MANAGER_2', 'ASSISTANT_MANAGER', 'ASSISTANT_MANAGER_2'
+    ];
+    
+    const canApprove = canApproveRoles.includes(userRole);
+    
+    if (!canApprove) {
+      return NextResponse.json({ 
+        error: "Insufficient permissions to approve documents",
+        message: `Your role (${userRole}) does not have document approval permissions. Required: Manager level or above (Level 4+). Supervisor level roles can only read documents.`,
+        userRole: userRole
+      }, { status: 403 });
     }
 
-    // For non-admin users, check if they are the department head for this document's department
+    // For non-executive users, check if they are authorized for this document's department
+    const isExecutive = ['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT_GENERAL_MANAGER_2'].includes(userRole);
     const userDept = (session.user.department || '').toUpperCase();
     const docDept = (document.department || '').toUpperCase();
     
-    if (!isAdmin && userDept !== docDept) {
-      return NextResponse.json({ error: "Not authorized for this department" }, { status: 403 });
+    // Only check department for non-executive users
+    if (!isExecutive && userDept !== docDept) {
+      return NextResponse.json({ 
+        error: "Not authorized for this department",
+        message: `You can only approve documents from your department (${userDept}). This document belongs to ${docDept}.`,
+        userDepartment: userDept,
+        documentDepartment: docDept
+      }, { status: 403 });
     }
 
     // Update document metadata to mark as approved

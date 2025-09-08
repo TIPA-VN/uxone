@@ -313,7 +313,8 @@ export const APP_CONFIG = {
         "tasks:read", "tasks:write", "tasks:delete",
         "team:read", "team:write", "reports:read", "analytics:read",
         "userManagement", "systemSettings",
-        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:delete", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports", "helpdesk:admin"
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:delete", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports", "helpdesk:admin",
+        "documents:read", "documents:write", "documents:approve", "documents:delete"
       ] as Permission[]
     },
     ASSISTANT_GENERAL_MANAGER_2: {
@@ -341,7 +342,8 @@ export const APP_CONFIG = {
         "tasks:read", "tasks:write", "tasks:delete",
         "team:read", "team:write", "reports:read", "analytics:read",
         "userManagement",
-        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:delete", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports", "helpdesk:admin"
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:delete", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports", "helpdesk:admin",
+        "documents:read", "documents:write", "documents:approve", "documents:delete"
       ] as Permission[]
     },
     SENIOR_MANAGER_2: {
@@ -380,7 +382,8 @@ export const APP_CONFIG = {
         "projects:read", "projects:write",
         "tasks:read", "tasks:write",
         "team:read", "reports:read",
-        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports"
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve", "helpdesk:escalate", "helpdesk:reports",
+        "documents:read", "documents:write", "documents:approve"
       ] as Permission[]
     },
     MANAGER_2: {
@@ -430,7 +433,8 @@ export const APP_CONFIG = {
         "projects:read",
         "tasks:read", "tasks:write",
         "team:read",
-        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve",
+        "documents:read"
       ] as Permission[]
     },
     SUPERVISOR_2: {
@@ -442,7 +446,8 @@ export const APP_CONFIG = {
         "projects:read",
         "tasks:read", "tasks:write",
         "team:read",
-        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve"
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:assign", "helpdesk:resolve",
+        "documents:read"
       ] as Permission[]
     },
     LINE_LEADER: {
@@ -453,7 +458,8 @@ export const APP_CONFIG = {
       permissions: [
         "projects:read",
         "tasks:read", "tasks:write",
-        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:resolve"
+        "helpdesk:read", "helpdesk:create", "helpdesk:update", "helpdesk:resolve",
+        "documents:read"
       ] as Permission[]
     },
 

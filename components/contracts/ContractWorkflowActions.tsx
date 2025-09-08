@@ -11,7 +11,11 @@ import {
   AlertTriangle,
   UserCheck,
   FileText,
-  Unlock
+  Unlock,
+  Info,
+  Shield,
+  Play,
+  Pause
 } from 'lucide-react';
 
 interface ContractWorkflowActionsProps {
@@ -29,6 +33,193 @@ interface ApprovalRequest {
   approvedAt?: string;
 }
 
+// Helper functions for approval management
+const getApproverRole = (level: number): string => {
+  const roleMap: { [key: number]: string } = {
+    1: 'Department Manager',
+    2: 'Senior Manager', 
+    3: 'General Manager',
+    4: 'Executive Director'
+  };
+  return roleMap[level] || `Level ${level} Approver`;
+};
+
+const canUserApproveAtLevel = (userRole: string, level: number): boolean => {
+  // Define role hierarchy for approval levels
+  const approvalLevels: { [key: string]: number } = {
+    'ADMIN': 4,
+    'GENERAL_DIRECTOR': 4,
+    'GENERAL_MANAGER': 3,
+    'ASSISTANT_GENERAL_MANAGER': 3,
+    'ASSISTANT_GENERAL_MANAGER_2': 3,
+    'SENIOR_MANAGER': 2,
+    'SENIOR_MANAGER_2': 2,
+    'ASSISTANT_SENIOR_MANAGER': 2,
+    'MANAGER': 1,
+    'MANAGER_2': 1,
+    'ASSISTANT_MANAGER': 1,
+    'ASSISTANT_MANAGER_2': 1
+  };
+  
+  const userMaxLevel = approvalLevels[userRole] || 0;
+  return userMaxLevel >= level;
+};
+
+const getActionContext = (action: string, contract: any, userRole: string) => {
+  const contexts: { [key: string]: any } = {
+    'SEND_REVIEW': {
+      title: 'Send for Review',
+      description: 'Submit this contract for approval workflow',
+      requirements: 'Contract must be in DRAFT status',
+      nextStep: 'Contract will be sent to Level 1 approvers',
+      icon: Send,
+      color: 'blue'
+    },
+    'APPROVE': {
+      title: `Approve Level ${contract.currentApprovalLevel}`,
+      description: `Approve this contract at Level ${contract.currentApprovalLevel} of ${contract.totalApprovalLevels}`,
+      requirements: 'You must be authorized to approve at this level',
+      nextStep: contract.currentApprovalLevel === contract.totalApprovalLevels 
+        ? 'Contract will be fully approved and ready for signing'
+        : `Contract will advance to Level ${contract.currentApprovalLevel + 1}`,
+      icon: CheckCircle,
+      color: 'green'
+    },
+    'REJECT': {
+      title: 'Reject Contract',
+      description: 'Reject this contract and terminate the approval process',
+      requirements: 'You must be authorized to reject at this level',
+      nextStep: 'Contract will be terminated and cannot be resubmitted',
+      icon: XCircle,
+      color: 'red'
+    },
+    'SIGN': {
+      title: 'Sign Contract',
+      description: 'Sign the approved contract to make it legally binding',
+      requirements: 'Contract must be fully approved',
+      nextStep: 'Contract will be signed and ready for execution',
+      icon: PenTool,
+      color: 'indigo'
+    },
+    'EXECUTE': {
+      title: 'Start Execution',
+      description: 'Begin executing the signed contract',
+      requirements: 'Contract must be signed',
+      nextStep: 'Contract execution will begin',
+      icon: Play,
+      color: 'purple'
+    },
+    'COMPLETE': {
+      title: 'Mark Complete',
+      description: 'Mark the contract as completed',
+      requirements: 'Contract must be in execution',
+      nextStep: 'Contract will be marked as completed',
+      icon: CheckCircle,
+      color: 'green'
+    },
+    'HOLD': {
+      title: 'Put on Hold',
+      description: 'Temporarily pause contract execution',
+      requirements: 'Contract must be in execution',
+      nextStep: 'Contract execution will be paused',
+      icon: Pause,
+      color: 'yellow'
+    },
+    'UNHOLD': {
+      title: 'Resume',
+      description: 'Resume contract execution from hold',
+      requirements: 'Contract must be on hold',
+      nextStep: 'Contract execution will resume',
+      icon: Play,
+      color: 'green'
+    },
+    'REOPEN': {
+      title: 'Reopen for Editing',
+      description: 'Reopen the contract for editing',
+      requirements: 'Contract must be approved but not signed',
+      nextStep: 'Contract will return to draft status',
+      icon: Unlock,
+      color: 'yellow'
+    }
+  };
+  
+  return contexts[action] || {};
+};
+
+// Approval Progress Component
+const ApprovalProgress = ({ contract, currentUserRole }: { contract: any, currentUserRole: string }) => {
+  const levels = Array.from({ length: contract.totalApprovalLevels }, (_, i) => i + 1);
+  
+  return (
+    <div className="approval-progress bg-white shadow rounded-lg">
+      <div className="px-4 py-3 border-b border-gray-200">
+        <h4 className="text-sm font-medium text-gray-900">Approval Progress</h4>
+        <p className="text-xs text-gray-500 mt-1">Each level must be approved before advancing</p>
+      </div>
+      <div className="p-4">
+        <div className="space-y-3">
+          {levels.map((level) => {
+            const isCompleted = level < contract.currentApprovalLevel;
+            const isCurrent = level === contract.currentApprovalLevel;
+            const isPending = level > contract.currentApprovalLevel;
+            const canApprove = canUserApproveAtLevel(currentUserRole, level);
+            
+            return (
+              <div key={level} className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                isCompleted ? 'bg-green-50 border-green-200' :
+                isCurrent ? 'bg-blue-50 border-blue-200' :
+                'bg-gray-50 border-gray-200'
+              }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  isCompleted ? 'bg-green-500 text-white' :
+                  isCurrent ? 'bg-blue-500 text-white' :
+                  'bg-gray-300 text-gray-600'
+                }`}>
+                  {isCompleted ? '✓' : level}
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900">
+                    Level {level} - {getApproverRole(level)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {isCompleted ? '✓ Approved' : 
+                     isCurrent ? (canApprove ? '⏳ Pending your approval' : '⏳ Waiting for approval') : 
+                     '⏸️ Waiting for previous levels'}
+                  </div>
+                </div>
+                {isCurrent && canApprove && (
+                  <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium">
+                    Action Required
+                  </div>
+                )}
+                {isCurrent && !canApprove && (
+                  <div className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                    Not Authorized
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+            <span>Overall Progress</span>
+            <span>{contract.currentApprovalLevel - 1} of {contract.totalApprovalLevels} levels completed</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${((contract.currentApprovalLevel - 1) / contract.totalApprovalLevels) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ContractWorkflowActions({ 
   project, 
   onStatusChange
@@ -41,6 +232,7 @@ export default function ContractWorkflowActions({
   const [showApprovalHistory, setShowApprovalHistory] = useState(false);
   const [approvalHistory, setApprovalHistory] = useState<ApprovalRequest[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string>('STAFF');
 
   // Fetch approval history from API
   const fetchApprovalHistory = async () => {
@@ -78,6 +270,13 @@ export default function ContractWorkflowActions({
       fetchApprovalHistory();
     }
   }, [showApprovalHistory]);
+
+  // Get current user role (you might need to pass this as a prop or get it from context)
+  useEffect(() => {
+    // This is a placeholder - you should get the actual user role from your auth context
+    // For now, we'll use a default role, but in production you'd get this from session/auth
+    setCurrentUserRole('MANAGER'); // This should be replaced with actual user role
+  }, []);
 
   if (!project.contractDetails) {
     return null;
@@ -167,58 +366,109 @@ export default function ContractWorkflowActions({
 
   const getAvailableActions = () => {
     const actions = [];
+    const currentLevel = contract.currentApprovalLevel || 1;
+    const totalLevels = contract.totalApprovalLevels || 3;
     
     switch (currentStatus) {
       case 'DRAFT':
-        actions.push(
-          { key: 'SEND_REVIEW', label: 'Send for Review', icon: Send, color: 'blue', action: () => handleAction('SEND_REVIEW') }
-        );
+        actions.push({
+          key: 'SEND_REVIEW',
+          label: 'Send for Review',
+          icon: Send,
+          color: 'blue',
+          action: () => handleAction('SEND_REVIEW'),
+          context: getActionContext('SEND_REVIEW', contract, currentUserRole)
+        });
         break;
-      case 'REVIEW':
-        // Show approval level and appropriate actions
-        const currentLevel = contract.currentApprovalLevel || 1;
-        const totalLevels = contract.totalApprovalLevels || 3;
         
-        if (currentLevel <= totalLevels) {
-          actions.push(
-            { 
-              key: 'APPROVE', 
-              label: `Approve (Level ${currentLevel} of ${totalLevels})`, 
-              icon: CheckCircle, 
-              color: 'green', 
-              action: () => handleAction('APPROVE') 
-            },
-            { 
-              key: 'REJECT', 
-              label: 'Reject & Terminate', 
-              icon: XCircle, 
-              color: 'red', 
-              action: () => handleAction('REJECT') 
-            }
-          );
+      case 'REVIEW':
+        // Check if user can approve at current level
+        if (canUserApproveAtLevel(currentUserRole, currentLevel)) {
+          actions.push({
+            key: 'APPROVE',
+            label: `Approve Level ${currentLevel}`,
+            icon: CheckCircle,
+            color: 'green',
+            action: () => handleAction('APPROVE'),
+            context: getActionContext('APPROVE', contract, currentUserRole)
+          });
+        }
+        
+        // Check if user can reject at current level
+        if (canUserApproveAtLevel(currentUserRole, currentLevel)) {
+          actions.push({
+            key: 'REJECT',
+            label: 'Reject Contract',
+            icon: XCircle,
+            color: 'red',
+            action: () => handleAction('REJECT'),
+            context: getActionContext('REJECT', contract, currentUserRole)
+          });
         }
         break;
+        
       case 'APPROVED':
         actions.push(
-          { key: 'SIGN', label: 'Sign Contract', icon: PenTool, color: 'indigo', action: () => handleAction('SIGN') },
-          { key: 'REOPEN', label: 'Reopen for Editing', icon: Unlock, color: 'yellow', action: () => handleAction('REOPEN') }
+          {
+            key: 'SIGN',
+            label: 'Sign Contract',
+            icon: PenTool,
+            color: 'indigo',
+            action: () => handleAction('SIGN'),
+            context: getActionContext('SIGN', contract, currentUserRole)
+          },
+          {
+            key: 'REOPEN',
+            label: 'Reopen for Editing',
+            icon: Unlock,
+            color: 'yellow',
+            action: () => handleAction('REOPEN'),
+            context: getActionContext('REOPEN', contract, currentUserRole)
+          }
         );
         break;
+        
       case 'SIGNED':
-        actions.push(
-          { key: 'EXECUTE', label: 'Start Execution', icon: Play, color: 'purple', action: () => handleAction('EXECUTE') }
-        );
+        actions.push({
+          key: 'EXECUTE',
+          label: 'Start Execution',
+          icon: Play,
+          color: 'purple',
+          action: () => handleAction('EXECUTE'),
+          context: getActionContext('EXECUTE', contract, currentUserRole)
+        });
         break;
+        
       case 'EXECUTING':
         actions.push(
-          { key: 'COMPLETE', label: 'Mark Complete', icon: CheckCircle, color: 'green', action: () => handleAction('COMPLETE') },
-          { key: 'HOLD', label: 'Put on Hold', icon: Pause, color: 'yellow', action: () => handleAction('HOLD') }
+          {
+            key: 'COMPLETE',
+            label: 'Mark Complete',
+            icon: CheckCircle,
+            color: 'green',
+            action: () => handleAction('COMPLETE'),
+            context: getActionContext('COMPLETE', contract, currentUserRole)
+          },
+          {
+            key: 'HOLD',
+            label: 'Put on Hold',
+            icon: Pause,
+            color: 'yellow',
+            action: () => handleAction('HOLD'),
+            context: getActionContext('HOLD', contract, currentUserRole)
+          }
         );
         break;
+        
       case 'ON_HOLD':
-        actions.push(
-          { key: 'UNHOLD', label: 'Resume', icon: Play, color: 'green', action: () => handleAction('UNHOLD') }
-        );
+        actions.push({
+          key: 'UNHOLD',
+          label: 'Resume',
+          icon: Play,
+          color: 'green',
+          action: () => handleAction('UNHOLD'),
+          context: getActionContext('UNHOLD', contract, currentUserRole)
+        });
         break;
     }
     
@@ -275,13 +525,15 @@ export default function ContractWorkflowActions({
             Manage contract approval and execution workflow
           </p>
         </div>
-        <button
-          onClick={() => setShowApprovalHistory(!showApprovalHistory)}
-          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <FileText className="w-4 h-4 mr-2" />
-          Approval History
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setShowApprovalHistory(!showApprovalHistory)}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Approval History
+          </button>
+        </div>
       </div>
 
       {/* Message Display */}
@@ -333,29 +585,13 @@ export default function ContractWorkflowActions({
               Last updated: {formatDate(new Date().toISOString())}
             </div>
           </div>
-          
-          {/* Approval Progress Bar for REVIEW status */}
-          {currentStatus === 'REVIEW' && (
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                <span>Approval Progress</span>
-                <span>{contract.currentApprovalLevel || 1} of {contract.totalApprovalLevels || 3} levels</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((contract.currentApprovalLevel || 1) / (contract.totalApprovalLevels || 3)) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Level 1</span>
-                <span>Level 2</span>
-                <span>Level 3</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Approval Progress - Show for REVIEW status */}
+      {currentStatus === 'REVIEW' && (
+        <ApprovalProgress contract={contract} currentUserRole={currentUserRole} />
+      )}
 
       {/* Available Actions */}
       {availableActions.length > 0 && (
@@ -371,26 +607,62 @@ export default function ContractWorkflowActions({
             </div>
           </div>
           <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {availableActions.map((action) => (
-                <button
-                  key={action.key}
-                  onClick={action.action}
-                  disabled={isProcessing}
-                  className={`flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    action.color === 'blue' ? 'text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-200' :
-                    action.color === 'green' ? 'text-green-700 bg-green-50 hover:bg-green-100 border-green-200' :
-                    action.color === 'red' ? 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200' :
-                    action.color === 'purple' ? 'text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200' :
-                    action.color === 'indigo' ? 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200' :
-                    action.color === 'yellow' ? 'text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border-yellow-200' :
-                    'text-gray-700 bg-gray-50 hover:bg-gray-100 border-gray-200'
-                  }`}
-                >
-                  <action.icon className="w-4 h-4 mr-2" />
-                  {action.label}
-                </button>
-              ))}
+            <div className="space-y-4">
+              {availableActions.map((action) => {
+                const context = action.context;
+                const canPerform = canUserApproveAtLevel(currentUserRole, contract.currentApprovalLevel || 1) || 
+                                 action.key === 'SEND_REVIEW' || 
+                                 action.key === 'SIGN' || 
+                                 action.key === 'EXECUTE' || 
+                                 action.key === 'COMPLETE' || 
+                                 action.key === 'HOLD' || 
+                                 action.key === 'UNHOLD' || 
+                                 action.key === 'REOPEN';
+                
+                return (
+                  <div key={action.key} className="action-card border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start space-x-3">
+                      <button
+                        onClick={action.action}
+                        disabled={isProcessing || !canPerform}
+                        className={`flex items-center justify-center px-4 py-3 border rounded-lg shadow-sm text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          action.color === 'blue' ? 'text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-200' :
+                          action.color === 'green' ? 'text-green-700 bg-green-50 hover:bg-green-100 border-green-200' :
+                          action.color === 'red' ? 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200' :
+                          action.color === 'purple' ? 'text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200' :
+                          action.color === 'indigo' ? 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200' :
+                          action.color === 'yellow' ? 'text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border-yellow-200' :
+                          'text-gray-700 bg-gray-50 hover:bg-gray-100 border-gray-200'
+                        }`}
+                      >
+                        <action.icon className="w-4 h-4 mr-2" />
+                        {action.label}
+                      </button>
+                      
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {context.title}
+                        </div>
+                        <div className="text-sm text-gray-600 mb-2">
+                          {context.description}
+                        </div>
+                        <div className="text-xs text-gray-500 mb-1">
+                          <strong>Requirements:</strong> {context.requirements}
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          <strong>Next:</strong> {context.nextStep}
+                        </div>
+                        {!canPerform && (
+                          <div className="text-xs text-red-500 mt-2 flex items-center">
+                            <Shield className="w-3 h-3 mr-1" />
+                            You don't have permission to perform this action
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -401,6 +673,7 @@ export default function ContractWorkflowActions({
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-3 border-b border-gray-200">
             <h3 className="text-sm font-medium text-gray-900">Approval History</h3>
+            <p className="text-xs text-gray-500 mt-1">Complete timeline of contract approvals and decisions</p>
           </div>
           <div className="p-4">
             {isLoadingHistory ? (
@@ -409,42 +682,66 @@ export default function ContractWorkflowActions({
                 <p className="text-sm text-gray-600 mt-2">Loading approval history...</p>
               </div>
             ) : approvalHistory.length > 0 ? (
-              <div className="space-y-3">
-                {approvalHistory.map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-sm font-medium text-gray-900">
-                          {request.requestedBy}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {formatDate(request.requestedAt)}
-                        </span>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          request.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                          request.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {request.status}
-                        </span>
+              <div className="space-y-4">
+                {approvalHistory.map((request, index) => (
+                  <div key={request.id} className="approval-item border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        request.status === 'APPROVED' ? 'bg-green-500 text-white' : 
+                        request.status === 'REJECTED' ? 'bg-red-500 text-white' :
+                        'bg-yellow-500 text-white'
+                      }`}>
+                        {request.status === 'APPROVED' ? '✓' : 
+                         request.status === 'REJECTED' ? '✗' : '⏳'}
                       </div>
-                      {request.comment && (
-                        <p className="text-xs text-gray-600 mt-1">
-                          {request.comment}
-                        </p>
-                      )}
-                      {request.approvedBy && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Approved by {request.approvedBy} on {formatDate(request.approvedAt!)}
-                        </p>
-                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm font-medium text-gray-900">
+                              {request.requestedBy}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(request.requestedAt)}
+                            </span>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            request.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            request.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {request.status}
+                          </span>
+                        </div>
+                        
+                        {request.comment && (
+                          <div className="bg-gray-50 rounded-md p-3 mb-2">
+                            <p className="text-xs text-gray-600 font-medium mb-1">Comment:</p>
+                            <p className="text-sm text-gray-700">
+                              "{request.comment}"
+                            </p>
+                          </div>
+                        )}
+                        
+                        {request.approvedBy && request.approvedAt && (
+                          <div className="text-xs text-gray-500">
+                            <span className="font-medium">Finalized by:</span> {request.approvedBy} on {formatDate(request.approvedAt)}
+                          </div>
+                        )}
+                        
+                        {/* Show approval level if available */}
+                        <div className="text-xs text-blue-600 mt-1">
+                          Approval #{index + 1} in sequence
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-500">
-                <p className="text-sm">No approval history found</p>
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                <p className="text-sm font-medium">No approval history found</p>
+                <p className="text-xs mt-1">Approval history will appear here once the contract is sent for review</p>
               </div>
             )}
           </div>
@@ -495,9 +792,3 @@ export default function ContractWorkflowActions({
   );
 }
 
-// Missing Play icon component
-const Play = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);

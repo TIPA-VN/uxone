@@ -16,6 +16,15 @@ export async function POST(
     const requestBody = await request.json();
     const { action, comment } = requestBody;
 
+    // Get current user for role checking
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
         // Get the contract details
     const contractDetails = await prisma.contractDetails.findUnique({
       where: { id },
@@ -34,6 +43,27 @@ export async function POST(
     if (!contractDetails) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
+
+    // Helper function to check if user can approve at current level
+    const canUserApproveAtLevel = (userRole: string, level: number): boolean => {
+      const approvalLevels: { [key: string]: number } = {
+        'ADMIN': 4,
+        'GENERAL_DIRECTOR': 4,
+        'GENERAL_MANAGER': 3,
+        'ASSISTANT_GENERAL_MANAGER': 3,
+        'ASSISTANT_GENERAL_MANAGER_2': 3,
+        'SENIOR_MANAGER': 2,
+        'SENIOR_MANAGER_2': 2,
+        'ASSISTANT_SENIOR_MANAGER': 2,
+        'MANAGER': 1,
+        'MANAGER_2': 1,
+        'ASSISTANT_MANAGER': 1,
+        'ASSISTANT_MANAGER_2': 1
+      };
+      
+      const userMaxLevel = approvalLevels[userRole] || 0;
+      return userMaxLevel >= level;
+    };
 
         // Handle different actions
     switch (action) {
@@ -58,9 +88,9 @@ export async function POST(
 
       case 'APPROVE':
       case 'APPROVED':
-                // Check if already fully approved
+        // Check if already fully approved
         if (contractDetails.contractStatus === 'APPROVED') {
-                    return NextResponse.json({
+          return NextResponse.json({
             success: true,
             message: 'Contract is already approved',
             contract: contractDetails,
@@ -70,8 +100,18 @@ export async function POST(
           });
         }
 
-        // Simple approval logic - advance one level at a time
+        // Check if user has permission to approve at current level
         const currentLevel = contractDetails.currentApprovalLevel;
+        if (!canUserApproveAtLevel(currentUser.role || 'STAFF', currentLevel)) {
+          return NextResponse.json({
+            success: false,
+            error: 'Insufficient permissions',
+            message: `You don't have permission to approve at level ${currentLevel}. Required role level: ${currentLevel}`,
+            contract: contractDetails
+          }, { status: 403 });
+        }
+
+        // Simple approval logic - advance one level at a time
         const nextLevel = currentLevel + 1;
         const isComplete = nextLevel > contractDetails.totalApprovalLevels;
 
@@ -126,6 +166,17 @@ export async function POST(
 
       case 'REJECT':
       case 'REJECTED':
+        // Check if user has permission to reject at current level
+        const rejectLevel = contractDetails.currentApprovalLevel;
+        if (!canUserApproveAtLevel(currentUser.role || 'STAFF', rejectLevel)) {
+          return NextResponse.json({
+            success: false,
+            error: 'Insufficient permissions',
+            message: `You don't have permission to reject at level ${rejectLevel}. Required role level: ${rejectLevel}`,
+            contract: contractDetails
+          }, { status: 403 });
+        }
+
         await prisma.contractApproval.create({
           data: {
             contractId: id,
