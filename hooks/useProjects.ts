@@ -17,7 +17,8 @@ export const useProjects = () => {
         throw new Error('Failed to fetch projects');
       }
       const data = await res.json();
-      setProjects(data);
+      // Ensure we have an array even if API returns error objects
+      setProjects(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

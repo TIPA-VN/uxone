@@ -90,24 +90,28 @@ export default function DashboardPage() {
       const projectsData = await projectsRes.json();
       const tasksData = await tasksRes.json();
 
-      setProjects(projectsData);
-      setTasks(tasksData);
+      // Ensure we have arrays even if API returns error objects
+      const projectsArray = Array.isArray(projectsData) ? projectsData : [];
+      const tasksArray = Array.isArray(tasksData) ? tasksData : [];
 
-      // Calculate statistics
-      const myTasks = tasksData.filter((t: Task) => t.assigneeId === user?.id);
+      setProjects(projectsArray);
+      setTasks(tasksArray);
+
+      // Calculate statistics using safe arrays
+      const myTasks = tasksArray.filter((t: Task) => t.assigneeId === user?.id);
       
-      const totalHours = tasksData.reduce((sum: number, t: Task) => sum + (t.actualHours || 0), 0);
-      const estimatedHours = tasksData.reduce((sum: number, t: Task) => sum + (t.estimatedHours || 0), 0);
+      const totalHours = tasksArray.reduce((sum: number, t: Task) => sum + (t.actualHours || 0), 0);
+      const estimatedHours = tasksArray.reduce((sum: number, t: Task) => sum + (t.estimatedHours || 0), 0);
       const efficiency = estimatedHours > 0 ? Math.round((estimatedHours / totalHours) * 100) : 0;
 
       setStats({
-        totalProjects: projectsData.length,
-        activeProjects: projectsData.filter((p: Project) => p.status === 'ACTIVE').length,
-        completedProjects: projectsData.filter((p: Project) => p.status === 'COMPLETED').length,
-        totalTasks: tasksData.length,
+        totalProjects: projectsArray.length,
+        activeProjects: projectsArray.filter((p: Project) => p.status === 'ACTIVE').length,
+        completedProjects: projectsArray.filter((p: Project) => p.status === 'COMPLETED').length,
+        totalTasks: tasksArray.length,
         myTasks: myTasks.length,
-        completedTasks: tasksData.filter((t: Task) => t.status === 'COMPLETED').length,
-        overdueTasks: tasksData.filter((t: Task) => {
+        completedTasks: tasksArray.filter((t: Task) => t.status === 'COMPLETED').length,
+        overdueTasks: tasksArray.filter((t: Task) => {
           if (!t.dueDate || t.status === 'COMPLETED') return false;
           return new Date(t.dueDate) < new Date();
         }).length,

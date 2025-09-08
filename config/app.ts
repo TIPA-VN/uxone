@@ -66,6 +66,7 @@ export const APP_CONFIG = {
     MKT: "/lvm/marketing",         // Marketing - Marketing activities
     SALES: "/lvm/sales",           // Sales - Sales management
     OPS: "/lvm/operations",        // Operations - Operations management
+    LEGAL: "/lvm/legal",           // Legal - Legal affairs and compliance
     ADMIN: "/lvm/admin",           // Administration - Admin panel
     MFG: "/lvm/manufacturing",     // Manufacturing - General manufacturing operations
     "LVM-ME": "/lvm/manufacturing-engineering", // LVM Manufacturing Engineering - Process design
@@ -89,6 +90,7 @@ export const APP_CONFIG = {
     IS: "Information Systems (IS)",
     HELPDESK: "Helpdesk",
     SALES: "Sales",
+    LEGAL: "Legal (LEGAL)",
     "LVM-EXPAT": "LVM EXPATS"
   },
 
@@ -264,6 +266,15 @@ export const APP_CONFIG = {
       description: "LVM Expatriate team",
       isActive: true,
       sortOrder: 19
+    },
+    {
+      value: "LEGAL",
+      label: "Legal (LEGAL)",
+      code: "LEGAL",
+      color: "bg-slate-600",
+      description: "Legal affairs and compliance",
+      isActive: true,
+      sortOrder: 20
     }
   ] as const,
 
@@ -1675,7 +1686,7 @@ export const getDepartmentGroups = () => {
   APP_CONFIG.departments.forEach(dept => {
     if (['LOG', 'LVM-PUR', 'PC', 'PM', 'FM'].includes(dept.code)) {
       groups['Operations'].push(dept);
-    } else if (['CS', 'ACC', 'INV'].includes(dept.code)) {
+    } else if (['CS', 'ACC', 'INV', 'LEGAL'].includes(dept.code)) {
       groups['Support'].push(dept);
     } else if (['HR', 'LVM-EXPAT'].includes(dept.code)) {
       groups['Management'].push(dept);

@@ -17,7 +17,8 @@ export const useTasks = () => {
         throw new Error('Failed to fetch tasks');
       }
       const data = await res.json();
-      setTasks(data);
+      // Ensure we have an array even if API returns error objects
+      setTasks(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

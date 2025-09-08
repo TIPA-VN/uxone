@@ -306,6 +306,15 @@ export const DEPARTMENT_MAPPING: DepartmentMapping[] = [
     isActive: true,
     homePage: "/lvm/marketing",
     aliases: ["MKT"]
+  },
+  {
+    legacyName: "Legal",
+    uxoneCode: "LEGAL",
+    category: "support",
+    description: "Legal affairs and compliance",
+    isActive: true,
+    homePage: "/lvm/legal",
+    aliases: ["LEGAL", "LEG"]
   }
 ];
 
