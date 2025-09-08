@@ -75,24 +75,8 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
   try {
         const doc = new jsPDF('p', 'mm', 'a4');
     
-    // ENHANCED SOLUTION: Try to load Noto Sans font, fallback to helvetica
-    let fontLoaded = false;
-    
-    try {
-      // Try to load Noto Sans font from Google Fonts
-      const fontUrl = 'https://fonts.gstatic.com/s/notosans/v30/o-0IIpQlx3QUlC5A4PNr5TRA.woff2';
-      
-      // Try to add the font to jsPDF
-      doc.addFont(fontUrl, 'NotoSans', 'normal');
-      doc.addFont(fontUrl, 'NotoSans', 'bold');
-      doc.setFont('NotoSans', 'normal');
-      fontLoaded = true;
-          } catch (error) {
-            doc.setFont('helvetica', 'normal');
-    }
-    
-    // Store font status for later use
-    const useNotoSans = fontLoaded;
+    // Use built-in helvetica font for reliable PDF generation
+    doc.setFont('helvetica', 'normal');
     
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -119,13 +103,11 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     
     // Left column - Basic contract info
     if (options.contractNumber) {
-      doc.setFont('helvetica', 'normal'); // FORCE FONT
       doc.text(`Contract Number: ${options.contractNumber}`, leftColumn, yPosition);
       yPosition += 6;
     }
     
     if (options.counterparty) {
-      doc.setFont('helvetica', 'normal');
       // SMART TEXT PROCESSING: Convert Vietnamese to readable format
       const processedCounterparty = processVietnameseText(options.counterparty);
       doc.text(`Counterparty: ${processedCounterparty}`, leftColumn, yPosition);
@@ -158,7 +140,6 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     if (options.approvedBy && options.approvedAt) {
       // Use actual names instead of IDs
       const approverNames = options.approverNames || options.approvedBy;
-      doc.setFont('helvetica', 'normal');
       // SMART TEXT PROCESSING: Convert Vietnamese to readable format
       const processedApproverNames = approverNames.map(name => processVietnameseText(name));
       doc.text(`Approved By: ${processedApproverNames.join(', ')}`, rightColumn, rightY);
@@ -339,8 +320,7 @@ export async function generateContractPDF(options: PDFGenerationOptions): Promis
     if (options.approvedBy && options.approvedBy.length > 0) {
       options.approvedBy.forEach((approverId, index) => {
         const approverName = options.approverNames?.[index] || approverId;
-                        // SMART TEXT PROCESSING: Convert Vietnamese to readable format
-        doc.setFont('helvetica', 'normal');
+        // SMART TEXT PROCESSING: Convert Vietnamese to readable format
         const processedApproverName = processVietnameseText(approverName);
         doc.text(`Approver ${index + 1}: ${processedApproverName}`, margin, yPosition);
         yPosition += 6;

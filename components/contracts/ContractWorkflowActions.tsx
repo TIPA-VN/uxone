@@ -130,6 +130,12 @@ export default function ContractWorkflowActions({
         case 'COMPLETE':
           newStatus = 'COMPLETED';
           break;
+        case 'HOLD':
+          newStatus = 'ON_HOLD';
+          break;
+        case 'UNHOLD':
+          newStatus = 'EXECUTING';
+          break;
         case 'REOPEN':
           newStatus = 'DRAFT';
           break;
@@ -205,7 +211,13 @@ export default function ContractWorkflowActions({
         break;
       case 'EXECUTING':
         actions.push(
-          { key: 'COMPLETE', label: 'Mark Complete', icon: CheckCircle, color: 'green', action: () => handleAction('COMPLETE') }
+          { key: 'COMPLETE', label: 'Mark Complete', icon: CheckCircle, color: 'green', action: () => handleAction('COMPLETE') },
+          { key: 'HOLD', label: 'Put on Hold', icon: Pause, color: 'yellow', action: () => handleAction('HOLD') }
+        );
+        break;
+      case 'ON_HOLD':
+        actions.push(
+          { key: 'UNHOLD', label: 'Resume', icon: Play, color: 'green', action: () => handleAction('UNHOLD') }
         );
         break;
     }
@@ -222,6 +234,7 @@ export default function ContractWorkflowActions({
       case 'SIGNED': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
       case 'EXECUTING': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'COMPLETED': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'ON_HOLD': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -235,6 +248,7 @@ export default function ContractWorkflowActions({
       case 'SIGNED': return <PenTool className="w-4 h-4" />;
       case 'EXECUTING': return <Clock className="w-4 h-4" />;
       case 'COMPLETED': return <CheckCircle className="w-4 h-4" />;
+      case 'ON_HOLD': return <Pause className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
   };

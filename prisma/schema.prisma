@@ -56,6 +56,11 @@ model User {
   // NEW: Contract project relationships
   contractProjects         Project[]                 @relation("ContractProjectOwner")
   contractProjectApprovers ContractDetails[]         @relation("ContractProjectApprover")
+  
+  // NEW: Contract lifecycle relationships
+  contractsOnHold          ContractDetails[]         @relation("ContractHoldBy")
+  contractsTerminated      ContractDetails[]         @relation("ContractTerminatedBy")
+  contractLifecycleEvents  ContractLifecycleEvent[]  @relation("ContractLifecycleEventUser")
 
   @@map("users")
 }
@@ -232,6 +237,24 @@ model ContractDetails {
   currentApproverId    String?
   currentApprover      User?              @relation("ContractProjectApprover", fields: [currentApproverId], references: [id])
   
+  // NEW: Lifecycle management fields
+  isOnHold             Boolean            @default(false)
+  holdReason           String?
+  holdDate             DateTime?
+  holdByUserId         String?
+  terminationReason    String?
+  terminationDate      DateTime?
+  terminatedByUserId   String?
+  expirationWarningDays Int?              @default(30)
+  autoRenewal          Boolean            @default(false)
+  renewalNoticeDays    Int?               @default(60)
+  lastExpirationNotice DateTime?
+  
+  // NEW: Lifecycle management relationships
+  holdByUser           User?              @relation("ContractHoldBy", fields: [holdByUserId], references: [id])
+  terminatedByUser     User?              @relation("ContractTerminatedBy", fields: [terminatedByUserId], references: [id])
+  lifecycleEvents      ContractLifecycleEvent[]
+  
   approvalHistory      ContractApproval[]
   document             Document?          @relation(fields: [documentId], references: [id], onDelete: Cascade)
   revisions            ContractRevision[]
@@ -243,6 +266,9 @@ model ContractDetails {
   addendumNumber       Int?               // Addendum sequence number (1, 2, 3, etc.)
   isAddendum           Boolean            @default(false)
 
+  @@index([expirationDate])
+  @@index([isOnHold])
+  @@index([contractStatus])
   @@map("contract_details")
 }
 
@@ -346,6 +372,24 @@ model DocumentChange {
   user       User              @relation("ChangeAuthor", fields: [userId], references: [id])
 
   @@map("document_changes")
+}
+
+model ContractLifecycleEvent {
+  id         String          @id @default(cuid())
+  contractId String
+  eventType  String          // HOLD, UNHOLD, TERMINATE, EXPIRE_WARNING, RENEWAL_NOTICE, etc.
+  eventDate  DateTime        @default(now())
+  userId     String
+  reason     String?
+  metadata   Json?
+  createdAt  DateTime        @default(now())
+  contract   ContractDetails @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  user       User            @relation("ContractLifecycleEventUser", fields: [userId], references: [id])
+
+  @@index([contractId])
+  @@index([eventType])
+  @@index([eventDate])
+  @@map("contract_lifecycle_events")
 }
 
 model Project {
@@ -1141,4 +1185,5 @@ enum ContractStatus {
   EXECUTING
   COMPLETED
   TERMINATED
+  ON_HOLD
 }
