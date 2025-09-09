@@ -18,6 +18,7 @@ import { TasksTab } from "./components/TasksTab";
 import { ProjectOverview } from "./components/ProjectOverview";
 import { DepartmentTab } from "./components/DepartmentTab";
 import { ProductionTab } from "./components/ProductionTab";
+import { DepartmentManager } from "./components/DepartmentManager";
 import EnhancedContractTab from "@/components/contracts/EnhancedContractTab";
 import AddendumLayout from "./addendum-layout";
 
@@ -236,6 +237,28 @@ export default function ProjectDetailsPage() {
                 onEditDueDates={() => setShowDueDateEditor(true)}
                 showDueDateEditor={showDueDateEditor}
               />
+              
+              {/* Department Management - Only show for project owner or managers */}
+              {(() => {
+                const isProjectOwner = project.ownerId === user?.id;
+                const isManager = user?.role && [
+                  'ADMIN', 'GENERAL_DIRECTOR', 'GENERAL MANAGER', 'GENERAL_MANAGER',
+                  'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT GENERAL MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'ASSISTANT GENERAL MANAGER 2',
+                  'SENIOR_MANAGER', 'SENIOR MANAGER', 'SENIOR_MANAGER_2', 'SENIOR MANAGER 2', 'ASSISTANT_SENIOR_MANAGER', 'ASSISTANT SENIOR MANAGER',
+                  'MANAGER', 'MANAGER_2', 'MANAGER 2', 'ASSISTANT_MANAGER', 'ASSISTANT MANAGER', 'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2'
+                ].includes(user.role.toUpperCase());
+                
+                return (isProjectOwner || isManager) && (
+                  <DepartmentManager
+                    projectId={projectId}
+                    currentDepartments={project.departments || []}
+                    onDepartmentsUpdated={(newDepartments) => {
+                      updateProject({ ...project, departments: newDepartments });
+                    }}
+                    user={user}
+                  />
+                );
+              })()}
             </div>
 
             {/* Right Column: Comments Section */}
