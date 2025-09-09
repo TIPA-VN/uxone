@@ -42,12 +42,14 @@ interface LegalReviewStatus {
 interface LegalReviewPanelProps {
   contractId: string;
   user: User;
+  readOnly?: boolean;
   onReviewStatusChange?: (status: LegalReviewStatus) => void;
 }
 
 export default function LegalReviewPanel({
   contractId,
   user,
+  readOnly = false,
   onReviewStatusChange
 }: LegalReviewPanelProps) {
   const [reviewStatus, setReviewStatus] = useState<LegalReviewStatus | null>(null);
@@ -248,7 +250,7 @@ export default function LegalReviewPanel({
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-3">
-          {reviewStatus.contractStatus === 'DRAFT' && (
+          {!readOnly && reviewStatus.contractStatus === 'DRAFT' && (
             <button
               onClick={() => setShowReviewForm(true)}
               disabled={actionLoading}
@@ -259,7 +261,7 @@ export default function LegalReviewPanel({
             </button>
           )}
 
-          {reviewStatus.contractStatus === 'REVIEW' && (
+          {!readOnly && reviewStatus.contractStatus === 'REVIEW' && (
             <>
               <button
                 onClick={() => setShowReviewForm(true)}

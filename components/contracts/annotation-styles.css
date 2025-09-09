@@ -1,0 +1,146 @@
+/* Document Annotation Styles */
+.annotation-highlight {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 2px;
+  padding: 1px 2px;
+  margin: 0 1px;
+}
+
+.annotation-highlight:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* Category-specific highlight colors */
+.annotation-highlight.general { background-color: #f3f4f6; }
+.annotation-highlight.legal { background-color: #e9d5ff; }
+.annotation-highlight.technical { background-color: #dbeafe; }
+.annotation-highlight.commercial { background-color: #dcfce7; }
+.annotation-highlight.compliance { background-color: #fef3c7; }
+.annotation-highlight.clarification { background-color: #e0e7ff; }
+.annotation-highlight.suggestion { background-color: #fce7f3; }
+.annotation-highlight.issue { background-color: #fee2e2; }
+
+/* Priority-specific styles */
+.annotation-highlight.urgent {
+  border: 2px solid #ef4444 !important;
+  animation: pulse 2s infinite;
+}
+
+.annotation-highlight.high {
+  border: 1px solid #f97316;
+}
+
+.annotation-highlight.normal {
+  border: 1px solid #3b82f6;
+}
+
+.annotation-highlight.low {
+  border: 1px solid #6b7280;
+}
+
+/* Pulse animation for urgent annotations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Tooltip styles for annotation preview */
+.annotation-tooltip {
+  position: absolute;
+  background: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.annotation-tooltip.show {
+  opacity: 1;
+}
+
+.annotation-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1f2937 transparent transparent transparent;
+}
+
+/* Annotation sidebar styles */
+.annotation-item {
+  transition: all 0.2s ease;
+}
+
+.annotation-item:hover {
+  transform: translateX(2px);
+}
+
+.annotation-item.selected {
+  border-left: 4px solid #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* Category icons */
+.category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* Priority badges */
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .annotation-highlight {
+    padding: 2px 4px;
+    margin: 0 2px;
+  }
+  
+  .annotation-tooltip {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+/* Print styles - hide annotations when printing */
+@media print {
+  .annotation-highlight {
+    background: none !important;
+    border: none !important;
+    color: inherit !important;
+  }
+  
+  .annotation-sidebar {
+    display: none !important;
+  }
+}

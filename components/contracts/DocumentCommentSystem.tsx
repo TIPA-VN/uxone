@@ -54,6 +54,7 @@ interface DocumentCommentSystemProps {
   documentContent: string;
   user: User;
   isLegalReview?: boolean;
+  readOnly?: boolean;
   onCommentAdded?: (comment: DocumentComment) => void;
   onCommentUpdated?: (comment: DocumentComment) => void;
   onCommentDeleted?: (commentId: string) => void;
@@ -82,6 +83,7 @@ export default function DocumentCommentSystem({
   documentContent,
   user,
   isLegalReview = false,
+  readOnly = false,
   onCommentAdded,
   onCommentUpdated,
   onCommentDeleted
@@ -378,7 +380,7 @@ export default function DocumentCommentSystem({
           </div>
 
           <div className="flex items-center space-x-1 ml-4">
-            {!isReply && (
+            {!isReply && !readOnly && (
               <button
                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
                 className="p-1 text-gray-400 hover:text-gray-600"
@@ -388,7 +390,7 @@ export default function DocumentCommentSystem({
               </button>
             )}
             
-            {isAuthor && (
+            {isAuthor && !readOnly && (
               <>
                 <button
                   onClick={() => {
@@ -430,33 +432,34 @@ export default function DocumentCommentSystem({
         )}
 
         {/* Reply form */}
-        {replyingTo === comment.id && (
-          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-            <div className="space-y-2">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Write a reply..."
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={() => setReplyingTo(null)}
-                  className="px-3 py-1 text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddComment}
-                  disabled={!newComment.trim()}
-                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Reply
-                </button>
+        {replyingTo === comment.id && !readOnly && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+              <div className="space-y-2">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Write a reply..."
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="px-3 py-1 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim()}
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Reply
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         )}
       </div>
     );
@@ -494,13 +497,15 @@ export default function DocumentCommentSystem({
               {showResolved ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               <span>{showResolved ? 'Hide' : 'Show'} resolved</span>
             </button>
-            <button
-              onClick={() => setShowCommentForm(!showCommentForm)}
-              className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Comment</span>
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setShowCommentForm(!showCommentForm)}
+                className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Comment</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -522,7 +527,7 @@ export default function DocumentCommentSystem({
       )}
 
       {/* Comment form */}
-      {showCommentForm && (
+      {showCommentForm && !readOnly && (
         <div ref={commentFormRef} className="p-4 border-b border-gray-200 bg-gray-50">
           <div className="space-y-3">
             {selectedText && (

@@ -256,6 +256,7 @@ export default function ProjectDetailsPage() {
                       updateProject({ ...project, departments: newDepartments });
                     }}
                     user={user}
+                    projectOwnerId={project.ownerId}
                   />
                 );
               })()}

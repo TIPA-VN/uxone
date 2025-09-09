@@ -76,18 +76,23 @@ export async function GET(request: NextRequest) {
 
     // Department-based filtering - all users see projects from their department
     // Managers can see all projects within their department, others see only their department
-    where.OR = [
-      { departments: { has: session.user.department } },
-      { owner: { department: session.user.department } },
-      { members: { some: { user: { department: session.user.department } } } }
-    ];
+    // Admin and General Director can see all projects
+    const isAdminOrGeneralDirector = ["ADMIN", "GENERAL_DIRECTOR"].includes(session.user.role);
+    
+    if (!isAdminOrGeneralDirector) {
+      where.OR = [
+        { departments: { has: session.user.department } },
+        { owner: { department: session.user.department } },
+        { members: { some: { user: { department: session.user.department } } } }
+      ];
+    }
 
     const include: {
       owner: { select: { id: boolean; name: boolean; username: boolean; department: boolean; departmentName: boolean } };
       _count: { select: { tasks: boolean; documents: boolean; comments: boolean; members: boolean } };
       tasks?: unknown;
       members?: unknown;
-      contractDetails?: boolean;
+      contractDetails?: { include: { parentContract: { include: { project: { select: { id: boolean; name: boolean } } } } } };
     } = {
       owner: {
         select: {

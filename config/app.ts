@@ -1484,8 +1484,8 @@ export const mapRoleToConfigKey = (roleValue: string): Role => {
 };
 
 export const hasPermission = (userRole: Role, permission: string) => {
-  // Special case: ADMIN role has all permissions
-  if (userRole === "ADMIN") {
+  // Special case: ADMIN and GENERAL_DIRECTOR roles have all permissions
+  if (userRole === "ADMIN" || userRole === "GENERAL_DIRECTOR") {
     return true;
   }
   
@@ -1494,8 +1494,8 @@ export const hasPermission = (userRole: Role, permission: string) => {
 };
 
 export const canAccessFeature = (userRole: Role, feature: keyof typeof APP_CONFIG.rbac.features) => {
-  // Special case: ADMIN role has access to all features
-  if (userRole === "ADMIN") {
+  // Special case: ADMIN and GENERAL_DIRECTOR roles have access to all features
+  if (userRole === "ADMIN" || userRole === "GENERAL_DIRECTOR") {
     return true;
   }
   
@@ -1504,8 +1504,8 @@ export const canAccessFeature = (userRole: Role, feature: keyof typeof APP_CONFI
 };
 
 export const canAccessPage = (userRole: string, page: keyof typeof APP_CONFIG.rbac.pages) => {
-  // Special case: ADMIN role has access to all pages
-  if (userRole === "ADMIN") {
+  // Special case: ADMIN and GENERAL_DIRECTOR roles have access to all pages
+  if (userRole === "ADMIN" || userRole === "GENERAL_DIRECTOR") {
     return true;
   }
   
@@ -1515,8 +1515,8 @@ export const canAccessPage = (userRole: string, page: keyof typeof APP_CONFIG.rb
 };
 
 export const canAccessApi = (userRole: Role, endpoint: keyof typeof APP_CONFIG.rbac.api, method: string) => {
-  // Special case: ADMIN role has access to all API endpoints
-  if (userRole === "ADMIN") {
+  // Special case: ADMIN and GENERAL_DIRECTOR roles have access to all API endpoints
+  if (userRole === "ADMIN" || userRole === "GENERAL_DIRECTOR") {
     return true;
   }
   

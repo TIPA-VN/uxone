@@ -2,7 +2,6 @@ import type { NextAuthConfig } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { verifyPassword } from '@/lib/hashPassword'
 import { authenticateUser, mapPositionToRole } from '@/lib/auth-middleware'
-import bcrypt from 'bcryptjs'
 
 export const runtime = 'nodejs'
 
@@ -13,8 +12,8 @@ const ADMIN_CREDENTIALS = {
   role: process.env.ADMIN_FALLBACK_ROLE || 'GENERAL DIRECTOR',
   name: process.env.ADMIN_FALLBACK_NAME || 'System Administrator',
   email: process.env.ADMIN_FALLBACK_EMAIL || 'admin@tipa.co.th',
-  department: process.env.ADMIN_FALLBACK_DEPARTMENT || 'IT',
-  departmentName: process.env.ADMIN_FALLBACK_DEPARTMENT_NAME || 'Information Technology'
+  department: process.env.ADMIN_FALLBACK_DEPARTMENT || 'LEGAL',
+  departmentName: process.env.ADMIN_FALLBACK_DEPARTMENT_NAME || 'Legal Department'
 }
 
 // Test accounts for emergency access when central API is completely down
@@ -105,44 +104,46 @@ export const authConfig = {
         }
 
         try {
-          // First, check if central API is available
+          // First, check if this is the admin fallback account
+          const isAdmin = await validateAdminCredentials(
+            credentials.username as string, 
+            credentials.password as string
+          )
+          
+          if (isAdmin) {
+            // Create a virtual admin user for emergency access
+            const virtualAdminUser = {
+              id: 'admin-fallback-' + Date.now(),
+              username: ADMIN_CREDENTIALS.username,
+              name: ADMIN_CREDENTIALS.name,
+              email: ADMIN_CREDENTIALS.email,
+              department: ADMIN_CREDENTIALS.department,
+              departmentName: ADMIN_CREDENTIALS.departmentName,
+              role: ADMIN_CREDENTIALS.role,
+              hashedPassword: process.env.ADMIN_FALLBACK_HASHED_PASSWORD || '',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+
+            return {
+              id: virtualAdminUser.id,
+              name: virtualAdminUser.name || virtualAdminUser.username,
+              email: virtualAdminUser.email || `${virtualAdminUser.username}@tipa.co.th`,
+              username: virtualAdminUser.username,
+              department: virtualAdminUser.department || 'LEGAL',
+              centralDepartment: virtualAdminUser.department || 'LEGAL',
+              departmentName: virtualAdminUser.departmentName || 'Legal Department',
+              role: virtualAdminUser.role || 'GENERAL DIRECTOR',
+              position: virtualAdminUser.departmentName || 'Legal Department',
+              isFallbackAuth: true, // Flag to indicate fallback authentication
+            }
+          }
+          
+          // Check if central API is available
           const centralApiAvailable = await isCentralApiAvailable()
           
-          // If central API is completely down, allow admin fallback and test accounts for emergency access
+          // If central API is completely down, allow test accounts for emergency access
           if (!centralApiAvailable) {
-              const isAdmin = await validateAdminCredentials(
-                credentials.username as string, 
-                credentials.password as string
-              )
-              
-              if (isAdmin) {
-                // Create a virtual admin user for emergency access
-                const virtualAdminUser = {
-                  id: 'admin-fallback-' + Date.now(),
-                  username: ADMIN_CREDENTIALS.username,
-                  name: ADMIN_CREDENTIALS.name,
-                  email: ADMIN_CREDENTIALS.email,
-                  department: ADMIN_CREDENTIALS.department,
-                  departmentName: ADMIN_CREDENTIALS.departmentName,
-                  role: ADMIN_CREDENTIALS.role,
-                  hashedPassword: process.env.ADMIN_FALLBACK_HASHED_PASSWORD || '',
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                };
-
-                return {
-                  id: virtualAdminUser.id,
-                  name: virtualAdminUser.name || virtualAdminUser.username,
-                  email: virtualAdminUser.email || `${virtualAdminUser.username}@tipa.co.th`,
-                  username: virtualAdminUser.username,
-                  department: virtualAdminUser.department || 'IT',
-                  centralDepartment: virtualAdminUser.department || 'IT',
-                  departmentName: virtualAdminUser.departmentName || 'Information Technology',
-                  role: virtualAdminUser.role || 'GENERAL DIRECTOR',
-                  position: virtualAdminUser.departmentName || 'Information Technology',
-                  isFallbackAuth: true, // Flag to indicate fallback authentication
-                }
-              }
               
               // Check for test accounts (only when central API is completely down)
               const testAccount = validateTestCredentials(

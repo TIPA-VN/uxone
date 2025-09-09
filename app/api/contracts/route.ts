@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const contractType = searchParams.get('contractType');
     const status = searchParams.get('status');
     const department = searchParams.get('department');
+    const includeLegalReview = searchParams.get('includeLegalReview') === 'true';
 
     // Build where clause
     const where: any = {};
@@ -23,27 +24,72 @@ export async function GET(req: NextRequest) {
     if (status) where.workflowState = status;
     if (department) where.department = department;
 
+    // Build include object
+    const include: any = {
+      contractDetails: true,
+      project: true,
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          department: true
+        }
+      },
+      finalizedDocument: true
+    };
+
+    // Add legal review data if requested
+    if (includeLegalReview) {
+      include.contractDetails = {
+        include: {
+          comments: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  username: true
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      };
+    }
+
     // Get contracts with related data
     const contracts = await prisma.document.findMany({
       where: {
         ...where,
         documentType: 'CONTRACT'
       },
-      include: {
-        contractDetails: true,
-        project: true,
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            department: true
-          }
-        },
-        finalizedDocument: true
-      },
+      include,
       orderBy: { updatedAt: 'desc' }
     });
+
+    // Transform contracts for legal page if includeLegalReview is true
+    if (includeLegalReview) {
+      const transformedContracts = contracts.map(contract => ({
+        id: contract.id,
+        contractNumber: contract.contractDetails?.contractNumber || 'N/A',
+        projectName: contract.project?.name || 'Unnamed Project',
+        counterparty: contract.contractDetails?.counterparty || 'N/A',
+        value: contract.contractDetails?.value || 0,
+        currency: contract.contractDetails?.currency || 'THB',
+        contractStatus: contract.contractDetails?.contractStatus || 'DRAFT',
+        legalReviewStatus: contract.contractDetails?.comments?.length > 0 ? 'IN_REVIEW' : 'PENDING',
+        createdAt: contract.createdAt.toISOString(),
+        dueDate: contract.contractDetails?.expirationDate?.toISOString(),
+        commentsCount: contract.contractDetails?.comments?.length || 0,
+        // Include full contract details for reference
+        contractDetails: contract.contractDetails,
+        project: contract.project,
+        owner: contract.owner
+      }));
+      return NextResponse.json(transformedContracts);
+    }
 
     return NextResponse.json(contracts);
   } catch (error) {

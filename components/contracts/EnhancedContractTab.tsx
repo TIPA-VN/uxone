@@ -10,6 +10,9 @@ import FinalizedDocumentTab from './FinalizedDocumentTab';
 import WorkflowProgressBar from './WorkflowProgressBar';
 import DocumentVersionTimeline from './DocumentVersionTimeline';
 import ContractVersionHistory from './ContractVersionHistory';
+import DocumentCommentSystem from './DocumentCommentSystem';
+import AnnotatedDocumentViewer from './AnnotatedDocumentViewer';
+import LegalReviewPanel from './LegalReviewPanel';
 
 import { 
   FileText, 
@@ -18,6 +21,8 @@ import {
   CheckCircle,
   History,
   Lock,
+  MessageSquare,
+  Scale,
 } from 'lucide-react';
 
 interface EnhancedContractTabProps {
@@ -33,7 +38,7 @@ interface EnhancedContractTabProps {
   };
 }
 
-type TabType = 'details' | 'document' | 'workflow' | 'finalized' | 'versions';
+type TabType = 'details' | 'document' | 'workflow' | 'legal-comments' | 'finalized' | 'versions';
 
 export default function EnhancedContractTab({ project, onUpdateContract, hideHeader = false, user }: EnhancedContractTabProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
@@ -241,6 +246,13 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
       description: 'Manage approval and execution workflow'
     },
     {
+      id: 'legal-comments' as TabType,
+      label: 'Legal Advice',
+      icon: MessageSquare,
+      description: 'Legal review, comments, and annotations',
+      disabled: !user || !project.contractDetails
+    },
+    {
       id: 'finalized' as TabType,
       label: 'Finalized Document',
       icon: CheckCircle,
@@ -321,6 +333,55 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
               onStatusChange={handleStatusChange}
               onRefresh={() => setWorkflowRefreshKey(prev => prev + 1)}
             />
+          )}
+          {activeTab === 'legal-comments' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <MessageSquare className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Legal Advice</h3>
+                    <p className="text-sm text-gray-600">Review, comment, and annotate contract documents</p>
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  {/* Annotated Document Viewer */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900 flex items-center space-x-2">
+                      <MessageSquare className="h-4 w-4 text-blue-600" />
+                      <span>Document with Annotations</span>
+                    </h4>
+                    <AnnotatedDocumentViewer
+                      contractId={project.contractDetails?.id || ''}
+                      documentContent={project.contractDetails?.document?.content || ''}
+                      user={user}
+                      readOnly={!user || (!user.department?.includes('LEGAL') && !['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(user.role || ''))}
+                      onAnnotationAdded={() => {
+                        // Refresh annotations if needed
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Legal Review Panel */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900 flex items-center space-x-2">
+                      <Scale className="h-4 w-4 text-purple-600" />
+                      <span>Legal Review Status</span>
+                    </h4>
+                    <LegalReviewPanel
+                      contractId={project.contractDetails?.id || ''}
+                      user={user}
+                      readOnly={!user || (!user.department?.includes('LEGAL') && !['ADMIN', 'GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(user.role || ''))}
+                      onStatusChange={() => {
+                        // Refresh legal review status if needed
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           {activeTab === 'finalized' && (
             <FinalizedDocumentTab project={project} />

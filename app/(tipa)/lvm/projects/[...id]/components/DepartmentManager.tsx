@@ -12,13 +12,15 @@ interface DepartmentManagerProps {
     role?: string;
     department?: string;
   } | null | undefined;
+  projectOwnerId?: string;
 }
 
 export function DepartmentManager({ 
   projectId, 
   currentDepartments, 
   onDepartmentsUpdated,
-  user 
+  user,
+  projectOwnerId
 }: DepartmentManagerProps) {
   const [departments, setDepartments] = useState<string[]>(currentDepartments);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
@@ -30,7 +32,7 @@ export function DepartmentManager({
   const canManageDepartments = () => {
     if (!user?.role) return false;
     
-    const isProjectOwner = user.id === projectId; // This should be compared with project owner ID
+    const isProjectOwner = projectOwnerId ? user.id === projectOwnerId : false;
     const isManager = [
       'ADMIN', 'GENERAL_DIRECTOR', 'GENERAL MANAGER', 'GENERAL_MANAGER',
       'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT GENERAL MANAGER', 'ASSISTANT_GENERAL_MANAGER_2', 'ASSISTANT GENERAL MANAGER 2',

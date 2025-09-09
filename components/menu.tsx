@@ -16,7 +16,7 @@ import { ImCalendar } from "react-icons/im";
 import { RiCustomerService2Fill } from "react-icons/ri";
 import { FaRegChartBar } from "react-icons/fa";
 import { MdTask } from "react-icons/md";
-import { Settings, Users, FileText } from "lucide-react";
+import { Settings, Users, FileText, Scale } from "lucide-react";
 import { canAccessPage, mapRoleToConfigKey } from "@/config/app";
 
 const menuItems = [
@@ -60,6 +60,11 @@ const menuItems = [
     route: "/lvm/demands",
     label: "Demands",
     icon: <FileText size={22} />,
+  },
+  {
+    route: "/lvm/legal",
+    label: "Legal",
+    icon: <Scale size={22} />,
   }
 ];
 
@@ -105,6 +110,11 @@ export default function Menu() {
     return hasManagerRole || hasMappedRole || isPRTeam;
   };
 
+  // Check if user has access to legal
+  const hasLegalAccess = session?.user?.department === 'LEGAL' || 
+                        session?.user?.role === 'ADMIN' || 
+                        session?.user?.role === 'GENERAL_DIRECTOR';
+
   return (
     <nav className="space-y-2">
       {menuItems.map((item) => {
@@ -115,6 +125,11 @@ export default function Menu() {
         
         // Skip demands menu item if user doesn't have access
         if (item.label === "Demands" && !hasDemandsAccess()) {
+          return null;
+        }
+        
+        // Skip legal menu item if user doesn't have access
+        if (item.route === "/lvm/legal" && !hasLegalAccess) {
           return null;
         }
         
