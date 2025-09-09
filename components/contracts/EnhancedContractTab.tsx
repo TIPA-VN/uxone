@@ -24,11 +24,18 @@ interface EnhancedContractTabProps {
   project: Project;
   onUpdateContract?: (updates: Partial<Project['contractDetails']>) => void;
   hideHeader?: boolean; // Add option to hide the header for addendum layout
+  user?: {
+    id: string;
+    name?: string;
+    username?: string;
+    department?: string;
+    role?: string;
+  };
 }
 
 type TabType = 'details' | 'document' | 'workflow' | 'finalized' | 'versions';
 
-export default function EnhancedContractTab({ project, onUpdateContract, hideHeader = false }: EnhancedContractTabProps) {
+export default function EnhancedContractTab({ project, onUpdateContract, hideHeader = false, user }: EnhancedContractTabProps) {
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [workflowRefreshKey, setWorkflowRefreshKey] = useState(0);
   // Removed addendum creator state - addendums managed separately
@@ -310,6 +317,7 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
             <ContractWorkflowActions
               key={workflowRefreshKey}
               project={project}
+              user={user}
               onStatusChange={handleStatusChange}
               onRefresh={() => setWorkflowRefreshKey(prev => prev + 1)}
             />

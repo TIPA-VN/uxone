@@ -368,6 +368,7 @@ export default function ProjectDetailsPage() {
 
                 <EnhancedContractTab
                   project={project}
+                  user={user}
                 onUpdateContract={async (contractData: Partial<Project['contractDetails']>) => {
                   try {
 

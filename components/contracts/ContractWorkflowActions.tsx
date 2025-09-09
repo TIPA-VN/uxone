@@ -15,12 +15,23 @@ import {
   Info,
   Shield,
   Play,
-  Pause
+  Pause,
+  MessageSquare,
+  Scale
 } from 'lucide-react';
+import DocumentCommentSystem from './DocumentCommentSystem';
+import LegalReviewPanel from './LegalReviewPanel';
 
 interface ContractWorkflowActionsProps {
   project: Project;
   onStatusChange?: (newStatus: string, comment?: string) => Promise<boolean>;
+  user?: {
+    id: string;
+    name?: string;
+    username?: string;
+    department?: string;
+    role?: string;
+  };
 }
 
 interface ApprovalRequest {
@@ -293,7 +304,8 @@ const ApprovalProgress = ({ contract, currentUserRole, userDepartment, contractD
 
 export default function ContractWorkflowActions({ 
   project, 
-  onStatusChange
+  onStatusChange,
+  user 
 }: ContractWorkflowActionsProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -302,6 +314,9 @@ export default function ContractWorkflowActions({
   const [message, setMessage] = useState('');
   const [showApprovalHistory, setShowApprovalHistory] = useState(false);
   const [approvalHistory, setApprovalHistory] = useState<ApprovalRequest[]>([]);
+  const [showComments, setShowComments] = useState(false);
+  const [showLegalReview, setShowLegalReview] = useState(false);
+  const [legalReviewStatus, setLegalReviewStatus] = useState<any>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<string>('STAFF');
 
@@ -865,6 +880,65 @@ export default function ContractWorkflowActions({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Comment System and Legal Review */}
+      {project.contractDetails && (
+        <div className="mt-6 space-y-6">
+          {/* Action Buttons for Comments and Legal Review */}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>{showComments ? 'Hide' : 'Show'} Comments</span>
+            </button>
+            
+            {(user?.department?.toUpperCase() === 'LEGAL' || 
+              user?.role === 'ADMIN' || 
+              ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(user?.role?.toUpperCase() || '')) && (
+              <button
+                onClick={() => setShowLegalReview(!showLegalReview)}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                <Scale className="w-4 h-4" />
+                <span>{showLegalReview ? 'Hide' : 'Show'} Legal Review</span>
+              </button>
+            )}
+          </div>
+
+          {/* Document Comment System */}
+          {showComments && user && (
+            <DocumentCommentSystem
+              contractId={project.contractDetails.id}
+              documentContent={project.contractDetails.document?.content || ''}
+              user={user}
+              isLegalReview={user?.department?.toUpperCase() === 'LEGAL'}
+              onCommentAdded={(comment) => {
+                console.log('Comment added:', comment);
+              }}
+              onCommentUpdated={(comment) => {
+                console.log('Comment updated:', comment);
+              }}
+              onCommentDeleted={(commentId) => {
+                console.log('Comment deleted:', commentId);
+              }}
+            />
+          )}
+
+          {/* Legal Review Panel */}
+          {showLegalReview && user && (
+            <LegalReviewPanel
+              contractId={project.contractDetails.id}
+              user={user}
+              onReviewStatusChange={(status) => {
+                setLegalReviewStatus(status);
+                console.log('Legal review status changed:', status);
+              }}
+            />
+          )}
         </div>
       )}
     </div>

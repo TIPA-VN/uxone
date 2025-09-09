@@ -48,6 +48,9 @@ model User {
   ownedTasks               Task[]                    @relation("TaskOwner")
   ticketAttachments        TicketAttachment[]        @relation("TicketAttachmentUploader")
   ticketComments           TicketComment[]           @relation("TicketCommentAuthor")
+  // Document commenting system
+  documentComments         DocumentComment[]         @relation("DocumentCommentAuthor")
+  resolvedComments         DocumentComment[]         @relation("DocumentCommentResolver")
   assignedTickets          Ticket[]                  @relation("TicketAssignee")
   createdTickets           Ticket[]                  @relation("TicketCreator")
   lastUpdatedTickets       Ticket[]                  @relation("TicketLastUpdatedBy")
@@ -177,6 +180,7 @@ model Document {
   owner             User               @relation("UserDocuments", fields: [ownerId], references: [id])
   parent            Document?          @relation("DocumentVersion", fields: [parentId], references: [id])
   versions          Document[]         @relation("DocumentVersion")
+  comments          DocumentComment[]  // Document commenting system
   project           Project?           @relation(fields: [projectId], references: [id])
   finalizedDocument FinalizedDocument? @relation("FinalizedDocument")
 
@@ -258,6 +262,7 @@ model ContractDetails {
   approvalHistory      ContractApproval[]
   document             Document?          @relation(fields: [documentId], references: [id], onDelete: Cascade)
   revisions            ContractRevision[]
+  comments             DocumentComment[]  // Document commenting system
   
   // NEW: Addendum support
   parentContractId     String?            // For addendums - points to original contract
@@ -1094,6 +1099,68 @@ enum ProjectType {
   SERVICE
   MAINTENANCE
   RESEARCH
+}
+
+// Document Comment System Models
+model DocumentComment {
+  id            String           @id @default(cuid())
+  documentId    String
+  contractId    String?          // Link to contract if applicable
+  content       String
+  authorId      String
+  author        User             @relation("DocumentCommentAuthor", fields: [authorId], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  isResolved    Boolean          @default(false)
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  resolvedByUser User?           @relation("DocumentCommentResolver", fields: [resolvedBy], references: [id])
+  
+  // Comment threading
+  parentId      String?
+  parent        DocumentComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies       DocumentComment[] @relation("CommentReplies")
+  
+  // Document positioning
+  selectionStart Int?
+  selectionEnd   Int?
+  selectedText   String?
+  
+  // Comment status and priority
+  status        CommentStatus    @default(ACTIVE)
+  priority      CommentPriority  @default(NORMAL)
+  category      CommentCategory  @default(GENERAL)
+  
+  // Document reference
+  document      Document?        @relation(fields: [documentId], references: [id])
+  contract      ContractDetails? @relation(fields: [contractId], references: [id])
+  
+  @@map("document_comments")
+}
+
+enum CommentStatus {
+  ACTIVE
+  RESOLVED
+  ARCHIVED
+  DELETED
+}
+
+enum CommentPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum CommentCategory {
+  GENERAL
+  LEGAL
+  TECHNICAL
+  COMMERCIAL
+  COMPLIANCE
+  CLARIFICATION
+  SUGGESTION
+  ISSUE
 }
 
 enum TaskStatus {
