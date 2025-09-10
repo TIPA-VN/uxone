@@ -81,6 +81,9 @@ export default function EnhancedContractTab({ project, onUpdateContract, hideHea
       // Map status to action for the backend
       let action = newStatus;
       switch (newStatus) {
+        case 'VERIFIED':
+          action = 'VERIFY';
+          break;
         case 'APPROVED':
           action = 'APPROVE';
           break;

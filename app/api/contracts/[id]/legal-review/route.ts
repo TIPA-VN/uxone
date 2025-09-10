@@ -82,15 +82,19 @@ export async function POST(
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      // Check if user is in legal department or has appropriate role
-      isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' ||
-                   currentUser.role === 'ADMIN' ||
-                   ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR', 'CHIEF_SPECIALIST', 'MANAGER', 'SENIOR_MANAGER', 'DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
+      // Check if user is LEGAL department Chief_Specialist (restricted access)
+      isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' && 
+                   currentUser.role === 'CHIEF_SPECIALIST';
+      
+      // Allow ADMIN access for system management
+      if (currentUser.role === 'ADMIN') {
+        isLegalUser = true;
+      }
     }
 
     if (!isLegalUser) {
       return NextResponse.json({ 
-        error: 'Access denied. Only legal department members can perform legal review.' 
+        error: 'Access denied. Only Chief_Specialist from LEGAL department can perform legal review.' 
       }, { status: 403 });
     }
 
@@ -284,16 +288,11 @@ export async function POST(
           }
         });
 
-        // Move contract to next approval level or approved
-        const nextLevel = contract.currentApprovalLevel + 1;
-        const isLastLevel = nextLevel > contract.totalApprovalLevels;
-
+        // Move contract to VERIFIED status (not approved yet)
         const finalContract = await prisma.contractDetails.update({
           where: { id: contractId },
           data: {
-            contractStatus: isLastLevel ? 'APPROVED' : 'DRAFT',
-            currentApprovalLevel: isLastLevel ? contract.currentApprovalLevel : nextLevel,
-            currentApproverId: null,
+            contractStatus: 'VERIFIED',
             updatedAt: new Date()
           }
         });
@@ -304,7 +303,7 @@ export async function POST(
             documentId: contract.documentId || null,
             contractId: contractId,
             legalReviewRequestId: currentReview.id,
-            content: `Legal review completed${comment ? `: ${comment}` : ''}`,
+            content: `Legal review completed and contract verified${comment ? `: ${comment}` : ''}`,
             authorId: currentUser.id,
             category: 'LEGAL',
             priority: 'NORMAL',
@@ -312,9 +311,34 @@ export async function POST(
           }
         });
 
+        // Send notification to AGD/GD for final approval
+        const executives = await prisma.user.findMany({
+          where: {
+            OR: [
+              { role: 'GENERAL_DIRECTOR' },
+              { role: 'GENERAL DIRECTOR' },
+              { role: 'ASSISTANT_GENERAL_DIRECTOR' },
+              { role: 'ASSISTANT GENERAL DIRECTOR' }
+            ]
+          }
+        });
+
+        for (const executive of executives) {
+          await prisma.notification.create({
+            data: {
+              userId: executive.id,
+              title: 'Contract Ready for Final Approval',
+              message: `Contract ${contract.contractNumber || 'N/A'} has been verified by legal and is ready for final approval`,
+              type: 'CONTRACT_FINAL_APPROVAL',
+              link: `/lvm/projects/${contract.projectId}?tab=CONTRACT`,
+              read: false
+            }
+          });
+        }
+
         return NextResponse.json({
           success: true,
-          message: isLastLevel ? 'Legal review completed. Contract is now approved.' : 'Legal review completed. Contract moved to next approval level.',
+          message: 'Legal review completed and contract verified. Ready for final approval by AGD/GD.',
           contract: finalContract,
           legalReviewRequest: completedReview
         });

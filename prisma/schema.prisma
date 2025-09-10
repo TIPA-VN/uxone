@@ -1294,6 +1294,7 @@ enum ChangeType {
 enum ContractStatus {
   DRAFT
   REVIEW
+  VERIFIED
   APPROVED
   SIGNED
   EXECUTING

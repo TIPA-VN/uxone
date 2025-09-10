@@ -80,13 +80,8 @@ export async function POST(
         }
       }
       
-      // Level 1 approval requires Purchasing Department Management or GM/AGM
+      // Level 1 approval - Any department manager or GM/AGM can approve
       if (level === 1) {
-        // Check if user is in Purchasing Department with management role
-        const isPurchasingDept = userDepartment?.toUpperCase() === 'LVM-PUR' || 
-                                userDepartment?.toUpperCase() === 'PROC' || 
-                                userDepartment?.toUpperCase() === 'PR';
-        
         const isManagementRole = [
           'GENERAL_MANAGER', 'GENERAL MANAGER',
           'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT GENERAL MANAGER',
@@ -96,14 +91,12 @@ export async function POST(
           'ASSISTANT_SENIOR_MANAGER', 'ASSISTANT SENIOR MANAGER',
           'MANAGER', 'MANAGER 2', 'MANAGER_2',
           'ASSISTANT_MANAGER', 'ASSISTANT MANAGER',
-          'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2'
+          'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2',
+          'CHIEF_SPECIALIST', 'DIRECTOR'
         ].includes(normalizedRole);
         
-        // Level 1: Purchasing Department Management OR any GM/AGM
-        return (isPurchasingDept && isManagementRole) || 
-               (normalizedRole === 'GENERAL_MANAGER' || normalizedRole === 'GENERAL MANAGER' ||
-                normalizedRole === 'ASSISTANT_GENERAL_MANAGER' || normalizedRole === 'ASSISTANT GENERAL MANAGER' ||
-                normalizedRole === 'ASSISTANT_GENERAL_MANAGER_2' || normalizedRole === 'ASSISTANT GENERAL MANAGER 2');
+        // Level 1: Any department manager or GM/AGM can approve
+        return isManagementRole;
       }
       
       // Default approval levels for other levels (2-4)
@@ -147,13 +140,107 @@ export async function POST(
           }
         });
 
+        // Send notification ONLY to LEGAL department Chief_Specialist
+        const legalChiefSpecialists = await prisma.user.findMany({
+          where: {
+            department: 'LEGAL',
+            role: 'CHIEF_SPECIALIST'
+          }
+        });
+
+        if (legalChiefSpecialists.length === 0) {
+          return NextResponse.json({
+            success: false,
+            error: 'No legal reviewers available',
+            message: 'No Chief_Specialist found in LEGAL department to review this contract'
+          }, { status: 400 });
+        }
+
+        // Create notifications for legal reviewers
+        for (const legalUser of legalChiefSpecialists) {
+          await prisma.notification.create({
+            data: {
+              userId: legalUser.id,
+              title: 'Contract Legal Review Required',
+              message: `Contract ${contractDetails.contractNumber || 'N/A'} requires legal review and verification`,
+              type: 'CONTRACT_LEGAL_REVIEW',
+              link: `/lvm/legal?contractId=${id}`,
+              read: false
+            }
+          });
+        }
+
         return NextResponse.json({
           success: true,
-          message: 'Contract sent for review',
+          message: 'Contract sent for legal review',
           contract: reviewContract,
           contractStatus: reviewContract.contractStatus,
           currentApprovalLevel: reviewContract.currentApprovalLevel,
           totalApprovalLevels: reviewContract.totalApprovalLevels
+        });
+
+      case 'VERIFY':
+      case 'VERIFIED':
+        // Legal verification - only LEGAL department Chief_Specialist can verify
+        if (currentUser.department?.toUpperCase() !== 'LEGAL' || currentUser.role !== 'CHIEF_SPECIALIST') {
+          return NextResponse.json({
+            success: false,
+            error: 'Insufficient permissions',
+            message: 'Only LEGAL department Chief_Specialist can verify contracts',
+            contract: contractDetails
+          }, { status: 403 });
+        }
+
+        // Check if contract is in REVIEW status
+        if (contractDetails.contractStatus !== 'REVIEW') {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid status',
+            message: 'Contract must be in REVIEW status to be verified',
+            contract: contractDetails
+          }, { status: 400 });
+        }
+
+        const verifiedContract = await prisma.contractDetails.update({
+          where: { id },
+          data: {
+            contractStatus: 'VERIFIED',
+            updatedAt: new Date()
+          }
+        });
+
+        // Send notification to AGD/GD for final approval
+        const executives = await prisma.user.findMany({
+          where: {
+            OR: [
+              { role: 'GENERAL_DIRECTOR' },
+              { role: 'GENERAL DIRECTOR' },
+              { role: 'ASSISTANT_GENERAL_DIRECTOR' },
+              { role: 'ASSISTANT GENERAL DIRECTOR' }
+            ]
+          }
+        });
+
+        for (const executive of executives) {
+          await prisma.notification.create({
+            data: {
+              userId: executive.id,
+              title: 'Contract Ready for Final Approval',
+              message: `Contract ${contractDetails.contractNumber || 'N/A'} has been verified by legal and is ready for final approval`,
+              type: 'CONTRACT_FINAL_APPROVAL',
+              link: `/lvm/projects/${contractDetails.projectId}?tab=CONTRACT`,
+              read: false
+            }
+          });
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: 'Contract verified by legal department',
+          contract: verifiedContract,
+          contractStatus: verifiedContract.contractStatus,
+          currentApprovalLevel: verifiedContract.currentApprovalLevel,
+          totalApprovalLevels: verifiedContract.totalApprovalLevels
         });
 
       case 'APPROVE':
@@ -168,6 +255,16 @@ export async function POST(
             currentApprovalLevel: contractDetails.currentApprovalLevel,
             totalApprovalLevels: contractDetails.totalApprovalLevels
           });
+        }
+
+        // Check if contract is VERIFIED before final approval
+        if (contractDetails.contractStatus !== 'VERIFIED') {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid status',
+            message: 'Contract must be VERIFIED by legal department before final approval',
+            contract: contractDetails
+          }, { status: 400 });
         }
 
         // Check if user has permission to approve at current level

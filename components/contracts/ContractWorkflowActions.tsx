@@ -43,12 +43,24 @@ interface ApprovalRequest {
 // Helper functions for approval management
 const getApproverRole = (level: number): string => {
   const roleMap: { [key: number]: string } = {
-    1: 'Purchasing Management / GM/AGM',
-    2: 'Senior Manager', 
-    3: 'General Manager',
-    4: 'Executive Director'
+    1: 'Legal Chief_Specialist',
+    2: 'Department Manager / GM/AGM', 
+    3: 'Senior Manager',
+    4: 'General Manager',
+    5: 'Executive Director'
   };
   return roleMap[level] || `Level ${level} Approver`;
+};
+
+const getApproverDetails = (level: number): string => {
+  const detailsMap: { [key: number]: string } = {
+    1: 'Only Chief_Specialist from LEGAL department',
+    2: 'Any Department Manager, Chief Specialist, Director, GM, or AGM', 
+    3: 'Senior Manager or above',
+    4: 'General Manager or above',
+    5: 'General Director only'
+  };
+  return detailsMap[level] || `Level ${level} approvers`;
 };
 
 const canUserApproveAtLevel = (userRole: string, level: number, userDepartment?: string, contractDepartment?: string): boolean => {
@@ -83,13 +95,14 @@ const canUserApproveAtLevel = (userRole: string, level: number, userDepartment?:
     }
   }
   
-  // Level 1 approval requires Purchasing Department Management or GM/AGM
+  // Level 1 approval - Only LEGAL Chief_Specialist can approve
   if (level === 1) {
-    // Check if user is in Purchasing Department with management role
-    const isPurchasingDept = userDepartment?.toUpperCase() === 'LVM-PUR' || 
-                            userDepartment?.toUpperCase() === 'PROC' || 
-                            userDepartment?.toUpperCase() === 'PR';
-    
+    // Only LEGAL department Chief_Specialist can approve Level 1 (legal review)
+    return userDepartment?.toUpperCase() === 'LEGAL' && normalizedRole === 'CHIEF_SPECIALIST';
+  }
+  
+  // Level 2 approval - Any department manager or GM/AGM can approve
+  if (level === 2) {
     const isManagementRole = [
       'GENERAL_MANAGER', 'GENERAL MANAGER',
       'ASSISTANT_GENERAL_MANAGER', 'ASSISTANT GENERAL MANAGER',
@@ -99,39 +112,37 @@ const canUserApproveAtLevel = (userRole: string, level: number, userDepartment?:
       'ASSISTANT_SENIOR_MANAGER', 'ASSISTANT SENIOR MANAGER',
       'MANAGER', 'MANAGER 2', 'MANAGER_2',
       'ASSISTANT_MANAGER', 'ASSISTANT MANAGER',
-      'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2'
+      'ASSISTANT_MANAGER_2', 'ASSISTANT MANAGER 2',
+      'CHIEF_SPECIALIST', 'DIRECTOR'
     ].includes(normalizedRole);
     
-    // Level 1: Purchasing Department Management OR any GM/AGM
-    return (isPurchasingDept && isManagementRole) || 
-           (normalizedRole === 'GENERAL_MANAGER' || normalizedRole === 'GENERAL MANAGER' ||
-            normalizedRole === 'ASSISTANT_GENERAL_MANAGER' || normalizedRole === 'ASSISTANT GENERAL MANAGER' ||
-            normalizedRole === 'ASSISTANT_GENERAL_MANAGER_2' || normalizedRole === 'ASSISTANT GENERAL MANAGER 2');
+    // Level 2: Any department manager or GM/AGM can approve
+    return isManagementRole;
   }
   
-  // Default approval levels for other levels (2-4)
+  // Default approval levels for other levels (3-5)
   const approvalLevels: { [key: string]: number } = {
-    'GENERAL_DIRECTOR': 4,
-    'GENERAL DIRECTOR': 4,
-    'GENERAL_MANAGER': 3,
-    'GENERAL MANAGER': 3,
-    'ASSISTANT_GENERAL_MANAGER': 3,
-    'ASSISTANT GENERAL MANAGER': 3,
-    'ASSISTANT_GENERAL_MANAGER_2': 3,
-    'ASSISTANT GENERAL MANAGER 2': 3,
-    'SENIOR_MANAGER': 2,
-    'SENIOR MANAGER': 2,
-    'SENIOR_MANAGER_2': 2,
-    'SENIOR MANAGER 2': 2,
-    'ASSISTANT_SENIOR_MANAGER': 2,
-    'ASSISTANT SENIOR MANAGER': 2,
-    'MANAGER': 1,
-    'MANAGER 2': 1,
-    'MANAGER_2': 1,
-    'ASSISTANT_MANAGER': 1,
-    'ASSISTANT MANAGER': 1,
-    'ASSISTANT_MANAGER_2': 1,
-    'ASSISTANT MANAGER 2': 1
+    'GENERAL_DIRECTOR': 5,
+    'GENERAL DIRECTOR': 5,
+    'GENERAL_MANAGER': 4,
+    'GENERAL MANAGER': 4,
+    'ASSISTANT_GENERAL_MANAGER': 4,
+    'ASSISTANT GENERAL MANAGER': 4,
+    'ASSISTANT_GENERAL_MANAGER_2': 4,
+    'ASSISTANT GENERAL MANAGER 2': 4,
+    'SENIOR_MANAGER': 3,
+    'SENIOR MANAGER': 3,
+    'SENIOR_MANAGER_2': 3,
+    'SENIOR MANAGER 2': 3,
+    'ASSISTANT_SENIOR_MANAGER': 3,
+    'ASSISTANT SENIOR MANAGER': 3,
+    'MANAGER': 2,
+    'MANAGER 2': 2,
+    'MANAGER_2': 2,
+    'ASSISTANT_MANAGER': 2,
+    'ASSISTANT MANAGER': 2,
+    'ASSISTANT_MANAGER_2': 2,
+    'ASSISTANT MANAGER 2': 2
   };
   
   const userMaxLevel = approvalLevels[normalizedRole] || 0;
@@ -141,10 +152,10 @@ const canUserApproveAtLevel = (userRole: string, level: number, userDepartment?:
 const getActionContext = (action: string, contract: any, userRole: string) => {
   const contexts: { [key: string]: any } = {
     'SEND_REVIEW': {
-      title: 'Send for Review',
-      description: 'Submit this contract for approval workflow',
+      title: 'Send for Legal Review',
+      description: 'Submit this contract for legal review by LEGAL Chief_Specialist',
       requirements: 'Contract must be in DRAFT status',
-      nextStep: 'Contract will be sent to Level 1 approvers',
+      nextStep: 'Contract will be sent to LEGAL Chief_Specialist for review and verification',
       icon: Send,
       color: 'blue'
     },
@@ -263,6 +274,9 @@ const ApprovalProgress = ({ contract, currentUserRole, userDepartment, contractD
                     {isCompleted ? '✓ Approved' : 
                      isCurrent ? (canApprove ? '⏳ Pending your approval' : '⏳ Waiting for approval') : 
                      '⏸️ Waiting for previous levels'}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {getApproverDetails(level)}
                   </div>
                 </div>
                 {isCurrent && canApprove && (
@@ -393,6 +407,9 @@ export default function ContractWorkflowActions({
         case 'SEND_REVIEW':
           newStatus = 'REVIEW';
           break;
+        case 'VERIFY':
+          newStatus = 'VERIFIED';
+          break;
         case 'APPROVE':
           newStatus = 'APPROVED';
           break;
@@ -461,6 +478,25 @@ export default function ContractWorkflowActions({
         break;
         
       case 'REVIEW':
+        // Check if user is LEGAL Chief_Specialist for verification
+        if (user?.department?.toUpperCase() === 'LEGAL' && user?.role === 'CHIEF_SPECIALIST') {
+          actions.push({
+            key: 'VERIFY',
+            label: 'Verify Contract',
+            icon: Shield,
+            color: 'blue',
+            action: () => handleAction('VERIFY'),
+            context: {
+              title: 'Verify Contract',
+              description: 'Complete legal review and verify contract',
+              requirements: 'Only LEGAL Chief_Specialist can verify',
+              nextStep: 'Contract will be marked as VERIFIED and sent to AGD/GD for final approval',
+              icon: Shield,
+              color: 'blue'
+            }
+          });
+        }
+        
         // Check if user can approve at current level
         const userDepartment = project.owner?.department || '';
         const contractDepartment = project.departments?.[0] || '';
@@ -485,6 +521,27 @@ export default function ContractWorkflowActions({
             color: 'red',
             action: () => handleAction('REJECT'),
             context: getActionContext('REJECT', contract, currentUserRole)
+          });
+        }
+        break;
+        
+      case 'VERIFIED':
+        // Only AGD/GD can approve verified contracts
+        if (['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'ASSISTANT_GENERAL_DIRECTOR', 'ASSISTANT GENERAL DIRECTOR'].includes(currentUserRole)) {
+          actions.push({
+            key: 'APPROVE',
+            label: 'Final Approval',
+            icon: CheckCircle,
+            color: 'green',
+            action: () => handleAction('APPROVE'),
+            context: {
+              title: 'Final Approval',
+              description: 'Approve the verified contract',
+              requirements: 'Only AGD/GD can provide final approval',
+              nextStep: 'Contract will be fully approved',
+              icon: CheckCircle,
+              color: 'green'
+            }
           });
         }
         break;
@@ -561,6 +618,7 @@ export default function ContractWorkflowActions({
     switch (status) {
       case 'DRAFT': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'REVIEW': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'VERIFIED': return 'bg-cyan-100 text-cyan-800 border-cyan-200';
       case 'APPROVED': return 'bg-green-100 text-green-800 border-green-200';
       case 'REJECTED': return 'bg-red-100 text-red-800 border-red-200';
       case 'SIGNED': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
@@ -575,6 +633,7 @@ export default function ContractWorkflowActions({
     switch (status) {
       case 'DRAFT': return <Clock className="w-4 h-4" />;
       case 'REVIEW': return <AlertTriangle className="w-4 h-4" />;
+      case 'VERIFIED': return <Shield className="w-4 h-4" />;
       case 'APPROVED': return <CheckCircle className="w-4 h-4" />;
       case 'REJECTED': return <XCircle className="w-4 h-4" />;
       case 'SIGNED': return <PenTool className="w-4 h-4" />;
@@ -657,10 +716,16 @@ export default function ContractWorkflowActions({
               
               {/* Show approval level for REVIEW status */}
               {currentStatus === 'REVIEW' && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                  <UserCheck className="w-4 h-4 mr-2" />
-                  Level {contract.currentApprovalLevel || 1} of {contract.totalApprovalLevels || 3}
-                </span>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                    <UserCheck className="w-4 h-4 mr-2" />
+                    Level {contract.currentApprovalLevel || 1} of {contract.totalApprovalLevels || 3}
+                  </span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    <Info className="w-4 h-4 mr-2" />
+                    {getApproverDetails(contract.currentApprovalLevel || 1)}
+                  </span>
+                </div>
               )}
             </div>
             <div className="text-sm text-gray-500">
