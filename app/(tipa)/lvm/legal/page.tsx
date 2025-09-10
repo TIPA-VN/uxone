@@ -192,7 +192,11 @@ export default function LegalPage() {
   // Check if user has legal department access
   const isLegalUser = session?.user?.department === 'LEGAL' || 
                      session?.user?.role === 'ADMIN' || 
-                     session?.user?.role === 'GENERAL_DIRECTOR';
+                     session?.user?.role === 'GENERAL_DIRECTOR' ||
+                     session?.user?.role === 'CHIEF_SPECIALIST' ||
+                     session?.user?.role === 'MANAGER' ||
+                     session?.user?.role === 'SENIOR_MANAGER' ||
+                     session?.user?.role === 'DIRECTOR';
 
   useEffect(() => {
     if (isLegalUser) {

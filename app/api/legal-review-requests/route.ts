@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     // Check if user has legal department access
     const isLegalUser = session.user.department?.toUpperCase() === 'LEGAL' ||
                        session.user.role === 'ADMIN' ||
-                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(session.user.role?.toUpperCase() || '');
+                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR', 'CHIEF_SPECIALIST', 'MANAGER', 'SENIOR_MANAGER', 'DIRECTOR'].includes(session.user.role?.toUpperCase() || '');
 
     if (!isLegalUser) {
       return NextResponse.json({ 

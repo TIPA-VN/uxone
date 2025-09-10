@@ -34,7 +34,7 @@ export async function GET(
     // Check if user has access to this contract
     const isLegalUser = session.user.department?.toUpperCase() === 'LEGAL' ||
                        session.user.role === 'ADMIN' ||
-                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(session.user.role?.toUpperCase() || '');
+                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR', 'CHIEF_SPECIALIST', 'MANAGER', 'SENIOR_MANAGER', 'DIRECTOR'].includes(session.user.role?.toUpperCase() || '');
     
     const hasAccess = 
       contract.project?.ownerId === session.user.id ||
@@ -260,7 +260,7 @@ export async function POST(
     // Check if user has access to this contract
     const isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' ||
                        currentUser.role === 'ADMIN' ||
-                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
+                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR', 'CHIEF_SPECIALIST', 'MANAGER', 'SENIOR_MANAGER', 'DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
     
     const hasAccess = 
       contract.project?.ownerId === currentUser.id ||

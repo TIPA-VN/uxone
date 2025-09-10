@@ -71,7 +71,7 @@ export async function POST(
       // Check if user is in legal department or has appropriate role
       isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' ||
                    currentUser.role === 'ADMIN' ||
-                   ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
+                   ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR', 'CHIEF_SPECIALIST', 'MANAGER', 'SENIOR_MANAGER', 'DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
     } else {
       // For normal users, look up in database
       currentUser = await prisma.user.findUnique({
@@ -85,7 +85,7 @@ export async function POST(
       // Check if user is in legal department or has appropriate role
       isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' ||
                    currentUser.role === 'ADMIN' ||
-                   ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
+                   ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR', 'CHIEF_SPECIALIST', 'MANAGER', 'SENIOR_MANAGER', 'DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
     }
 
     if (!isLegalUser) {

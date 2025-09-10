@@ -137,8 +137,10 @@ export default function LegalReviewConversation({
   const canReply = () => {
     if (!legalReviewRequest) return false;
     
-    // Legal users can always reply
-    if (currentUser.department?.toUpperCase() === 'LEGAL' || currentUser.role === 'ADMIN') {
+    // Legal users and managers can always reply
+    if (currentUser.department?.toUpperCase() === 'LEGAL' || 
+        currentUser.role === 'ADMIN' ||
+        ['GENERAL_DIRECTOR', 'CHIEF_SPECIALIST', 'MANAGER', 'SENIOR_MANAGER', 'DIRECTOR'].includes(currentUser.role?.toUpperCase() || '')) {
       return true;
     }
     
