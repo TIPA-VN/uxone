@@ -144,7 +144,9 @@ export async function POST(
         const legalChiefSpecialists = await prisma.user.findMany({
           where: {
             department: 'LEGAL',
-            role: 'CHIEF_SPECIALIST'
+            role: {
+              in: ['CHIEF_SPECIALIST', 'chief_specialist', 'CHIEF SPECIALIST']
+            }
           }
         });
 
@@ -182,11 +184,26 @@ export async function POST(
       case 'VERIFY':
       case 'VERIFIED':
         // Legal verification - only LEGAL department Chief_Specialist can verify
-        if (currentUser.department?.toUpperCase() !== 'LEGAL' || currentUser.role !== 'CHIEF_SPECIALIST') {
+        console.log('DEBUG: User verification check:', {
+          department: currentUser.department,
+          role: currentUser.role,
+          departmentUpper: currentUser.department?.toUpperCase(),
+          roleUpper: currentUser.role?.toUpperCase(),
+          isLegalDept: currentUser.department?.toUpperCase() === 'LEGAL',
+          isChiefSpecialist: currentUser.role?.toUpperCase() === 'CHIEF_SPECIALIST'
+        });
+        
+        if (currentUser.department?.toUpperCase() !== 'LEGAL' || currentUser.role?.toUpperCase() !== 'CHIEF_SPECIALIST') {
           return NextResponse.json({
             success: false,
             error: 'Insufficient permissions',
             message: 'Only LEGAL department Chief_Specialist can verify contracts',
+            debug: {
+              department: currentUser.department,
+              role: currentUser.role,
+              expectedDepartment: 'LEGAL',
+              expectedRole: 'CHIEF_SPECIALIST'
+            },
             contract: contractDetails
           }, { status: 403 });
         }

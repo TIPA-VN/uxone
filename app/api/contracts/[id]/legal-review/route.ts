@@ -84,7 +84,7 @@ export async function POST(
 
       // Check if user is LEGAL department Chief_Specialist (restricted access)
       isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' && 
-                   currentUser.role === 'CHIEF_SPECIALIST';
+                   currentUser.role?.toUpperCase() === 'CHIEF_SPECIALIST';
       
       // Allow ADMIN access for system management
       if (currentUser.role === 'ADMIN') {

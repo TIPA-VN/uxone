@@ -479,7 +479,7 @@ export default function ContractWorkflowActions({
         
       case 'REVIEW':
         // Check if user is LEGAL Chief_Specialist for verification
-        if (user?.department?.toUpperCase() === 'LEGAL' && user?.role === 'CHIEF_SPECIALIST') {
+        if (user?.department?.toUpperCase() === 'LEGAL' && user?.role?.toUpperCase() === 'CHIEF_SPECIALIST') {
           actions.push({
             key: 'VERIFY',
             label: 'Verify Contract',
