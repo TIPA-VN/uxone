@@ -460,7 +460,6 @@ export default function DocumentCommentSystem({
               </div>
             </div>
           )}
-        )}
       </div>
     );
   };

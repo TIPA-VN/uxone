@@ -51,6 +51,8 @@ model User {
   // Document commenting system
   documentComments         DocumentComment[]         @relation("DocumentCommentAuthor")
   resolvedComments         DocumentComment[]         @relation("DocumentCommentResolver")
+  legalReviewRequests      LegalReviewRequest[]      @relation("LegalReviewRequester")
+  assignedLegalReviews     LegalReviewRequest[]      @relation("LegalReviewAssignee")
   assignedTickets          Ticket[]                  @relation("TicketAssignee")
   createdTickets           Ticket[]                  @relation("TicketCreator")
   lastUpdatedTickets       Ticket[]                  @relation("TicketLastUpdatedBy")
@@ -270,6 +272,9 @@ model ContractDetails {
   addendums            ContractDetails[]  @relation("ContractAddendums")
   addendumNumber       Int?               // Addendum sequence number (1, 2, 3, etc.)
   isAddendum           Boolean            @default(false)
+  
+  // Legal review request
+  legalReviewRequest   LegalReviewRequest?
 
   @@index([expirationDate])
   @@index([isOnHold])
@@ -1104,7 +1109,7 @@ enum ProjectType {
 // Document Comment System Models
 model DocumentComment {
   id            String           @id @default(cuid())
-  documentId    String
+  documentId    String?          // Optional - can be null for contract-only comments
   contractId    String?          // Link to contract if applicable
   content       String
   authorId      String
@@ -1135,6 +1140,10 @@ model DocumentComment {
   document      Document?        @relation(fields: [documentId], references: [id])
   contract      ContractDetails? @relation(fields: [contractId], references: [id])
   
+  // Legal review request reference
+  legalReviewRequestId String?
+  legalReviewRequest   LegalReviewRequest? @relation("LegalReviewComments", fields: [legalReviewRequestId], references: [id])
+  
   @@map("document_comments")
 }
 
@@ -1161,6 +1170,44 @@ enum CommentCategory {
   CLARIFICATION
   SUGGESTION
   ISSUE
+}
+
+// Legal Review Request System
+model LegalReviewRequest {
+  id            String           @id @default(cuid())
+  contractId    String           @unique // Only one open review per contract
+  contract      ContractDetails  @relation(fields: [contractId], references: [id])
+  
+  // Request details
+  status        LegalReviewStatus @default(PENDING)
+  requestedBy   String
+  requestedByUser User           @relation("LegalReviewRequester", fields: [requestedBy], references: [id])
+  assignedTo    String?
+  assignedToUser User?           @relation("LegalReviewAssignee", fields: [assignedTo], references: [id])
+  
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  startedAt     DateTime?
+  completedAt   DateTime?
+  
+  // Review details
+  initialComment String?         // Initial request comment
+  finalComment   String?         // Final review comment
+  
+  // Comments within this review request
+  comments      DocumentComment[] @relation("LegalReviewComments")
+  
+  @@map("legal_review_requests")
+}
+
+enum LegalReviewStatus {
+  PENDING       // Request created, waiting for legal team
+  IN_REVIEW     // Legal team is reviewing
+  CHANGES_REQUESTED // Legal team requested changes
+  APPROVED      // Legal review approved
+  REJECTED      // Legal review rejected
+  CANCELLED     // Review request cancelled
 }
 
 enum TaskStatus {

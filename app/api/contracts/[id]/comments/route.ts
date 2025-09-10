@@ -32,10 +32,15 @@ export async function GET(
     }
 
     // Check if user has access to this contract
+    const isLegalUser = session.user.department?.toUpperCase() === 'LEGAL' ||
+                       session.user.role === 'ADMIN' ||
+                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(session.user.role?.toUpperCase() || '');
+    
     const hasAccess = 
       contract.project?.ownerId === session.user.id ||
       contract.project?.members.some((member: any) => member.userId === session.user.id) ||
-      session.user.role === 'ADMIN';
+      session.user.role === 'ADMIN' ||
+      isLegalUser;
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -64,6 +69,28 @@ export async function GET(
             username: true,
             department: true,
             role: true
+          }
+        },
+        legalReviewRequest: {
+          select: {
+            id: true,
+            status: true,
+            requestedByUser: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            },
+            assignedToUser: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            }
           }
         },
         replies: {
@@ -135,7 +162,8 @@ export async function POST(
       selectionEnd,
       selectedText,
       priority = 'NORMAL',
-      category = 'GENERAL'
+      category = 'GENERAL',
+      legalReviewRequestId = null
     } = body;
 
     if (!content || content.trim().length === 0) {
@@ -145,8 +173,8 @@ export async function POST(
       );
     }
 
-    // Get contract details to verify access
-    const contract = await prisma.contractDetails.findUnique({
+    // Get contract details to verify access - first try ContractDetails ID
+    let contract = await prisma.contractDetails.findUnique({
       where: { id },
       include: {
         project: {
@@ -157,35 +185,104 @@ export async function POST(
       }
     });
 
+    let contractId = id; // Use a mutable variable for the contract ID
+
+    // If not found by ContractDetails ID, try to find by Document ID
+    if (!contract) {
+      console.log('Contract not found by ContractDetails ID, trying Document ID:', id);
+      const document = await prisma.document.findUnique({
+        where: { id },
+        include: {
+          contractDetails: {
+            include: {
+              project: {
+                include: {
+                  members: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (document?.contractDetails) {
+        contract = document.contractDetails;
+        // Update the contract ID to use the ContractDetails ID for operations
+        contractId = contract.id;
+      }
+    }
+
     if (!contract) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
+    // Check if this is a fallback authentication user
+    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    
+    let currentUser;
+    
+    if (isFallbackAuth) {
+      // For fallback auth, create or find the user in database
+      let fallbackUser = await prisma.user.findUnique({
+        where: { username: session.user.username }
+      });
+      
+      if (!fallbackUser) {
+        // Create the fallback user in database
+        fallbackUser = await prisma.user.create({
+          data: {
+            id: session.user.id,
+            username: session.user.username,
+            name: session.user.name,
+            email: session.user.email || `${session.user.username}@tipa.co.th`,
+            department: session.user.department,
+            departmentName: session.user.departmentName,
+            role: session.user.role,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+      }
+      
+      currentUser = fallbackUser;
+    } else {
+      // For normal users, look up in database
+      currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id }
+      });
+
+      if (!currentUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+    }
+
     // Check if user has access to this contract
+    const isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' ||
+                       currentUser.role === 'ADMIN' ||
+                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
+    
     const hasAccess = 
-      contract.project?.ownerId === session.user.id ||
-      contract.project?.members.some((member: any) => member.userId === session.user.id) ||
-      session.user.role === 'ADMIN';
+      contract.project?.ownerId === currentUser.id ||
+      contract.project?.members.some((member: any) => member.userId === currentUser.id) ||
+      currentUser.role === 'ADMIN' ||
+      isLegalUser;
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Get the document ID from the contract
-    if (!contract.documentId) {
-      return NextResponse.json(
-        { error: 'Contract has no associated document' },
-        { status: 400 }
-      );
-    }
+    // Note: documentId is optional for contracts, we'll create comments without it if needed
+    // The contractId will be used to link comments to the contract
 
     // Create the comment
     const comment = await prisma.documentComment.create({
       data: {
-        documentId: contract.documentId,
-        contractId: id,
+        documentId: contract.documentId || null, // Use null if no documentId
+        contractId: contractId,
+        legalReviewRequestId: legalReviewRequestId,
         content: content.trim(),
-        authorId: session.user.id,
+        authorId: currentUser.id,
         parentId: parentId || null,
         selectionStart: selectionStart || null,
         selectionEnd: selectionEnd || null,
@@ -202,6 +299,28 @@ export async function POST(
             username: true,
             department: true,
             role: true
+          }
+        },
+        legalReviewRequest: {
+          select: {
+            id: true,
+            status: true,
+            requestedByUser: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            },
+            assignedToUser: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            }
           }
         },
         replies: true

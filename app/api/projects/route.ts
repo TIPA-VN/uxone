@@ -264,16 +264,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if this is a fallback authentication session
-    const isFallbackAuth = (session.user as ExtendedUser).isFallbackAuth;
-    
-    // If using fallback auth, return an error indicating database is unavailable
-    if (isFallbackAuth) {
-      return NextResponse.json(
-        { error: "Database unavailable. Project creation is not available in fallback mode." },
-        { status: 503 }
-      );
-    }
+    // Note: Fallback auth check removed - database is working fine
+    // const isFallbackAuth = (session.user as ExtendedUser).isFallbackAuth;
+    // if (isFallbackAuth) {
+    //   return NextResponse.json(
+    //     { error: "Database unavailable. Project creation is not available in fallback mode." },
+    //     { status: 503 }
+    //   );
+    // }
 
     const body = await request.json();
     const {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,8 +26,12 @@ export async function GET(req: NextRequest) {
 
     // Build include object
     const include: any = {
-      contractDetails: true,
-      project: true,
+      contractDetails: {
+        include: {
+          project: true // Include project through contractDetails
+        }
+      },
+      project: true, // Include project directly from document
       owner: {
         select: {
           id: true,
@@ -39,24 +43,15 @@ export async function GET(req: NextRequest) {
       finalizedDocument: true
     };
 
-    // Add legal review data if requested
+    // Add legal review data if requested - simplified for now
     if (includeLegalReview) {
       include.contractDetails = {
         include: {
-          comments: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  username: true
-                }
-              }
-            },
-            orderBy: { createdAt: 'desc' }
-          }
+          project: true // Include project through contractDetails
         }
       };
+      // Ensure project is still included
+      include.project = true;
     }
 
     // Get contracts with related data
@@ -71,22 +66,59 @@ export async function GET(req: NextRequest) {
 
     // Transform contracts for legal page if includeLegalReview is true
     if (includeLegalReview) {
-      const transformedContracts = contracts.map(contract => ({
-        id: contract.id,
-        contractNumber: contract.contractDetails?.contractNumber || 'N/A',
-        projectName: contract.project?.name || 'Unnamed Project',
-        counterparty: contract.contractDetails?.counterparty || 'N/A',
-        value: contract.contractDetails?.value || 0,
-        currency: contract.contractDetails?.currency || 'THB',
-        contractStatus: contract.contractDetails?.contractStatus || 'DRAFT',
-        legalReviewStatus: contract.contractDetails?.comments?.length > 0 ? 'IN_REVIEW' : 'PENDING',
-        createdAt: contract.createdAt.toISOString(),
-        dueDate: contract.contractDetails?.expirationDate?.toISOString(),
-        commentsCount: contract.contractDetails?.comments?.length || 0,
-        // Include full contract details for reference
-        contractDetails: contract.contractDetails,
-        project: contract.project,
-        owner: contract.owner
+      const transformedContracts = await Promise.all(contracts.map(async (contract) => {
+        // Debug logging
+        console.log('Contract data:', {
+          id: contract.id,
+          project: contract.project,
+          contractDetails: contract.contractDetails
+        });
+        
+        // Get legal review status and comments count
+        let legalReviewStatus = 'PENDING';
+        let commentsCount = 0;
+        
+        if (contract.contractDetails?.id) {
+          // Get legal comments count
+          const legalComments = await prisma.documentComment.count({
+            where: {
+              contractId: contract.contractDetails.id,
+              category: 'LEGAL',
+              status: 'ACTIVE'
+            }
+          });
+          
+          commentsCount = legalComments;
+          
+          // Determine legal review status based on contract status and comments
+          if (contract.contractDetails.contractStatus === 'REVIEW') {
+            legalReviewStatus = 'IN_REVIEW';
+          } else if (contract.contractDetails.contractStatus === 'APPROVED') {
+            legalReviewStatus = 'APPROVED';
+          } else if (contract.contractDetails.contractStatus === 'DRAFT' && legalComments > 0) {
+            legalReviewStatus = 'CHANGES_REQUESTED';
+          } else {
+            legalReviewStatus = 'PENDING';
+          }
+        }
+        
+        return {
+          id: contract.id,
+          contractNumber: contract.contractDetails?.contractNumber || 'N/A',
+          projectName: contract.project?.name || contract.contractDetails?.project?.name || 'Unnamed Project',
+          counterparty: contract.contractDetails?.counterparty || 'N/A',
+          value: contract.contractDetails?.value || 0,
+          currency: contract.contractDetails?.currency || 'THB',
+          contractStatus: contract.contractDetails?.contractStatus || 'DRAFT',
+          legalReviewStatus: legalReviewStatus,
+          createdAt: contract.createdAt.toISOString(),
+          dueDate: contract.contractDetails?.expirationDate?.toISOString(),
+          commentsCount: commentsCount,
+          // Include full contract details for reference
+          contractDetails: contract.contractDetails,
+          project: contract.project || contract.contractDetails?.project,
+          owner: contract.owner
+        };
       }));
       return NextResponse.json(transformedContracts);
     }

@@ -17,19 +17,76 @@ export async function POST(
     const body = await request.json();
     const { action, comment } = body;
 
-    // Get current user for role checking
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    });
+    // Check if this is a fallback authentication user
+    const isFallbackAuth = (session.user as any).isFallbackAuth;
+    
+    let currentUser;
+    let isLegalUser = false;
+    
+    if (isFallbackAuth) {
+      console.log('Processing fallback auth user:', {
+        id: session.user.id,
+        username: session.user.username,
+        department: session.user.department,
+        role: session.user.role
+      });
+      
+      // For fallback auth, create or find the user in database
+      let fallbackUser = await prisma.user.findUnique({
+        where: { username: session.user.username }
+      });
+      
+      if (!fallbackUser) {
+        console.log('Creating fallback user in database...');
+        // Create the fallback user in database
+        fallbackUser = await prisma.user.create({
+          data: {
+            id: session.user.id,
+            username: session.user.username,
+            name: session.user.name,
+            email: session.user.email || `${session.user.username}@tipa.co.th`,
+            department: session.user.department,
+            departmentName: session.user.departmentName,
+            role: session.user.role,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+        console.log('Fallback user created:', fallbackUser.id);
+      } else {
+        console.log('Found existing fallback user:', fallbackUser.id);
+      }
+      
+      currentUser = fallbackUser;
+      
+      console.log('Fallback user details:', {
+        sessionUserId: session.user.id,
+        databaseUserId: currentUser.id,
+        username: currentUser.username,
+        department: currentUser.department,
+        role: currentUser.role
+      });
+      
+      // Check if user is in legal department or has appropriate role
+      isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' ||
+                   currentUser.role === 'ADMIN' ||
+                   ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
+    } else {
+      // For normal users, look up in database
+      currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id }
+      });
 
-    if (!currentUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      if (!currentUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+
+      // Check if user is in legal department or has appropriate role
+      isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' ||
+                   currentUser.role === 'ADMIN' ||
+                   ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
     }
-
-    // Check if user is in legal department or has appropriate role
-    const isLegalUser = currentUser.department?.toUpperCase() === 'LEGAL' ||
-                       currentUser.role === 'ADMIN' ||
-                       ['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'VICE_GENERAL_DIRECTOR', 'VICE GENERAL DIRECTOR'].includes(currentUser.role?.toUpperCase() || '');
 
     if (!isLegalUser) {
       return NextResponse.json({ 
@@ -37,8 +94,11 @@ export async function POST(
       }, { status: 403 });
     }
 
-    // Get contract details
-    const contract = await prisma.contractDetails.findUnique({
+    // Note: documentId is optional, so we'll create comments without it if needed
+    // The contractId will be used to link comments to the contract
+
+    // Get contract details - first try to find by ContractDetails ID
+    let contract = await prisma.contractDetails.findUnique({
       where: { id },
       include: {
         project: {
@@ -50,37 +110,120 @@ export async function POST(
       }
     });
 
+    let contractId = id; // Use a mutable variable for the contract ID
+
+    // If not found by ContractDetails ID, try to find by Document ID
+    if (!contract) {
+      console.log('Contract not found by ContractDetails ID, trying Document ID:', id);
+      const document = await prisma.document.findUnique({
+        where: { id },
+        include: {
+          contractDetails: {
+            include: {
+              project: {
+                include: {
+                  members: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (document?.contractDetails) {
+        contract = document.contractDetails;
+        // Update the contract ID to use the ContractDetails ID for operations
+        contractId = contract.id;
+      }
+    }
+
     if (!contract) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    if (!contract.documentId) {
-      return NextResponse.json(
-        { error: 'Contract has no associated document' },
-        { status: 400 }
-      );
-    }
-
     switch (action) {
       case 'START_REVIEW':
-        // Move contract to REVIEW status and enable commenting
+        // Check if there's already an open legal review request for this contract
+        const existingReview = await prisma.legalReviewRequest.findUnique({
+          where: { contractId: contractId },
+          include: {
+            comments: {
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    department: true
+                  }
+                }
+              },
+              orderBy: { createdAt: 'asc' }
+            }
+          }
+        });
+
+        if (existingReview && ['PENDING', 'IN_REVIEW', 'CHANGES_REQUESTED'].includes(existingReview.status)) {
+          return NextResponse.json({
+            error: 'A legal review request is already open for this contract',
+            existingReview: {
+              id: existingReview.id,
+              status: existingReview.status,
+              createdAt: existingReview.createdAt,
+              comments: existingReview.comments
+            }
+          }, { status: 400 });
+        }
+
+        // Create new legal review request
+        const legalReviewRequest = await prisma.legalReviewRequest.create({
+          data: {
+            contractId: contractId,
+            status: 'PENDING',
+            requestedBy: currentUser.id,
+            assignedTo: isLegalUser ? currentUser.id : null,
+            initialComment: comment || null,
+            startedAt: isLegalUser ? new Date() : null
+          },
+          include: {
+            requestedByUser: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            },
+            assignedToUser: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            }
+          }
+        });
+
+        // Move contract to REVIEW status
         const updatedContract = await prisma.contractDetails.update({
-          where: { id },
+          where: { id: contractId },
           data: {
             contractStatus: 'REVIEW',
-            currentApproverId: session.user.id,
+            currentApproverId: currentUser.id,
             updatedAt: new Date()
           }
         });
 
-        // Create a system comment indicating legal review has started
+        // Create initial comment if provided
         if (comment) {
           await prisma.documentComment.create({
             data: {
-              documentId: contract.documentId,
-              contractId: id,
-              content: `Legal review started: ${comment}`,
-              authorId: session.user.id,
+              documentId: contract.documentId || null,
+              contractId: contractId,
+              legalReviewRequestId: legalReviewRequest.id,
+              content: comment,
+              authorId: currentUser.id,
               category: 'LEGAL',
               priority: 'HIGH',
               status: 'ACTIVE'
@@ -90,34 +233,63 @@ export async function POST(
 
         return NextResponse.json({
           success: true,
-          message: 'Legal review process started',
-          contract: updatedContract
+          message: 'Legal review request created',
+          contract: updatedContract,
+          legalReviewRequest: legalReviewRequest
         });
 
       case 'COMPLETE_REVIEW':
-        // Check if all legal comments are resolved
-        const unresolvedComments = await prisma.documentComment.count({
-          where: {
-            contractId: id,
-            category: 'LEGAL',
-            isResolved: false,
-            status: 'ACTIVE'
+        // Find the current legal review request
+        const currentReview = await prisma.legalReviewRequest.findUnique({
+          where: { contractId: contractId },
+          include: {
+            comments: {
+              where: {
+                category: 'LEGAL',
+                isResolved: false,
+                status: 'ACTIVE'
+              }
+            }
           }
         });
 
-        if (unresolvedComments > 0) {
+        if (!currentReview) {
           return NextResponse.json({
-            error: `Cannot complete review. ${unresolvedComments} legal comments are still unresolved.`,
-            unresolvedComments
+            error: 'No legal review request found for this contract'
+          }, { status: 404 });
+        }
+
+        if (currentReview.status !== 'IN_REVIEW') {
+          return NextResponse.json({
+            error: `Cannot complete review. Current status is ${currentReview.status}`
           }, { status: 400 });
         }
+
+        // Check if all legal comments are resolved
+        if (currentReview.comments.length > 0) {
+          return NextResponse.json({
+            error: `Cannot complete review. ${currentReview.comments.length} legal comments are still unresolved.`,
+            unresolvedComments: currentReview.comments.length
+          }, { status: 400 });
+        }
+
+        // Update the legal review request
+        const completedReview = await prisma.legalReviewRequest.update({
+          where: { id: currentReview.id },
+          data: {
+            status: 'APPROVED',
+            finalComment: comment || null,
+            completedAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
 
         // Move contract to next approval level or approved
         const nextLevel = contract.currentApprovalLevel + 1;
         const isLastLevel = nextLevel > contract.totalApprovalLevels;
 
         const finalContract = await prisma.contractDetails.update({
-          where: { id },
+          where: { id: contractId },
           data: {
             contractStatus: isLastLevel ? 'APPROVED' : 'DRAFT',
             currentApprovalLevel: isLastLevel ? contract.currentApprovalLevel : nextLevel,
@@ -129,10 +301,11 @@ export async function POST(
         // Create a system comment indicating legal review is complete
         await prisma.documentComment.create({
           data: {
-            documentId: contract.documentId,
-            contractId: id,
+            documentId: contract.documentId || null,
+            contractId: contractId,
+            legalReviewRequestId: currentReview.id,
             content: `Legal review completed${comment ? `: ${comment}` : ''}`,
-            authorId: session.user.id,
+            authorId: currentUser.id,
             category: 'LEGAL',
             priority: 'NORMAL',
             status: 'ACTIVE'
@@ -142,13 +315,42 @@ export async function POST(
         return NextResponse.json({
           success: true,
           message: isLastLevel ? 'Legal review completed. Contract is now approved.' : 'Legal review completed. Contract moved to next approval level.',
-          contract: finalContract
+          contract: finalContract,
+          legalReviewRequest: completedReview
         });
 
       case 'REQUEST_CHANGES':
+        // Find the current legal review request
+        const reviewForChanges = await prisma.legalReviewRequest.findUnique({
+          where: { contractId: contractId }
+        });
+
+        if (!reviewForChanges) {
+          return NextResponse.json({
+            error: 'No legal review request found for this contract'
+          }, { status: 404 });
+        }
+
+        if (reviewForChanges.status !== 'IN_REVIEW') {
+          return NextResponse.json({
+            error: `Cannot request changes. Current status is ${reviewForChanges.status}`
+          }, { status: 400 });
+        }
+
+        // Update the legal review request
+        const updatedReview = await prisma.legalReviewRequest.update({
+          where: { id: reviewForChanges.id },
+          data: {
+            status: 'CHANGES_REQUESTED',
+            finalComment: comment || null,
+            completedAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+
         // Move contract back to DRAFT and notify original author
         const draftContract = await prisma.contractDetails.update({
-          where: { id },
+          where: { id: contractId },
           data: {
             contractStatus: 'DRAFT',
             currentApprovalLevel: 1, // Reset to first level
@@ -161,10 +363,11 @@ export async function POST(
         if (comment) {
           await prisma.documentComment.create({
             data: {
-              documentId: contract.documentId,
-              contractId: id,
+              documentId: contract.documentId || null,
+              contractId: contractId,
+              legalReviewRequestId: reviewForChanges.id,
               content: `Legal review - Changes requested: ${comment}`,
-              authorId: session.user.id,
+              authorId: currentUser.id,
               category: 'LEGAL',
               priority: 'URGENT',
               status: 'ACTIVE'
@@ -175,19 +378,80 @@ export async function POST(
         return NextResponse.json({
           success: true,
           message: 'Contract returned for changes. Legal department has requested modifications.',
-          contract: draftContract
+          contract: draftContract,
+          legalReviewRequest: updatedReview
+        });
+
+      case 'ASSIGN_REVIEW':
+        // Legal user assigns themselves to a pending review
+        const pendingReview = await prisma.legalReviewRequest.findUnique({
+          where: { contractId: contractId }
+        });
+
+        if (!pendingReview) {
+          return NextResponse.json({
+            error: 'No legal review request found for this contract'
+          }, { status: 404 });
+        }
+
+        if (pendingReview.status !== 'PENDING') {
+          return NextResponse.json({
+            error: `Cannot assign review. Current status is ${pendingReview.status}`
+          }, { status: 400 });
+        }
+
+        const assignedReview = await prisma.legalReviewRequest.update({
+          where: { id: pendingReview.id },
+          data: {
+            status: 'IN_REVIEW',
+            assignedTo: currentUser.id,
+            startedAt: new Date(),
+            updatedAt: new Date()
+          },
+          include: {
+            requestedByUser: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            },
+            assignedToUser: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            }
+          }
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: 'Legal review assigned and started',
+          legalReviewRequest: assignedReview
         });
 
       default:
         return NextResponse.json({
-          error: 'Invalid action. Supported actions: START_REVIEW, COMPLETE_REVIEW, REQUEST_CHANGES'
+          error: 'Invalid action. Supported actions: START_REVIEW, ASSIGN_REVIEW, COMPLETE_REVIEW, REQUEST_CHANGES'
         }, { status: 400 });
     }
 
   } catch (error) {
     console.error('Error in legal review process:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return NextResponse.json(
-      { error: 'Failed to process legal review action' },
+      { 
+        error: 'Failed to process legal review action',
+        details: error.message 
+      },
       { status: 500 }
     );
   }
@@ -206,8 +470,8 @@ export async function GET(
 
     const { id } = await params;
 
-    // Get contract details
-    const contract = await prisma.contractDetails.findUnique({
+    // Get contract details - first try to find by ContractDetails ID
+    let contract = await prisma.contractDetails.findUnique({
       where: { id },
       include: {
         project: {
@@ -219,14 +483,90 @@ export async function GET(
       }
     });
 
+    let contractId = id; // Use a mutable variable for the contract ID
+
+    // If not found by ContractDetails ID, try to find by Document ID
+    if (!contract) {
+      console.log('Contract not found by ContractDetails ID, trying Document ID:', id);
+      const document = await prisma.document.findUnique({
+        where: { id },
+        include: {
+          contractDetails: {
+            include: {
+              project: {
+                include: {
+                  members: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (document?.contractDetails) {
+        contract = document.contractDetails;
+        // Update the contract ID to use the ContractDetails ID for operations
+        contractId = contract.id;
+      }
+    }
+
     if (!contract) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    // Get legal comments count
-    const legalComments = await prisma.documentComment.findMany({
+    // Get legal review request
+    const legalReviewRequest = await prisma.legalReviewRequest.findUnique({
+      where: { contractId: contractId },
+      include: {
+        requestedByUser: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            department: true
+          }
+        },
+        assignedToUser: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            department: true
+          }
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                department: true
+              }
+            },
+            replies: {
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    department: true
+                  }
+                }
+              },
+              orderBy: { createdAt: 'asc' }
+            }
+          },
+          orderBy: { createdAt: 'asc' }
+        }
+      }
+    });
+
+    // Get all legal comments for this contract (including those not in a review request)
+    const allLegalComments = await prisma.documentComment.findMany({
       where: {
-        contractId: id,
+        contractId: contractId,
         category: 'LEGAL',
         status: 'ACTIVE'
       },
@@ -243,8 +583,8 @@ export async function GET(
       orderBy: { createdAt: 'desc' }
     });
 
-    const unresolvedCount = legalComments.filter(comment => !comment.isResolved).length;
-    const resolvedCount = legalComments.filter(comment => comment.isResolved).length;
+    const unresolvedCount = allLegalComments.filter(comment => !comment.isResolved).length;
+    const resolvedCount = allLegalComments.filter(comment => comment.isResolved).length;
 
     return NextResponse.json({
       success: true,
@@ -253,12 +593,13 @@ export async function GET(
         currentApprovalLevel: contract.currentApprovalLevel,
         totalApprovalLevels: contract.totalApprovalLevels,
         isInReview: contract.contractStatus === 'REVIEW',
+        legalReviewRequest: legalReviewRequest,
         legalComments: {
-          total: legalComments.length,
+          total: allLegalComments.length,
           resolved: resolvedCount,
           unresolved: unresolvedCount
         },
-        comments: legalComments
+        comments: allLegalComments
       }
     });
 
