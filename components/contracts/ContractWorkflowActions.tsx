@@ -526,22 +526,27 @@ export default function ContractWorkflowActions({
         break;
         
       case 'VERIFIED':
-        // Only AGD/GD can approve verified contracts
-        if (['GENERAL_DIRECTOR', 'GENERAL DIRECTOR', 'ASSISTANT_GENERAL_DIRECTOR', 'ASSISTANT GENERAL DIRECTOR'].includes(currentUserRole)) {
+        // Check if user can approve at current level (level 2 after verification)
+        if (canUserApproveAtLevel(currentUserRole, currentLevel, userDepartment, contractDepartment)) {
           actions.push({
             key: 'APPROVE',
-            label: 'Final Approval',
+            label: `Approve Level ${currentLevel}`,
             icon: CheckCircle,
             color: 'green',
             action: () => handleAction('APPROVE'),
-            context: {
-              title: 'Final Approval',
-              description: 'Approve the verified contract',
-              requirements: 'Only AGD/GD can provide final approval',
-              nextStep: 'Contract will be fully approved',
-              icon: CheckCircle,
-              color: 'green'
-            }
+            context: getActionContext('APPROVE', contract, currentUserRole)
+          });
+        }
+        
+        // Check if user can reject at current level
+        if (canUserApproveAtLevel(currentUserRole, currentLevel, userDepartment, contractDepartment)) {
+          actions.push({
+            key: 'REJECT',
+            label: 'Reject Contract',
+            icon: XCircle,
+            color: 'red',
+            action: () => handleAction('REJECT'),
+            context: getActionContext('REJECT', contract, currentUserRole)
           });
         }
         break;
@@ -764,6 +769,7 @@ export default function ContractWorkflowActions({
                 const context = action.context;
                 const canPerform = canUserApproveAtLevel(currentUserRole, contract.currentApprovalLevel || 1) || 
                                  action.key === 'SEND_REVIEW' || 
+                                 action.key === 'VERIFY' ||
                                  action.key === 'SIGN' || 
                                  action.key === 'EXECUTE' || 
                                  action.key === 'COMPLETE' || 

@@ -2,20 +2,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Handle preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 // POST /api/contracts/[id]/legal-review - Start legal review process
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  console.log('POST /api/contracts/[id]/legal-review - Route called');
   try {
     const session = await auth();
+    console.log('Session check:', { hasSession: !!session, hasUser: !!session?.user, userId: session?.user?.id });
     if (!session?.user?.id) {
+      console.log('Returning 401 - No session or user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
+    console.log('Contract ID from params:', id);
+    
     const body = await request.json();
     const { action, comment } = body;
+    console.log('Request body:', { action, comment });
 
     // Check if this is a fallback authentication user
     const isFallbackAuth = (session.user as any).isFallbackAuth;
@@ -101,49 +119,67 @@ export async function POST(
     // Note: documentId is optional, so we'll create comments without it if needed
     // The contractId will be used to link comments to the contract
 
-    // Get contract details - first try to find by ContractDetails ID
-    let contract = await prisma.contractDetails.findUnique({
-      where: { id },
-      include: {
-        project: {
-          include: {
-            members: true
-          }
-        },
-        document: true
-      }
-    });
-
+    // Get contract details - try both ContractDetails ID and Document ID
+    console.log('Looking up contract by ID:', id);
+    let contract;
     let contractId = id; // Use a mutable variable for the contract ID
-
-    // If not found by ContractDetails ID, try to find by Document ID
-    if (!contract) {
-      console.log('Contract not found by ContractDetails ID, trying Document ID:', id);
-      const document = await prisma.document.findUnique({
+    
+    try {
+      // First, try to find by ContractDetails ID
+      console.log('Attempting database query for ContractDetails ID:', id);
+      contract = await prisma.contractDetails.findUnique({
         where: { id },
         include: {
-          contractDetails: {
+          project: {
             include: {
-              project: {
-                include: {
-                  members: true
+              members: true
+            }
+          },
+          document: true
+        }
+      });
+      console.log('Database query completed, result:', contract ? 'Found' : 'Not found');
+      
+      if (contract) {
+        console.log('Contract found by ContractDetails ID');
+      } else {
+        console.log('Contract not found by ContractDetails ID, trying Document ID');
+        // If not found by ContractDetails ID, try to find by Document ID
+        const document = await prisma.document.findUnique({
+          where: { id },
+          include: {
+            contractDetails: {
+              include: {
+                project: {
+                  include: {
+                    members: true
+                  }
                 }
               }
             }
           }
-        }
-      });
+        });
 
-      if (document?.contractDetails) {
-        contract = document.contractDetails;
-        // Update the contract ID to use the ContractDetails ID for operations
-        contractId = contract.id;
+        if (document?.contractDetails) {
+          contract = document.contractDetails;
+          // Update the contract ID to use the ContractDetails ID for operations
+          contractId = contract?.id;
+          console.log('Contract found by Document ID, ContractDetails ID:', contractId);
+        }
       }
+      
+      console.log('Final contract lookup result:', contract ? 'Found' : 'Not found');
+    } catch (dbError) {
+      console.error('Database error during contract lookup:', dbError);
+      return NextResponse.json({ error: 'Database error', details: dbError.message }, { status: 500 });
     }
 
     if (!contract) {
+      console.log('Contract not found, returning 404');
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
+    
+    console.log('Contract found:', { id: contract.id, contractStatus: contract.contractStatus });
 
     switch (action) {
       case 'START_REVIEW':
@@ -467,14 +503,27 @@ export async function POST(
   } catch (error) {
     console.error('Error in legal review process:', error);
     console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'UnknownError'
     });
+    
+    // Check if this is a 404 error
+    if (error instanceof Error && error.message.includes('404')) {
+      console.error('404 error detected, returning 404 response');
+      return NextResponse.json(
+        { 
+          error: 'Not Found',
+          details: error.message 
+        },
+        { status: 404 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         error: 'Failed to process legal review action',
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error' 
       },
       { status: 500 }
     );
@@ -530,7 +579,7 @@ export async function GET(
       if (document?.contractDetails) {
         contract = document.contractDetails;
         // Update the contract ID to use the ContractDetails ID for operations
-        contractId = contract.id;
+        contractId = contract?.id;
       }
     }
 

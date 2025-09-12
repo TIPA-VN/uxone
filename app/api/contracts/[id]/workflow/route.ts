@@ -158,6 +158,17 @@ export async function POST(
           }, { status: 400 });
         }
 
+        // Create a legal review request record
+        const legalReviewRequest = await prisma.legalReviewRequest.create({
+          data: {
+            contractId: id,
+            requestedBy: session.user.id,
+            status: 'PENDING',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+
         // Create notifications for legal reviewers
         for (const legalUser of legalChiefSpecialists) {
           await prisma.notification.create({
@@ -222,6 +233,17 @@ export async function POST(
           where: { id },
           data: {
             contractStatus: 'VERIFIED',
+            currentApprovalLevel: 2, // Move to next approval level after verification
+            updatedAt: new Date()
+          }
+        });
+
+        // Update the legal review request status
+        await prisma.legalReviewRequest.updateMany({
+          where: { contractId: id },
+          data: {
+            status: 'APPROVED',
+            completedAt: new Date(),
             updatedAt: new Date()
           }
         });

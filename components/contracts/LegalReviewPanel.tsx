@@ -64,18 +64,34 @@ export default function LegalReviewPanel({
     loadReviewStatus();
   }, [contractId]);
 
+  // Debug logging for button state
+  useEffect(() => {
+    console.log('LegalReviewPanel state:', {
+      contractStatus: reviewStatus?.contractStatus,
+      actionLoading,
+      showReviewForm,
+      reviewComment: reviewComment?.length || 0
+    });
+  }, [reviewStatus, actionLoading, showReviewForm, reviewComment]);
+
   const loadReviewStatus = async () => {
     try {
       setLoading(true);
+      console.log('Loading review status for contract:', contractId);
       const response = await fetch(`/api/contracts/${contractId}/legal-review`);
+      console.log('Review status response:', response.status, response.ok);
       if (response.ok) {
         const data = await response.json();
+        console.log('Review status data:', data);
         setReviewStatus(data.reviewStatus);
         onReviewStatusChange?.(data.reviewStatus);
       } else {
+        const errorData = await response.json();
+        console.error('Review status error:', errorData);
         setError('Failed to load review status');
       }
     } catch (error) {
+      console.error('Review status fetch error:', error);
       setError('Failed to load review status');
     } finally {
       setLoading(false);
@@ -93,14 +109,37 @@ export default function LegalReviewPanel({
       setError(null);
       setSuccess(null);
 
-      const response = await fetch(`/api/contracts/${contractId}/legal-review`, {
+      // Map legal review actions to appropriate API endpoints
+      let url: string;
+      let apiAction: string;
+      
+      if (action === 'REQUEST_CHANGES') {
+        // REQUEST_CHANGES should use the legal-review API, not workflow
+        url = `/api/contracts/${contractId}/legal-review`;
+        apiAction = action;
+      } else {
+        // Other actions use the workflow API
+        const workflowActionMap: { [key: string]: string } = {
+          'START_REVIEW': 'SEND_REVIEW',
+          'COMPLETE_REVIEW': 'VERIFY'
+        };
+        
+        apiAction = workflowActionMap[action] || action;
+        url = `/api/contracts/${contractId}/workflow`;
+      }
+      
+      console.log('Making POST request to:', url, 'with action:', apiAction, '(mapped from:', action, ')');
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action,
+          action: apiAction,
           comment: reviewComment.trim()
         })
       });
+      
+      console.log('Response status:', response.status, 'Response ok:', response.ok);
 
       if (response.ok) {
         const data = await response.json();
@@ -264,12 +303,19 @@ export default function LegalReviewPanel({
           {!readOnly && reviewStatus.contractStatus === 'REVIEW' && (
             <>
               <button
-                onClick={() => setShowReviewForm(true)}
+                onClick={() => {
+                  console.log('Complete Review button clicked directly', { actionLoading, reviewStatus });
+                  handleReviewAction('COMPLETE_REVIEW');
+                }}
                 disabled={actionLoading}
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ 
+                  opacity: actionLoading ? 0.5 : 1,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer'
+                }}
               >
                 <CheckCircle className="w-4 h-4" />
-                <span>Complete Review</span>
+                <span>Complete Review {actionLoading ? '(Loading...)' : ''}</span>
               </button>
               <button
                 onClick={() => setShowReviewForm(true)}
@@ -341,12 +387,19 @@ export default function LegalReviewPanel({
                 {reviewStatus.contractStatus === 'REVIEW' && (
                   <>
                     <button
-                      onClick={() => handleReviewAction('COMPLETE_REVIEW')}
+                      onClick={() => {
+                        console.log('Complete Review button clicked', { actionLoading, reviewStatus });
+                        handleReviewAction('COMPLETE_REVIEW');
+                      }}
                       disabled={actionLoading}
                       className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ 
+                        opacity: actionLoading ? 0.5 : 1,
+                        cursor: actionLoading ? 'not-allowed' : 'pointer'
+                      }}
                     >
                       <CheckCircle className="w-4 h-4" />
-                      <span>Complete Review</span>
+                      <span>Complete Review {actionLoading ? '(Loading...)' : ''}</span>
                     </button>
                     <button
                       onClick={() => handleReviewAction('REQUEST_CHANGES')}
