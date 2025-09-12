@@ -13,6 +13,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Task, User } from "@/types";
 import { getActiveDepartments } from "@/config/app";
 import { isOverdue, formatDateString } from "@/lib/utils";
+import AssigneeSelector from "@/components/AssigneeSelector";
 
 export default function TasksPage() {
 
@@ -330,21 +331,13 @@ export default function TasksPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Assignee
                   </label>
-                  <select
+                  <AssigneeSelector
+                    users={users}
                     value={assigneeId}
-                    onChange={e => setAssigneeId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    onChange={setAssigneeId}
+                    placeholder={loadingUsers ? "Loading users..." : "Select assignee"}
                     disabled={loadingUsers}
-                  >
-                    <option value="">
-                      {loadingUsers ? "Loading users..." : "Select assignee"}
-                    </option>
-                    {users.map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.name} ({user.username})
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>

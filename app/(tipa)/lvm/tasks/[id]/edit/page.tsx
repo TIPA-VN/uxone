@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Eye, Save, X } from "lucide-react";
 import Link from "next/link";
+import AssigneeSelector from "@/components/AssigneeSelector";
 
 type Task = {
   id: string;
@@ -297,18 +298,12 @@ export default function EditTaskPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Assignee
               </label>
-              <select
+              <AssigneeSelector
+                users={users}
                 value={formData.assigneeId}
-                onChange={(e) => setFormData(prev => ({ ...prev, assigneeId: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                <option value="">No assignee</option>
-                {Array.isArray(users) && users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.departmentName})
-                  </option>
-                ))}
-              </select>
+                onChange={(userId) => setFormData(prev => ({ ...prev, assigneeId: userId }))}
+                placeholder="No assignee"
+              />
             </div>
 
             <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">

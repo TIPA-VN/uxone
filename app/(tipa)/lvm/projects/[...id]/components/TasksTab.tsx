@@ -4,6 +4,7 @@ import { CheckCircle, XCircle, Clock, Menu } from "lucide-react";
 import { Task, User } from "../types/project";
 import { canCreateTasks } from "@/lib/rbac";
 import { useClickOutside } from "@/hooks/useClickOutside";
+import AssigneeSelector from "@/components/AssigneeSelector";
 
 interface TasksTabProps {
   projectId: string;
@@ -192,25 +193,13 @@ export function TasksTab({
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Assignee
                   </label>
-                  <select
+                  <AssigneeSelector
+                    users={displayUsers}
                     value={taskForm.assigneeId}
-                    onChange={(e) => setTaskForm(prev => ({ ...prev, assigneeId: e.target.value }))}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
-                  >
-                    <option value="">Select assignee</option>
-                    {/* Show assignable users for assignment */}
-                    {displayUsers.length > 0 ? (
-                      displayUsers.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name || user.username} ({user.department}) - {user.role || 'No Role'}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {users.length === 0 ? "No users available" : "No assignable users found"}
-                      </option>
-                    )}
-                  </select>
+                    onChange={(userId) => setTaskForm(prev => ({ ...prev, assigneeId: userId }))}
+                    placeholder="Select assignee"
+                    className="text-xs"
+                  />
                 </div>
               </div>
               
